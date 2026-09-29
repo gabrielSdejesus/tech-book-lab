@@ -1,0 +1,98 @@
+import React from 'react';
+import type { Book, Lab, Chapter } from '../types';
+import { Bookmark, ChevronRight } from 'lucide-react';
+
+interface Props {
+  books: Book[];
+  selectedLab: Lab | null;
+  onSelectLab: (lab: Lab) => void;
+}
+
+export const Sidebar: React.FC<Props> = ({ books, selectedLab, onSelectLab }) => {
+  return (
+    <aside className="w-80 border-r-2 border-stone-800 dark:border-stone-700 bg-[#f5f2e9] dark:bg-[#181715] flex flex-col h-[calc(100vh-4.5rem)] overflow-y-auto select-none transition-colors">
+      {/* Book Metadata Box */}
+      <div className="p-4 border-b border-stone-300 dark:border-stone-700 bg-[#efebe1] dark:bg-[#1f1d1a]">
+        <div className="text-[10px] font-mono uppercase tracking-widest text-stone-600 dark:text-stone-400 font-bold mb-1.5 flex items-center gap-1.5">
+          <Bookmark className="w-3 h-3 text-[#8f1d1d] dark:text-[#df4444]" />
+          <span>TÁBUA DE MATÉRIAS</span>
+        </div>
+        {books.map((book) => (
+          <div key={book.id} className="space-y-1">
+            <h2 className="text-sm font-serif font-bold text-stone-900 dark:text-stone-100 leading-snug">
+              {book.title}
+            </h2>
+            <p className="text-xs font-serif italic text-stone-600 dark:text-stone-400">
+              Por {book.author}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Chapters & Sections */}
+      <div className="p-3 flex-1 space-y-5">
+        {books.flatMap((b) => b.chapters).map((chapter: Chapter) => (
+          <div key={chapter.id} className="space-y-2">
+            {/* Chapter Header */}
+            <div className="px-2 pt-1 pb-1 border-b border-stone-300 dark:border-stone-700">
+              <span className="text-[10px] font-mono font-bold text-[#8f1d1d] dark:text-[#df4444] uppercase tracking-wider">
+                CAPÍTULO {chapter.number}
+              </span>
+              <h3 className="text-xs font-serif font-bold text-stone-900 dark:text-stone-100 mt-0.5">
+                {chapter.title}
+              </h3>
+            </div>
+
+            {/* Labs as numbered sections */}
+            <div className="space-y-1.5">
+              {chapter.labs.map((lab) => {
+                const isSelected = selectedLab?.id === lab.id;
+                return (
+                  <button
+                    key={lab.id}
+                    onClick={() => onSelectLab(lab)}
+                    className={`w-full text-left p-2.5 transition-all flex items-start gap-2.5 border text-xs ${
+                      isSelected
+                        ? 'bg-[#eee8db] dark:bg-[#252320] border-l-4 border-l-[#8f1d1d] dark:border-l-[#df4444] border-t-stone-400 dark:border-t-stone-700 border-r-stone-400 dark:border-r-stone-700 border-b-stone-400 dark:border-b-stone-700 text-stone-950 dark:text-stone-100 font-medium book-shadow-sm'
+                        : 'border-transparent text-stone-700 dark:text-stone-300 hover:text-stone-950 dark:hover:text-stone-100 hover:bg-[#ede7da] dark:hover:bg-[#201e1b]'
+                    }`}
+                  >
+                    <span className="mt-0.5 text-stone-500 dark:text-stone-400 font-mono text-[11px] font-bold">
+                      &sect;&nbsp;3.{lab.number}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="font-serif font-semibold truncate text-stone-900 dark:text-stone-100">
+                          {lab.title}
+                        </span>
+                        <ChevronRight
+                          className={`w-3.5 h-3.5 shrink-0 transition-transform ${
+                            isSelected ? 'text-[#8f1d1d] dark:text-[#df4444] translate-x-0.5' : 'text-stone-400 dark:text-stone-600'
+                          }`}
+                        />
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <span
+                          className={`px-1.5 py-0.2 text-[9px] font-mono uppercase font-bold border ${
+                            lab.engineType === 'NEO4J'
+                              ? 'bg-[#efe3d5] dark:bg-[#2d2419] text-[#713f12] dark:text-[#fde047] border-[#a16207] dark:border-[#854d0e]'
+                              : 'bg-[#e5ebe4] dark:bg-[#1a2e1d] text-[#14532d] dark:text-[#86efac] border-[#166534] dark:border-[#15803d]'
+                          }`}
+                        >
+                          {lab.engineType}
+                        </span>
+                        <span className="text-[10px] font-mono text-stone-500 dark:text-stone-400">
+                          [{lab.challenges.length} desafios]
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </aside>
+  );
+};

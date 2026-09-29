@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --paper-bg: #fbf9f4;
+    --paper-card: #f5f2e9;
+    --paper-muted: #ece7db;
+    --ink-black: #1c1917;
+    --ink-gray: #44403c;
+    --ink-light: #78716c;
+    --rule-border: #292524;
+    --rule-light: #d6d0c4;
+    --oreilly-red: #8f1d1d;
+    --shadow-color: #1c1917;
+  }
+
+  .dark {
+    --paper-bg: #141312;
+    --paper-card: #1c1a17;
+    --paper-muted: #272522;
+    --ink-black: #eae6dd;
+    --ink-gray: #b8b2a7;
+    --ink-light: #8c857b;
+    --rule-border: #44403c;
+    --rule-light: #2d2a27;
+    --oreilly-red: #df4444;
+    --shadow-color: #000000;
+  }
+
+  body {
+    background-color: var(--paper-bg);
+    color: var(--ink-black);
+    font-family: Georgia, Cambria, "Times New Roman", Times, serif;
+    -webkit-font-smoothing: antialiased;
+    selection-background-color: var(--oreilly-red);
+    selection-color: #ffffff;
+  }
+}
+
+/* Hard Book / Technical Manual Shadows */
+.book-shadow-sm {
+  box-shadow: 1.5px 1.5px 0px var(--shadow-color);
+}
+
+.book-shadow {
+  box-shadow: 3px 3px 0px var(--shadow-color);
+}
+
+.book-shadow-lg {
+  box-shadow: 5px 5px 0px var(--shadow-color);
+}
+
+.book-shadow-pressed:active {
+  transform: translate(1.5px, 1.5px);
+  box-shadow: 1px 1px 0px var(--shadow-color);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: var(--paper-muted);
+  border-left: 1px solid var(--rule-light);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ink-light);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-gray);
+}
