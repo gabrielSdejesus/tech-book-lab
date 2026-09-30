@@ -75,15 +75,56 @@ class AiAssessmentServiceTest {
     }
 
     @Test
-    @DisplayName("Deve rejeitar provedor desconhecido no teste de conexão")
+    @DisplayName("Deve lançar DomainValidationException para provedor não suportado no teste de conexão")
     void shouldRejectUnknownProviderInTestConnection() {
         AiTestConnectionRequest request = new AiTestConnectionRequest("provedor_invalido", "xyz", null);
 
-        AiTestConnectionResponse response = aiAssessmentService.testConnection(request);
-
-        assertThat(response.valid()).isFalse();
-        assertThat(response.message()).containsIgnoringCase("provedor desconhecido");
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.dataintensive.lab.domain.DomainValidationException.class,
+                () -> aiAssessmentService.testConnection(request)
+        );
     }
+
+    @Test
+    @DisplayName("Deve lançar DomainValidationException quando laboratório for inexistente na avaliação")
+    void shouldThrowDomainValidationExceptionWhenLabDoesNotExist() {
+        AiAssessmentRequest request = new AiAssessmentRequest(
+                "lab-fantasma",
+                "ch-1",
+                "SELECT 1;",
+                null,
+                "Minha reflexão",
+                "test-api-key",
+                "gemini",
+                "gemini-3.8-flash"
+        );
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.dataintensive.lab.domain.DomainValidationException.class,
+                () -> aiAssessmentService.assess(request)
+        );
+    }
+
+    @Test
+    @DisplayName("Deve lançar DomainValidationException quando desafio não pertencer ao laboratório")
+    void shouldThrowDomainValidationExceptionWhenChallengeDoesNotExist() {
+        AiAssessmentRequest request = new AiAssessmentRequest(
+                "ddia-cap-03-lab-01",
+                "desafio-fantasma",
+                "SELECT 1;",
+                null,
+                "Minha reflexão",
+                "test-api-key",
+                "gemini",
+                "gemini-3.8-flash"
+        );
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.dataintensive.lab.domain.DomainValidationException.class,
+                () -> aiAssessmentService.assess(request)
+        );
+    }
+
 
     @Test
     @DisplayName("Deve retornar NEEDS_REVISION quando o código do usuário estiver vazio")
