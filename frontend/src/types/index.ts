@@ -80,7 +80,9 @@ export interface AiAssessmentRequest {
   apiKeyOverride?: string;
   providerOverride?: string;
   modelOverride?: string;
+  language?: string;
 }
+
 
 export interface AiTestConnectionRequest {
   provider: string;

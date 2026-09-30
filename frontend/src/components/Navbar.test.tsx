@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Navbar } from './Navbar';
 import type { InfraStatus } from '../types';
+import { LanguageProvider } from '../i18n/LanguageContext';
 
 describe('Navbar Component', () => {
   const defaultStatus: InfraStatus = {
@@ -131,6 +132,26 @@ describe('Navbar Component', () => {
     expect(handleNavigate).toHaveBeenCalledTimes(1);
   });
 
+  it('deve renderizar o seletor de idiomas PT e EN', () => {
+    render(
+      <Navbar
+        infraStatus={defaultStatus}
+        loadingInfra={false}
+        onRefreshInfra={vi.fn()}
+        onOpenSettings={vi.fn()}
+        selectedBookTitle="DDIA"
+        theme="dark"
+        onToggleTheme={vi.fn()}
+      />
+    );
+
+    const ptButton = screen.getByRole('button', { name: /^PT$/i });
+    const enButton = screen.getByRole('button', { name: /^EN$/i });
+
+    expect(ptButton).toBeInTheDocument();
+    expect(enButton).toBeInTheDocument();
+  });
+
   it('deve disparar onToggleSidebar ao clicar no ícone do livro no cabeçalho em modo workspace', () => {
     const handleToggleSidebar = vi.fn();
     render(
@@ -176,4 +197,28 @@ describe('Navbar Component', () => {
     expect(toggleSidebarBtn).toHaveAttribute('aria-expanded', 'false');
     expect(toggleSidebarBtn).toHaveAttribute('title', 'Expandir tábua de matérias');
   });
+
+  it('deve exibir títulos em inglês para alternar barra lateral quando o idioma for en', () => {
+    localStorage.setItem('tbl_locale', 'en');
+    render(
+      <LanguageProvider>
+        <Navbar
+          infraStatus={defaultStatus}
+          loadingInfra={false}
+          onRefreshInfra={vi.fn()}
+          onOpenSettings={vi.fn()}
+          selectedBookTitle="DDIA"
+          theme="dark"
+          onToggleTheme={vi.fn()}
+          isBookshelfActive={false}
+          isSidebarOpen={true}
+          onToggleSidebar={vi.fn()}
+        />
+      </LanguageProvider>
+    );
+
+    const toggleSidebarBtn = screen.getByRole('button', { name: /Toggle table of contents/i });
+    expect(toggleSidebarBtn).toHaveAttribute('title', 'Collapse table of contents');
+  });
 });
+

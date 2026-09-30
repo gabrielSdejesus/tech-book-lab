@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Book, Lab, Chapter } from '../types';
 import { Bookmark, ChevronRight, PanelLeftClose } from 'lucide-react';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface Props {
   books: Book[];
@@ -17,10 +18,12 @@ export const Sidebar: React.FC<Props> = ({
   isOpen = true,
   onToggle,
 }) => {
+  const { t, locale } = useLanguage();
+
   return (
     <aside
       data-testid="sidebar"
-      aria-label="Tábua de Matérias"
+      aria-label={t.sidebar.tableOfContents}
       aria-hidden={!isOpen}
       className={`bg-[#f5f2e9] dark:bg-[#181715] flex flex-col h-[calc(100vh-4.5rem)] select-none transition-all duration-300 ease-in-out shrink-0 ${
         isOpen
@@ -33,13 +36,13 @@ export const Sidebar: React.FC<Props> = ({
         <div className="flex items-center justify-between mb-1.5">
           <div className="text-[10px] font-mono uppercase tracking-widest text-stone-600 dark:text-stone-400 font-bold flex items-center gap-1.5">
             <Bookmark className="w-3 h-3 text-[#8f1d1d] dark:text-[#df4444]" />
-            <span>TÁBUA DE MATÉRIAS</span>
+            <span>{t.sidebar.tableOfContents}</span>
           </div>
           {onToggle && (
             <button
               onClick={onToggle}
-              aria-label="Recolher tábua de matérias"
-              title="Recolher tábua de matérias"
+              aria-label={t.sidebar.collapseSidebar}
+              title={t.sidebar.collapseSidebar}
               className="text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100 p-1 hover:bg-[#e4dfd3] dark:hover:bg-[#2e2b27] border border-stone-400 dark:border-stone-600 transition-colors"
             >
               <PanelLeftClose className="w-3.5 h-3.5" />
@@ -52,7 +55,7 @@ export const Sidebar: React.FC<Props> = ({
               {book.title}
             </h2>
             <p className="text-xs font-serif italic text-stone-600 dark:text-stone-400">
-              Por {book.author}
+              {locale === 'pt' ? 'Por' : 'By'} {book.author}
             </p>
           </div>
         ))}
@@ -65,7 +68,7 @@ export const Sidebar: React.FC<Props> = ({
             {/* Chapter Header */}
             <div className="px-2 pt-1 pb-1 border-b border-stone-300 dark:border-stone-700">
               <span className="text-[10px] font-mono font-bold text-[#8f1d1d] dark:text-[#df4444] uppercase tracking-wider">
-                CAPÍTULO {chapter.number}
+                {locale === 'pt' ? 'CAPÍTULO' : 'CHAPTER'} {chapter.number}
               </span>
               <h3 className="text-xs font-serif font-bold text-stone-900 dark:text-stone-100 mt-0.5">
                 {chapter.title}
@@ -111,7 +114,14 @@ export const Sidebar: React.FC<Props> = ({
                           {lab.engineType}
                         </span>
                         <span className="text-[10px] font-mono text-stone-500 dark:text-stone-400">
-                          [{lab.challenges.length} desafios]
+                          [{lab.challenges.length}{' '}
+                          {locale === 'pt'
+                            ? lab.challenges.length === 1
+                              ? 'desafio'
+                              : 'desafios'
+                            : lab.challenges.length === 1
+                            ? 'challenge'
+                            : 'challenges'}]
                         </span>
                       </div>
                     </div>

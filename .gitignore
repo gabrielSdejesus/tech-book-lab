@@ -5,6 +5,8 @@
 docs/agents/
 AGENTS.md
 GEMINI.md
+GLOSSARY.md
+glossary.md
 skills-lock.json
 .gemini/
 .cursor/

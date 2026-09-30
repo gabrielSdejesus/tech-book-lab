@@ -1,8 +1,10 @@
 package com.dataintensive.lab.ai;
 
 import com.dataintensive.lab.catalog.CatalogService;
+import com.dataintensive.lab.domain.AssessmentLanguage;
 import com.dataintensive.lab.domain.Challenge;
 import com.dataintensive.lab.domain.Lab;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
@@ -146,6 +148,8 @@ public class AiAssessmentService {
     }
 
     public AiAssessmentResponse assess(AiAssessmentRequest request) {
+        AssessmentLanguage lang = AssessmentLanguage.from(request.language());
+
         Optional<Lab> labOpt = catalogService.findLabById(request.labId());
         Lab lab = labOpt.orElse(null);
         Challenge challenge = null;
@@ -158,6 +162,19 @@ public class AiAssessmentService {
 
         // Validação: Bloqueia submissão de código vazio ou template inicial inalterado
         if (isUntouchedOrEmpty(request.userQuery(), challenge)) {
+            if (lang == AssessmentLanguage.EN) {
+                return new AiAssessmentResponse(
+                    "NEEDS_REVISION",
+                    "No implementation detected. The query editor is empty or contains only the untouched starter template. Write your solution to the challenge before requesting the Tutor's evaluation.",
+                    "To analyze conceptual trade-offs (such as storage locality, normalization vs denormalization, or query execution plans), it is necessary to implement and run the query.",
+                    "No real query was submitted.",
+                    List.of(
+                        "Read the 'Practical Scenario' in the sidebar and the challenge objectives.",
+                        "Write the corresponding SQL or Cypher commands in the editor and run them with 'Ctrl + Enter' before evaluating."
+                    ),
+                    "Submission Validator"
+                );
+            }
             return new AiAssessmentResponse(
                 "NEEDS_REVISION",
                 "Nenhuma implementação detectada. O editor de consultas está vazio ou contém apenas o template inicial inalterado. Escreva a sua solução para o desafio antes de solicitar a avaliação do Tutor.",
@@ -185,6 +202,16 @@ public class AiAssessmentService {
                 : ("gemini".equalsIgnoreCase(provider) ? geminiModel : ollamaModel);
 
         if ("gemini".equalsIgnoreCase(provider) && (key == null || key.isBlank())) {
+            if (lang == AssessmentLanguage.EN) {
+                return new AiAssessmentResponse(
+                    "NEEDS_REVISION",
+                    "API Key not provided for Google Gemini. Click 'AI Tutor Settings' in the top right to insert your free Google AI Studio API Key, or switch to local Ollama.",
+                    "Real-time evaluation requires a valid API key to analyze your solution.",
+                    "Could not contact Gemini model.",
+                    List.of("Get your free API key at https://aistudio.google.com/ and save it in the settings modal."),
+                    "Pending Authentication"
+                );
+            }
             return new AiAssessmentResponse(
                 "NEEDS_REVISION",
                 "Chave de API não informada para o Google Gemini. Clique no botão 'Tutor IA Config' no canto superior direito para inserir sua API Key gratuita do Google AI Studio, ou alterne para o Ollama local.",
@@ -195,7 +222,7 @@ public class AiAssessmentService {
             );
         }
 
-        String prompt = buildPrompt(lab, challenge, request);
+        String prompt = buildPrompt(lab, challenge, request, lang);
 
         try {
             if ("gemini".equalsIgnoreCase(provider)) {
@@ -205,6 +232,16 @@ public class AiAssessmentService {
             }
         } catch (Exception e) {
             System.err.println("Erro ao chamar serviço de IA (" + provider + "): " + e.getMessage());
+            if (lang == AssessmentLanguage.EN) {
+                return new AiAssessmentResponse(
+                    "NEEDS_REVISION",
+                    "Communication failure with AI Tutor (" + provider + "): " + e.getMessage() + ". Check if your API Key is valid in 'AI Tutor Settings'.",
+                    "Could not obtain trade-off analysis due to an error in the AI provider.",
+                    "Connection error with the model.",
+                    List.of("Validate your key and model using 'Test Connection' inside 'AI Tutor Settings'."),
+                    "AI Error"
+                );
+            }
             return new AiAssessmentResponse(
                 "NEEDS_REVISION",
                 "Falha na comunicação com o Tutor de IA (" + provider + "): " + e.getMessage() + ". Verifique se sua API Key é válida no modal 'Tutor IA Config'.",
@@ -217,6 +254,7 @@ public class AiAssessmentService {
 
         return fallbackAssessment(lab, challenge, request);
     }
+
 
     private boolean isUntouchedOrEmpty(String query, Challenge challenge) {
         if (query == null || query.isBlank()) return true;
@@ -242,7 +280,53 @@ public class AiAssessmentService {
                    .trim();
     }
 
-    private String buildPrompt(Lab lab, Challenge challenge, AiAssessmentRequest request) {
+    private String buildPrompt(Lab lab, Challenge challenge, AiAssessmentRequest request, AssessmentLanguage lang) {
+        if (lang == AssessmentLanguage.EN) {
+            return """
+                You are an Expert Data Engineering and Distributed Systems Tutor evaluating a practical exercise based on the book "Designing Data-Intensive Applications" (Martin Kleppmann).
+
+                EVALUATION GUIDELINES:
+                1. DO NOT require a single fixed template or syntax. There are multiple valid ways to solve the same problem (different JOIN types, CTEs, subqueries, JSONB operators, graph traversals).
+                2. HOWEVER, BE RIGOROUS: Check whether the student's code ACTUALLY solves the challenge proposed in the scenario. If the code is incomplete, is merely the starter template, or contains obvious logic errors, return status "NEEDS_REVISION" and clearly state what is missing.
+                3. Only approve with "APPROVED" if the query is functional and meets the laboratory requirements.
+
+                LABORATORY CONTENT:
+                - Topic: %s
+                - Key Concepts: %s
+                - Challenge: %s
+                - Business Scenario: %s
+                - Reflective Trade-off Question: %s
+
+                STUDENT SUBMISSION:
+                - Query / Executed Code:
+                %s
+
+                - Execution Result on Real Database:
+                %s
+
+                - Student's Conceptual Reflection:
+                %s
+
+                Respond EXCLUSIVELY in JSON format with the following keys:
+                {
+                  "status": "APPROVED" | "NEEDS_REVISION" | "DISCUSSION",
+                  "feedback": "Constructive and encouraging pedagogical analysis explaining whether the solution met requirements or what is missing.",
+                  "tradeOffAnalysis": "Deep commentary relating the student's answer to Martin Kleppmann's concepts (e.g., storage locality, read vs write cost, transitive closure, etc).",
+                  "efficiencyNotes": "Performance observations (index usage, query execution plan, computational complexity).",
+                  "alternativeApproaches": ["Viable alternative 1", "Viable alternative 2"]
+                }
+                """.formatted(
+                    lab != null ? lab.title() : "Data Laboratory",
+                    lab != null ? String.join(", ", lab.keyConcepts()) : "Data-Intensive Systems",
+                    challenge != null ? challenge.title() + ": " + challenge.description() : "General Challenge",
+                    challenge != null ? challenge.scenario() : "Test Scenario",
+                    challenge != null ? challenge.reflectionPrompt() : "Conceptual Trade-offs",
+                    request.userQuery() != null ? request.userQuery() : "(No code)",
+                    request.executionSummary() != null ? request.executionSummary() : "(No result)",
+                    request.userReflection() != null ? request.userReflection() : "(No reflection)"
+            );
+        }
+
         return """
             Você é um Tutor Especialista em Engenharia de Dados e Sistemas Distribuídos avaliando um exercício prático baseado no livro "Designing Data-Intensive Applications" (Martin Kleppmann).
             
@@ -287,6 +371,7 @@ public class AiAssessmentService {
                 request.userReflection() != null ? request.userReflection() : "(Nenhuma reflexão)"
         );
     }
+
 
     private AiAssessmentResponse callGemini(String prompt, String apiKey, String modelName, boolean isModelOverridden) throws Exception {
         String effectiveModel = modelName != null && !modelName.isBlank() ? modelName : geminiModel;

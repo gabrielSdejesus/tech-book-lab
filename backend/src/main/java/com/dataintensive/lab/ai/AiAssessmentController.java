@@ -1,7 +1,10 @@
 package com.dataintensive.lab.ai;
 
+import com.dataintensive.lab.domain.AssessmentLanguage;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/ai")
@@ -21,8 +24,18 @@ public class AiAssessmentController {
     }
 
     @PostMapping("/assess")
-    public ResponseEntity<AiAssessmentResponse> assess(@RequestBody AiAssessmentRequest request) {
+    public ResponseEntity<?> assess(@RequestBody AiAssessmentRequest request) {
+        try {
+            AssessmentLanguage.from(request.language());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "BAD_REQUEST",
+                    "message", e.getMessage()
+            ));
+        }
+
         AiAssessmentResponse response = aiAssessmentService.assess(request);
         return ResponseEntity.ok(response);
     }
 }
+

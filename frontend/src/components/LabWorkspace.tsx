@@ -14,6 +14,7 @@ import {
   Loader2,
   BookOpen
 } from 'lucide-react';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface Props {
   lab: Lab;
@@ -23,7 +24,9 @@ interface Props {
 }
 
 export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) => {
+  const { t, locale } = useLanguage();
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge>(lab.challenges[0]);
+
   const [queryCode, setQueryCode] = useState<string>('');
   const [userReflection, setUserReflection] = useState<string>('');
 
@@ -83,18 +86,22 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
   };
 
   const handleReset = async () => {
-    if (!confirm('Deseja realmente restaurar o banco deste laboratório para o estado inicial?')) return;
+    if (!confirm(t.lab.confirmReset)) return;
     setResetting(true);
     try {
       const res = await resetLab(lab.id);
       if (res.success) {
-        setFeedbackToast('Esquema restaurado para o estado original com sucesso!');
+        setFeedbackToast(
+          locale === 'pt'
+            ? 'Esquema restaurado para o estado original com sucesso!'
+            : 'Schema restored to original state successfully!'
+        );
         setTimeout(() => setFeedbackToast(null), 3500);
       } else {
-        alert('Erro ao restaurar banco: ' + res.errorMessage);
+        alert((locale === 'pt' ? 'Erro ao restaurar banco: ' : 'Error resetting database: ') + res.errorMessage);
       }
     } catch (err: any) {
-      alert('Falha ao restaurar banco: ' + err.message);
+      alert((locale === 'pt' ? 'Falha ao restaurar banco: ' : 'Failed to reset database: ') + err.message);
     } finally {
       setResetting(false);
     }
@@ -118,11 +125,21 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
       setActiveTab('ai');
       setAiResponse({
         status: 'NEEDS_REVISION',
-        feedback: 'Nenhuma implementação submetida. O editor de código está vazio ou contém apenas o template de comentários inicial. Escreva os comandos do exercício e execute-os antes de solicitar a avaliação do Tutor.',
-        tradeOffAnalysis: 'Para examinar os trade-offs descritos no livro de Martin Kleppmann, você deve executar a consulta e comparar o comportamento das estruturas.',
-        efficiencyNotes: 'Nenhuma instrução executada.',
-        alternativeApproaches: ['Leia os requisitos do exercício na coluna à esquerda.'],
-        modelUsed: 'Validador Local de Submissão'
+        feedback:
+          locale === 'pt'
+            ? 'Nenhuma implementação submetida. O editor de código está vazio ou contém apenas o template de comentários inicial. Escreva os comandos do exercício e execute-os antes de solicitar a avaliação do Tutor.'
+            : 'No implementation submitted. The code editor is empty or contains only the initial comment template. Write the exercise commands and run them before requesting the Tutor evaluation.',
+        tradeOffAnalysis:
+          locale === 'pt'
+            ? 'Para examinar os trade-offs descritos no livro de Martin Kleppmann, você deve executar a consulta e comparar o comportamento das estruturas.'
+            : 'To examine the trade-offs described in Martin Kleppmann\'s book, you should execute the query and compare the behavior of the structures.',
+        efficiencyNotes: locale === 'pt' ? 'Nenhuma instrução executada.' : 'No instructions executed.',
+        alternativeApproaches: [
+          locale === 'pt'
+            ? 'Leia os requisitos do exercício na coluna à esquerda.'
+            : 'Read the exercise requirements in the column on the left.'
+        ],
+        modelUsed: locale === 'pt' ? 'Validador Local de Submissão' : 'Local Submission Validator'
       });
       return;
     }
@@ -146,23 +163,35 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
         userReflection,
         apiKeyOverride: apiKey,
         providerOverride: provider,
-        modelOverride: model
+        modelOverride: model,
+        language: locale
       });
 
       setAiResponse(response);
     } catch (err: any) {
       setAiResponse({
         status: 'NEEDS_REVISION',
-        feedback: 'Falha ao contatar o Tutor de IA: ' + err.message + '. Verifique sua API Key ou conexão de rede.',
-        tradeOffAnalysis: 'Análise de trade-offs não disponível devido a erro de comunicação.',
-        efficiencyNotes: 'Erro de comunicação.',
-        alternativeApproaches: ['Clique no botão "CONFIGURAR TUTOR IA" no cabeçalho para testar a chave.'],
-        modelUsed: 'Erro de Conexão'
+        feedback:
+          locale === 'pt'
+            ? 'Falha ao contatar o Tutor de IA: ' + err.message + '. Verifique sua API Key ou conexão de rede.'
+            : 'Failed to contact AI Tutor: ' + err.message + '. Check your API Key or network connection.',
+        tradeOffAnalysis:
+          locale === 'pt'
+            ? 'Análise de trade-offs não disponível devido a erro de comunicação.'
+            : 'Trade-off analysis not available due to communication error.',
+        efficiencyNotes: locale === 'pt' ? 'Erro de comunicação.' : 'Communication error.',
+        alternativeApproaches: [
+          locale === 'pt'
+            ? 'Clique no botão "CONFIGURAR TUTOR IA" no cabeçalho para testar a chave.'
+            : 'Click the "CONFIGURE AI TUTOR" button in the header to test your key.'
+        ],
+        modelUsed: locale === 'pt' ? 'Erro de Conexão' : 'Connection Error'
       });
     } finally {
       setAssessing(false);
     }
   };
+
 
   return (
     <div className="flex-1 flex flex-col md:flex-row h-[calc(100vh-4.5rem)] overflow-hidden bg-[#fbf9f4] dark:bg-[#141312] transition-colors">
@@ -180,7 +209,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
         <div className="p-6 border-b-2 border-stone-800 dark:border-stone-700 bg-[#f7f4ec] dark:bg-[#1a1917]">
           <div className="flex items-center gap-2 mb-1.5">
             <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#8f1d1d] dark:text-[#df4444]">
-              LABORATÓRIO &sect;&nbsp;3.{lab.number}
+              {t.lab.laboratory} &sect;&nbsp;3.{lab.number}
             </span>
             <span className="text-stone-400 dark:text-stone-600">&bull;</span>
             <span className="text-xs font-mono text-stone-500 dark:text-stone-400 font-semibold">{lab.slug}</span>
@@ -217,7 +246,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
                   : 'bg-[#e5dfd2] dark:bg-[#252320] border-transparent text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200 hover:bg-[#ded7c8] dark:hover:bg-[#2d2a26]'
               }`}
             >
-              Exercício {ch.order}
+              {locale === 'pt' ? 'Exercício' : 'Exercise'} {ch.order}
             </button>
           ))}
         </div>
@@ -237,7 +266,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
           <div className="p-4 bg-[#f5f0e4] dark:bg-[#1e1c19] border-l-4 border-l-[#8f1d1d] dark:border-l-[#df4444] border border-stone-300 dark:border-stone-700 space-y-1.5 book-shadow-sm">
             <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#8f1d1d] dark:text-[#df4444] flex items-center gap-1.5">
               <BookOpen className="w-3.5 h-3.5" />
-              <span>Cenário Prático de Engenharia</span>
+              <span>{t.lab.engineeringScenario}</span>
             </span>
             <p className="text-xs font-serif text-stone-800 dark:text-stone-200 leading-relaxed italic">
               "{selectedChallenge.scenario}"
@@ -247,7 +276,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
           {/* Guidelines Checklist */}
           <div className="space-y-2">
             <h4 className="text-[11px] font-mono font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300">
-              Requisitos de Implementação
+              {t.lab.requirementsAndConstraints}
             </h4>
             <ul className="space-y-2">
               {selectedChallenge.guidelines.map((guide, idx) => (
@@ -263,7 +292,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
           <div className="space-y-2 pt-4 border-t-2 border-stone-300 dark:border-stone-700">
             <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#8f1d1d] dark:text-[#df4444] flex items-center gap-1.5">
               <FileText className="w-3.5 h-3.5" />
-              <span>Reflexão Teórica (Trade-offs de Martin Kleppmann)</span>
+              <span>{t.lab.reflectiveQuestion}</span>
             </label>
             <p className="text-xs font-serif italic text-stone-700 dark:text-stone-300 bg-[#efebe1] dark:bg-[#1e1c19] p-3 border border-stone-300 dark:border-stone-700">
               "{selectedChallenge.reflectionPrompt}"
@@ -271,7 +300,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
             <textarea
               value={userReflection}
               onChange={(e) => setUserReflection(e.target.value)}
-              placeholder="Digite aqui sua análise sobre os trade-offs de modelagem, localidade e leitura vs escrita..."
+              placeholder={t.lab.reflectionPlaceholder}
               rows={4}
               className="w-full bg-[#fdfcf9] dark:bg-[#181715] border-2 border-stone-700 dark:border-stone-600 p-3 text-xs font-mono text-stone-900 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-500 focus:outline-none focus:border-stone-900 dark:focus:border-stone-300 leading-relaxed book-shadow-sm"
             />
@@ -287,24 +316,25 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
               {assessing ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Avaliando...</span>
+                  <span>{t.lab.evaluating}</span>
                 </>
               ) : (
                 <>
                   <Sparkles className="w-4 h-4 text-amber-200" />
-                  <span>Submeter ao Tutor IA</span>
+                  <span>{t.lab.evaluateWithAi}</span>
                 </>
               )}
             </button>
 
+
             <button
               onClick={handleReset}
               disabled={resetting}
-              title="Restaurar tabelas e esquemas para o estado inicial limpo"
+              title={t.lab.resetTooltip}
               className="flex items-center gap-1.5 py-2.5 px-3 bg-[#eee8db] dark:bg-[#252320] hover:bg-[#ded7c8] dark:hover:bg-[#302c28] border-2 border-stone-800 dark:border-stone-600 text-stone-900 dark:text-stone-200 text-xs font-mono font-bold uppercase book-shadow-sm book-shadow-pressed transition-all"
             >
               <RotateCcw className={`w-3.5 h-3.5 ${resetting ? 'animate-spin' : ''}`} />
-              <span>Restaurar</span>
+              <span>{t.lab.reset}</span>
             </button>
           </div>
         </div>
@@ -322,10 +352,10 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
                   : 'bg-[#e5ebe4] dark:bg-[#1a2e1d] text-[#14532d] dark:text-[#86efac] border-stone-800 dark:border-stone-600'
               }`}
             >
-              {lab.engineType === 'NEO4J' ? 'MOTOR: NEO4J 5 (CYPHER)' : 'MOTOR: POSTGRESQL 16 (SQL)'}
+              {lab.engineType === 'NEO4J' ? t.lab.engineNeo4j : t.lab.enginePostgres}
             </span>
             <span className="text-[10px] font-mono text-stone-500 dark:text-stone-400 hidden sm:inline">
-              [ Ctrl + Enter para rodar ]
+              {t.lab.ctrlEnterHint}
             </span>
           </div>
 
@@ -334,7 +364,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
               onClick={() => setQueryCode(selectedChallenge.starterTemplate || '')}
               className="text-[11px] font-mono font-semibold text-stone-600 dark:text-stone-400 hover:text-stone-950 dark:hover:text-stone-100 px-2 py-1 border border-stone-400 dark:border-stone-700 bg-[#efebe1] dark:bg-[#1f1d1a] hover:bg-[#ded7c8] dark:hover:bg-[#2a2723] transition-colors"
             >
-              Recarregar Template
+              {t.lab.reloadTemplate}
             </button>
 
             <button
@@ -347,7 +377,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
               ) : (
                 <Play className="w-3.5 h-3.5 fill-current" />
               )}
-              <span>Executar</span>
+              <span>{t.lab.execute}</span>
             </button>
           </div>
         </div>
@@ -363,7 +393,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
                 handleExecute();
               }
             }}
-            placeholder="-- Digite aqui sua instrução SQL ou Cypher..."
+            placeholder={t.lab.queryPlaceholder}
             spellCheck={false}
             className="flex-1 w-full p-4 bg-transparent text-stone-950 dark:text-stone-100 font-mono text-xs leading-relaxed resize-none focus:outline-none selection:bg-[#8f1d1d] selection:text-white"
           />
@@ -381,7 +411,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
               }`}
             >
               <TableIcon className="w-3.5 h-3.5" />
-              <span>Resultados</span>
+              <span>{t.lab.tabs.results}</span>
               {queryResult?.rowCount !== undefined && (
                 <span className="text-[10px] bg-stone-200 dark:bg-stone-800 px-1 border border-stone-400 dark:border-stone-600 font-mono text-stone-900 dark:text-stone-200">
                   {queryResult.rowCount}
@@ -398,7 +428,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 text-[#8f1d1d] dark:text-[#df4444]" />
-              <span>Parecer do Tutor IA</span>
+              <span>{t.lab.tabs.aiTutor}</span>
               {aiResponse && (
                 <span className="w-2 h-2 rounded-full bg-[#8f1d1d] dark:bg-[#df4444]" />
               )}
@@ -413,13 +443,13 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
               }`}
             >
               <Code2 className="w-3.5 h-3.5" />
-              <span>JSON</span>
+              <span>{t.lab.tabs.json}</span>
             </button>
           </div>
 
           {queryResult && (
             <div className="flex items-center gap-1.5 text-[11px] text-stone-600 dark:text-stone-400 font-mono">
-              <Clock className="w-3 h-3 text-stone-500" />
+              <Clock className="w-3.5 h-3.5 text-stone-500" />
               <span>{queryResult.executionTimeMs}ms</span>
             </div>
           )}
@@ -431,7 +461,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
             <div>
               {!queryResult && (
                 <div className="h-44 flex flex-col items-center justify-center text-stone-500 dark:text-stone-400 gap-2 font-serif italic text-sm">
-                  <span>Execute uma consulta para inspecionar os dados retornados pelo motor.</span>
+                  <span>{t.lab.emptyResultsPrompt}</span>
                 </div>
               )}
 
@@ -439,7 +469,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
                 <div className="p-4 bg-[#fee2e2] dark:bg-[#381616] border-2 border-[#b91c1c] text-[#7f1d1d] dark:text-[#fca5a5] space-y-2 book-shadow-sm">
                   <div className="flex items-center gap-2 font-bold font-mono text-xs uppercase tracking-wider">
                     <AlertTriangle className="w-4 h-4 text-[#b91c1c] dark:text-[#f87171]" />
-                    <span>Erro de Execução no Banco</span>
+                    <span>{t.lab.executionErrorTitle}</span>
                   </div>
                   <pre className="text-xs text-stone-900 dark:text-stone-100 whitespace-pre-wrap font-mono bg-white dark:bg-[#201212] p-3 border border-[#fca5a5] dark:border-[#7f1d1d]">
                     {queryResult.errorMessage}
@@ -493,7 +523,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
                 <div className="h-44 flex flex-col items-center justify-center text-stone-500 dark:text-stone-400 gap-2 font-serif italic text-sm">
                   <Sparkles className="w-6 h-6 stroke-1 text-[#8f1d1d] dark:text-[#df4444]" />
                   <span>
-                    Clique em <strong>"Submeter ao Tutor IA"</strong> para obter a crítica conceitual e a análise dos trade-offs da sua solução.
+                    {t.lab.aiPromptInstruction}
                   </span>
                 </div>
               )}
@@ -501,7 +531,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
               {assessing && (
                 <div className="h-44 flex flex-col items-center justify-center text-[#8f1d1d] dark:text-[#df4444] gap-3 font-mono font-bold text-xs uppercase">
                   <Loader2 className="w-8 h-8 animate-spin" />
-                  <span>O Tutor de IA está examinando sua modelagem e trade-offs...</span>
+                  <span>{t.lab.aiExamining}</span>
                 </div>
               )}
 
@@ -513,17 +543,17 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
                       {aiResponse.status === 'APPROVED' ? (
                         <span className="flex items-center gap-1.5 px-3 py-1 text-xs font-mono font-bold uppercase bg-[#dcfce7] dark:bg-[#152e18] text-[#14532d] dark:text-[#86efac] border border-[#166534] dark:border-[#15803d]">
                           <CheckCircle2 className="w-4 h-4 text-[#15803d] dark:text-[#4ade80]" />
-                          <span>PARECER: SOLUÇÃO APROVADA</span>
+                          <span>{t.lab.solutionApproved}</span>
                         </span>
                       ) : (
                         <span className="flex items-center gap-1.5 px-3 py-1 text-xs font-mono font-bold uppercase bg-[#fee2e2] dark:bg-[#381616] text-[#991b1b] dark:text-[#fca5a5] border border-[#b91c1c] dark:border-[#7f1d1d]">
                           <AlertTriangle className="w-4 h-4 text-[#b91c1c] dark:text-[#f87171]" />
-                          <span>PARECER: REVISÃO NECESSÁRIA</span>
+                          <span>{t.lab.revisionNeeded}</span>
                         </span>
                       )}
                     </div>
                     <span className="text-[11px] text-stone-600 dark:text-stone-400 font-mono">
-                      Modelo: <strong className="text-stone-900 dark:text-stone-200">{aiResponse.modelUsed}</strong>
+                      {t.lab.modelLabel} <strong className="text-stone-900 dark:text-stone-200">{aiResponse.modelUsed}</strong>
                     </span>
                   </div>
 
@@ -531,7 +561,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
                   <div className="p-4 bg-[#fdfcf9] dark:bg-[#181715] border-2 border-stone-800 dark:border-stone-700 space-y-2 book-shadow-sm">
                     <h4 className="font-mono font-bold text-xs uppercase tracking-wider text-[#8f1d1d] dark:text-[#df4444] flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5" />
-                      <span>Análise Crítica do Tutor</span>
+                      <span>{t.lab.criticalAnalysis}</span>
                     </h4>
                     <p className="text-stone-900 dark:text-stone-200 leading-relaxed whitespace-pre-line text-xs font-serif">
                       {aiResponse.feedback}
@@ -541,7 +571,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
                   {/* Trade-off Analysis */}
                   <div className="p-4 bg-[#f5f0e4] dark:bg-[#1e1c19] border-l-4 border-l-[#8f1d1d] dark:border-l-[#df4444] border border-stone-300 dark:border-stone-700 space-y-2 book-shadow-sm">
                     <h4 className="font-mono font-bold text-xs uppercase tracking-wider text-stone-800 dark:text-stone-200">
-                      Trade-offs Teóricos (Martin Kleppmann - DDIA)
+                      {t.lab.theoreticalTradeOffs}
                     </h4>
                     <p className="text-stone-800 dark:text-stone-300 leading-relaxed text-xs font-serif italic">
                       {aiResponse.tradeOffAnalysis}
@@ -552,7 +582,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
                   {aiResponse.efficiencyNotes && (
                     <div className="p-3.5 bg-[#fbf9f4] dark:bg-[#141312] border border-stone-400 dark:border-stone-700 space-y-1">
                       <h4 className="font-mono font-bold text-[11px] uppercase tracking-wider text-stone-600 dark:text-stone-400">
-                        Observações de Desempenho & Custo Computacional
+                        {t.lab.performanceNotes}
                       </h4>
                       <p className="text-stone-800 dark:text-stone-300 text-xs font-mono leading-relaxed">
                         {aiResponse.efficiencyNotes}
@@ -564,7 +594,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
                   {aiResponse.alternativeApproaches?.length > 0 && (
                     <div className="p-4 bg-[#efebe1] dark:bg-[#1e1c19] border border-stone-400 dark:border-stone-700 space-y-2">
                       <h4 className="font-mono font-bold text-xs uppercase tracking-wider text-stone-700 dark:text-stone-300">
-                        Abordagens Alternativas Válidas
+                        {t.lab.alternativeApproaches}
                       </h4>
                       <ul className="space-y-1.5 font-serif">
                         {aiResponse.alternativeApproaches.map((alt, idx) => (
@@ -584,7 +614,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
           {activeTab === 'json' && (
             <div>
               <pre className="text-stone-900 dark:text-stone-200 font-mono text-xs whitespace-pre-wrap bg-[#fdfcf9] dark:bg-[#181715] p-4 border border-stone-300 dark:border-stone-700">
-                {queryResult ? JSON.stringify(queryResult, null, 2) : '// Nenhum resultado disponível'}
+                {queryResult ? JSON.stringify(queryResult, null, 2) : t.lab.noResult}
               </pre>
             </div>
           )}

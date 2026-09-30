@@ -1,7 +1,9 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { Bookshelf } from './Bookshelf';
+import { LanguageProvider } from '../i18n/LanguageContext';
 import type { Book } from '../types';
+
 
 const mockBooks: Book[] = [
   {
@@ -64,4 +66,20 @@ describe('Bookshelf Component', () => {
     expect(handleSelectBook).toHaveBeenCalledTimes(1);
     expect(handleSelectBook).toHaveBeenCalledWith(mockBooks[0]);
   });
+
+  it('deve renderizar os textos em inglês quando o idioma for en', () => {
+    localStorage.setItem('tbl_locale', 'en');
+
+    render(
+      <LanguageProvider>
+        <Bookshelf books={mockBooks} onSelectBook={vi.fn()} />
+      </LanguageProvider>
+    );
+
+    expect(screen.getByText(/Technical Books Library/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 Available Book/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Open Lab Notebook/i })).toBeInTheDocument();
+  });
 });
+
+
