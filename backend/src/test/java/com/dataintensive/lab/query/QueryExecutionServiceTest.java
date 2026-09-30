@@ -53,11 +53,22 @@ class QueryExecutionServiceTest {
     }
 
     @Test
-    @DisplayName("Deve retornar erro ao tentar resetar laboratório inexistente")
-    void shouldReturnErrorWhenResettingUnknownLab() {
-        QueryResult result = queryExecutionService.resetLab("lab-fantasma");
+    @DisplayName("Deve lançar DomainValidationException ao executar consulta em laboratório inexistente")
+    void shouldThrowDomainValidationExceptionWhenLabDoesNotExist() {
+        QueryRequest request = new QueryRequest("SELECT 1;", EngineType.POSTGRES, "lab-fantasma");
 
-        assertThat(result.success()).isFalse();
-        assertThat(result.errorMessage()).containsIgnoringCase("laboratório não encontrado");
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.dataintensive.lab.domain.DomainValidationException.class,
+                () -> queryExecutionService.execute(request)
+        );
+    }
+
+    @Test
+    @DisplayName("Deve lançar DomainValidationException ao tentar resetar laboratório inexistente")
+    void shouldThrowDomainValidationExceptionWhenResettingUnknownLab() {
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.dataintensive.lab.domain.DomainValidationException.class,
+                () -> queryExecutionService.resetLab("lab-fantasma")
+        );
     }
 }

@@ -183,13 +183,48 @@ class ApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("POST /api/query/reset/{labId} - Deve retornar erro para lab inexistente")
+    @DisplayName("POST /api/query/reset/{labId} - Deve retornar HTTP 400 Bad Request para lab inexistente")
     void shouldFailResetForUnknownLab() throws Exception {
         mockMvc.perform(post("/api/query/reset/lab-inexistente"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success", is(false)))
-                .andExpect(jsonPath("$.errorMessage", containsString("não encontrado")));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title", is("Regra de negócio violada")))
+                .andExpect(jsonPath("$.detail", containsString("não encontrado")));
     }
+
+    @Test
+    @DisplayName("POST /api/query/execute - Deve retornar HTTP 400 Bad Request para labId inexistente no catálogo")
+    void shouldRejectQueryExecutionWithUnknownLabId() throws Exception {
+        Map<String, Object> payload = Map.of(
+                "query", "SELECT 1;",
+                "engineType", "POSTGRES",
+                "labId", "lab-fantasma"
+        );
+
+        mockMvc.perform(post("/api/query/execute")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title", is("Regra de negócio violada")))
+                .andExpect(jsonPath("$.detail", containsString("não encontrado")));
+    }
+
+    @Test
+    @DisplayName("POST /api/query/execute - Deve retornar HTTP 400 Bad Request com diagnóstico para erro de sintaxe SQL")
+    void shouldRejectInvalidSqlSyntaxWithBadRequest() throws Exception {
+        Map<String, Object> payload = Map.of(
+                "query", "SELECT FROM WHERE ;",
+                "engineType", "POSTGRES",
+                "labId", "ddia-cap-03-lab-01"
+        );
+
+        mockMvc.perform(post("/api/query/execute")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title", is("Erro na execução da consulta")))
+                .andExpect(jsonPath("$.detail", notNullValue()));
+    }
+
 
     @Test
     @DisplayName("POST /api/ai/test-connection - Deve falhar quando API key não for informada")
