@@ -24,6 +24,8 @@ backend/target/
 *.jar
 *.war
 *.ear
+*.db
+**/data/
 backend/.mvn/wrapper/maven-wrapper.jar
 backend/HELP.md
 

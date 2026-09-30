@@ -1,9 +1,12 @@
 package com.dataintensive.lab.config;
 
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.relational.core.dialect.AnsiDialect;
+import org.springframework.data.relational.core.dialect.Dialect;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,16 +17,21 @@ public class CatalogDatabaseConfig {
 
     private static final Logger log = LoggerFactory.getLogger(CatalogDatabaseConfig.class);
 
-    @PostConstruct
-    public void ensureDataDirectoryExists() {
-        Path dataDir = Path.of("data");
-        if (!Files.exists(dataDir)) {
+    @Bean
+    public static BeanFactoryPostProcessor ensureDataDirBeanFactoryPostProcessor() {
+        return beanFactory -> {
             try {
-                Files.createDirectories(dataDir);
-                log.info("Diretório 'data/' criado com sucesso para o banco SQLite do catálogo.");
+                Files.createDirectories(Path.of("data"));
+                Files.createDirectories(Path.of("backend", "data"));
+                log.info("Diretório 'data/' assegurado para inicialização do SQLite.");
             } catch (IOException e) {
-                log.warn("Não foi possível criar o diretório 'data/': {}", e.getMessage());
+                log.warn("Aviso ao assegurar diretório 'data/': {}", e.getMessage());
             }
-        }
+        };
+    }
+
+    @Bean
+    public Dialect jdbcDialect() {
+        return AnsiDialect.INSTANCE;
     }
 }
