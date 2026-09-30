@@ -40,7 +40,7 @@ describe('LabWorkspace Component', () => {
         title: 'Modelo Relacional Normalizado (3NF)',
         description: 'Construa as tabelas normalizadas.',
         scenario: 'Crie usuarios e contatos.',
-        starterTemplate: 'CREATE TABLE usuarios (id INT PRIMARY KEY);',
+        starterTemplate: 'CREATE TABLE IF NOT EXISTS usuarios (id INT PRIMARY KEY);',
         guidelines: ['Crie chave primária'],
         reflectionPrompt: 'Qual é o impacto do JOIN na latência?',
         engineType: 'POSTGRES',
@@ -125,7 +125,7 @@ describe('LabWorkspace Component', () => {
     expect(screen.getByText(/MOTOR: POSTGRESQL 16/i)).toBeInTheDocument();
 
     const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
-    expect(codeTextarea).toHaveValue('CREATE TABLE usuarios (id INT PRIMARY KEY);');
+    expect(codeTextarea).toHaveValue('CREATE TABLE IF NOT EXISTS usuarios (id INT PRIMARY KEY);');
   });
 
   it('deve executar a consulta e exibir o resultado tabular na tela quando READY', async () => {
@@ -168,7 +168,7 @@ describe('LabWorkspace Component', () => {
 
     // Digita uma alteração no código para não cair na regra de template inalterado
     const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
-    fireEvent.change(codeTextarea, { target: { value: 'CREATE TABLE usuarios (id INT PRIMARY KEY, nome VARCHAR(100));' } });
+    fireEvent.change(codeTextarea, { target: { value: 'CREATE TABLE IF NOT EXISTS usuarios (id INT PRIMARY KEY, nome VARCHAR(100));' } });
 
     // Digita reflexão
     const reflectionInput = screen.getByPlaceholderText(/Digite aqui sua análise sobre os trade-offs/i);
