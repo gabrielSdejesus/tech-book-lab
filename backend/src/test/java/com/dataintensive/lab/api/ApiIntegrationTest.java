@@ -47,6 +47,15 @@ class ApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("GET /api/books/{id} - Deve retornar o Capítulo 3 com o título 'Modelos de Dados e Linguagens de Consulta'")
+    void shouldReturnBookWithCorrectChapter3Title() throws Exception {
+        mockMvc.perform(get("/api/books/ddia"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.chapters[0].number", is(3)))
+                .andExpect(jsonPath("$.chapters[0].title", is("Modelos de Dados e Linguagens de Consulta")));
+    }
+
+    @Test
     @DisplayName("GET /api/books/{id} - Deve retornar 404 para livro inexistente")
     void shouldReturn404ForUnknownBook() throws Exception {
         mockMvc.perform(get("/api/books/livro-desconhecido"))
