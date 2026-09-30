@@ -1,5 +1,6 @@
 package com.dataintensive.lab.query;
 
+import com.dataintensive.lab.catalog.CatalogRepository;
 import com.dataintensive.lab.catalog.CatalogService;
 import com.dataintensive.lab.domain.EngineType;
 import org.junit.jupiter.api.BeforeEach;
@@ -7,6 +8,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 class QueryExecutionServiceTest {
 
@@ -15,7 +17,8 @@ class QueryExecutionServiceTest {
 
     @BeforeEach
     void setUp() {
-        catalogService = new CatalogService();
+        CatalogRepository catalogRepository = mock(CatalogRepository.class);
+        catalogService = new CatalogService(catalogRepository);
         queryExecutionService = new QueryExecutionService(
                 "jdbc:postgresql://localhost:5432/tbl_lab",
                 "postgres",
