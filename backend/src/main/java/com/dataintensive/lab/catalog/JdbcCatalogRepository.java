@@ -19,7 +19,7 @@ public class JdbcCatalogRepository implements CatalogRepository {
     @Override
     public List<Book> findAllBooks() {
         List<BookRow> bookRows = jdbcClient.sql("""
-                SELECT id, title, author, tag_line, cover_color, description
+                SELECT id, title, author, tag_line, cover_color, cover_image_url, description
                 FROM books
                 ORDER BY created_at ASC
                 """)
@@ -32,7 +32,7 @@ public class JdbcCatalogRepository implements CatalogRepository {
     @Override
     public Optional<Book> findBookById(String bookId) {
         return jdbcClient.sql("""
-                SELECT id, title, author, tag_line, cover_color, description
+                SELECT id, title, author, tag_line, cover_color, cover_image_url, description
                 FROM books
                 WHERE LOWER(id) = LOWER(:bookId)
                 """)
@@ -63,6 +63,7 @@ public class JdbcCatalogRepository implements CatalogRepository {
                 row.author(),
                 row.tag_line(),
                 row.cover_color(),
+                row.cover_image_url(),
                 row.description(),
                 chapters
         );
@@ -175,7 +176,7 @@ public class JdbcCatalogRepository implements CatalogRepository {
     }
 
     // Intermediate projection records
-    public record BookRow(String id, String title, String author, String tag_line, String cover_color, String description) {}
+    public record BookRow(String id, String title, String author, String tag_line, String cover_color, String cover_image_url, String description) {}
     public record ChapterRow(String id, String book_id, int number, String title, String subtitle, String summary) {}
     public record LabRow(String id, String chapter_id, int number, String slug, String title, String summary, String engine_type, String database_name, String reset_schema_sql) {}
     public record ChallengeRow(String id, String lab_id, int order_index, String title, String description, String scenario, String starter_template, String reflection_prompt) {}
