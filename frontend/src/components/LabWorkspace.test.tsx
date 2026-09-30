@@ -129,4 +129,17 @@ describe('LabWorkspace Component', () => {
       expect(screen.getByText(/Esquema restaurado para o estado original com sucesso!/i)).toBeInTheDocument();
     });
   });
+
+  it('deve possuir affordance de cursor-pointer e disabled:cursor-not-allowed nos botões de ação', () => {
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    const executeBtn = screen.getByRole('button', { name: /Executar/i });
+    expect(executeBtn).toHaveClass('disabled:cursor-not-allowed');
+
+    const assessBtn = screen.getByRole('button', { name: /Submeter ao Tutor IA/i });
+    expect(assessBtn).toHaveClass('disabled:cursor-not-allowed');
+
+    const resetBtn = screen.getByRole('button', { name: /Restaurar/i });
+    expect(resetBtn).toHaveClass('disabled:cursor-not-allowed');
+  });
 });

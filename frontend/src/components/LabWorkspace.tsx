@@ -311,7 +311,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
             <button
               onClick={handleAssessWithAi}
               disabled={assessing}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-[#8f1d1d] hover:bg-[#771818] dark:bg-[#991b1b] dark:hover:bg-[#7f1d1d] border-2 border-stone-900 dark:border-stone-600 text-white text-xs font-mono font-bold uppercase tracking-wider book-shadow book-shadow-pressed transition-all disabled:opacity-50"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-[#8f1d1d] hover:bg-[#771818] dark:bg-[#991b1b] dark:hover:bg-[#7f1d1d] border-2 border-stone-900 dark:border-stone-600 text-white text-xs font-mono font-bold uppercase tracking-wider book-shadow book-shadow-pressed transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             >
               {assessing ? (
                 <>
@@ -331,7 +331,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
               onClick={handleReset}
               disabled={resetting}
               title={t.lab.resetTooltip}
-              className="flex items-center gap-1.5 py-2.5 px-3 bg-[#eee8db] dark:bg-[#252320] hover:bg-[#ded7c8] dark:hover:bg-[#302c28] border-2 border-stone-800 dark:border-stone-600 text-stone-900 dark:text-stone-200 text-xs font-mono font-bold uppercase book-shadow-sm book-shadow-pressed transition-all"
+              className="flex items-center gap-1.5 py-2.5 px-3 bg-[#eee8db] dark:bg-[#252320] hover:bg-[#ded7c8] dark:hover:bg-[#302c28] border-2 border-stone-800 dark:border-stone-600 text-stone-900 dark:text-stone-200 text-xs font-mono font-bold uppercase book-shadow-sm book-shadow-pressed transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             >
               <RotateCcw className={`w-3.5 h-3.5 ${resetting ? 'animate-spin' : ''}`} />
               <span>{t.lab.reset}</span>
@@ -362,7 +362,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
           <div className="flex items-center gap-2">
             <button
               onClick={() => setQueryCode(selectedChallenge.starterTemplate || '')}
-              className="text-[11px] font-mono font-semibold text-stone-600 dark:text-stone-400 hover:text-stone-950 dark:hover:text-stone-100 px-2 py-1 border border-stone-400 dark:border-stone-700 bg-[#efebe1] dark:bg-[#1f1d1a] hover:bg-[#ded7c8] dark:hover:bg-[#2a2723] transition-colors"
+              className="text-[11px] font-mono font-semibold text-stone-600 dark:text-stone-400 hover:text-stone-950 dark:hover:text-stone-100 px-2 py-1 border border-stone-400 dark:border-stone-700 bg-[#efebe1] dark:bg-[#1f1d1a] hover:bg-[#ded7c8] dark:hover:bg-[#2a2723] transition-colors cursor-pointer"
             >
               {t.lab.reloadTemplate}
             </button>
@@ -370,7 +370,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
             <button
               onClick={handleExecute}
               disabled={executing}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-[#1c1917] hover:bg-[#33302e] dark:bg-[#e6e2d8] dark:hover:bg-[#f3f0e8] dark:text-stone-950 border-2 border-stone-900 text-white text-xs font-mono font-bold uppercase book-shadow-sm book-shadow-pressed transition-all disabled:opacity-50"
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-[#1c1917] hover:bg-[#33302e] dark:bg-[#e6e2d8] dark:hover:bg-[#f3f0e8] dark:text-stone-950 border-2 border-stone-900 text-white text-xs font-mono font-bold uppercase book-shadow-sm book-shadow-pressed transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             >
               {executing ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />

@@ -37,6 +37,24 @@
     selection-background-color: var(--oreilly-red);
     selection-color: #ffffff;
   }
+
+  /* Affordance Global para Elementos Interativos */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  select,
+  summary,
+  a {
+    cursor: pointer;
+  }
+
+  /* Affordance Global para Elementos Desabilitados */
+  button:disabled,
+  [role="button"][aria-disabled="true"],
+  input:disabled,
+  select:disabled,
+  textarea:disabled {
+    cursor: not-allowed;
+  }
 }
 
 /* Hard Book / Technical Manual Shadows */
