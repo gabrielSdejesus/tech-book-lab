@@ -1,6 +1,7 @@
 package com.dataintensive.lab.catalog;
 
 import com.dataintensive.lab.domain.Book;
+import com.dataintensive.lab.domain.Chapter;
 import com.dataintensive.lab.domain.EngineType;
 import com.dataintensive.lab.domain.Lab;
 import org.junit.jupiter.api.BeforeEach;
@@ -81,5 +82,15 @@ class CatalogServiceTest {
 
         assertThat(lab).isPresent();
         assertThat(lab.get().id()).isEqualTo("ddia-cap-03-lab-01");
+    }
+
+    @Test
+    @DisplayName("Deve conter o título correto 'Modelos de Dados e Linguagens de Consulta' para o Capítulo 3")
+    void shouldHaveCorrectTitleForChapter3() {
+        Book ddia = catalogService.findBookById("ddia").orElseThrow();
+        assertThat(ddia.chapters()).isNotEmpty();
+        Chapter ch3 = ddia.chapters().get(0);
+        assertThat(ch3.number()).isEqualTo(3);
+        assertThat(ch3.title()).isEqualTo("Modelos de Dados e Linguagens de Consulta");
     }
 }

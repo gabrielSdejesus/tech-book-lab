@@ -41,7 +41,7 @@ describe('Sidebar Component', () => {
       {
         id: 'ddia-cap-03',
         number: 3,
-        title: 'Armazenamento e Recuperação de Dados',
+        title: 'Modelos de Dados e Linguagens de Consulta',
         subtitle: 'Modelos de Dados',
         summary: 'Resumo cap 3',
         labs: [mockLab1, mockLab2]
@@ -56,6 +56,7 @@ describe('Sidebar Component', () => {
     expect(screen.getByText('Designing Data-Intensive Applications')).toBeInTheDocument();
     expect(screen.getByText(/Por Martin Kleppmann/i)).toBeInTheDocument();
     expect(screen.getByText(/CAPÍTULO 3/i)).toBeInTheDocument();
+    expect(screen.getByText('Modelos de Dados e Linguagens de Consulta')).toBeInTheDocument();
   });
 
   it('deve listar os laboratórios e chamar onSelectLab ao clicar', () => {

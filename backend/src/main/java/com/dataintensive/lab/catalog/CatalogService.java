@@ -44,7 +44,7 @@ public class CatalogService {
         Chapter ch3 = new Chapter(
             "ddia-cap-03",
             3,
-            "Armazenamento e Recuperação de Dados",
+            "Modelos de Dados e Linguagens de Consulta",
             "Modelos de Dados, Grafos, OLAP e CQRS",
             "Explore as estruturas fundamentais que diferenciam bancos relacionais de documentos, travessia em grafos vs SQL recursivo, modelagem dimensional para analytics e CQRS baseado em log de eventos.",
             ch3Labs
