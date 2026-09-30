@@ -107,4 +107,27 @@ describe('Navbar Component', () => {
 
     expect(handleRefresh).toHaveBeenCalledTimes(1);
   });
+
+  it('deve exibir botão de retorno à estante quando isBookshelfActive for false e onNavigateBookshelf for fornecido', () => {
+    const handleNavigate = vi.fn();
+    render(
+      <Navbar
+        infraStatus={defaultStatus}
+        loadingInfra={false}
+        onRefreshInfra={vi.fn()}
+        onOpenSettings={vi.fn()}
+        selectedBookTitle="DDIA"
+        theme="dark"
+        onToggleTheme={vi.fn()}
+        isBookshelfActive={false}
+        onNavigateBookshelf={handleNavigate}
+      />
+    );
+
+    const bookshelfBtn = screen.getByRole('button', { name: /ESTANTE DE LIVROS/i });
+    expect(bookshelfBtn).toBeInTheDocument();
+
+    fireEvent.click(bookshelfBtn);
+    expect(handleNavigate).toHaveBeenCalledTimes(1);
+  });
 });

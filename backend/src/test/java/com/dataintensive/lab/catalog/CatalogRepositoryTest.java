@@ -29,6 +29,7 @@ class CatalogRepositoryTest {
         Book ddia = books.stream().filter(b -> b.id().equals("ddia")).findFirst().orElseThrow();
         assertThat(ddia.title()).isEqualTo("Designing Data-Intensive Applications");
         assertThat(ddia.author()).isEqualTo("Martin Kleppmann");
+        assertThat(ddia.coverImageUrl()).isEqualTo("/covers/ddia.svg");
         assertThat(ddia.chapters()).isNotEmpty();
 
         Chapter ch3 = ddia.chapters().get(0);

@@ -5,6 +5,7 @@ import { getInitialTheme, toggleTheme, applyTheme } from './utils/theme';
 import { getBooks, getInfraStatus } from './services/api';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
+import { Bookshelf } from './components/Bookshelf';
 import { LabWorkspace } from './components/LabWorkspace';
 import { AiSettingsModal } from './components/AiSettingsModal';
 import { Loader2, AlertCircle } from 'lucide-react';
@@ -12,7 +13,9 @@ import { Loader2, AlertCircle } from 'lucide-react';
 export function App() {
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
   const [books, setBooks] = useState<Book[]>([]);
+  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [selectedLab, setSelectedLab] = useState<Lab | null>(null);
+  const [currentView, setCurrentView] = useState<'bookshelf' | 'workspace'>('bookshelf');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,13 +61,26 @@ export function App() {
     }
   };
 
+  const handleSelectBook = (book: Book) => {
+    setSelectedBook(book);
+    if (book.chapters && book.chapters.length > 0 && book.chapters[0].labs && book.chapters[0].labs.length > 0) {
+      setSelectedLab(book.chapters[0].labs[0]);
+    } else {
+      setSelectedLab(null);
+    }
+    setCurrentView('workspace');
+  };
+
   useEffect(() => {
     async function init() {
       try {
-        const loadedBooks = await getBooks();
+        const [loadedBooks, status] = await Promise.all([
+          getBooks(),
+          getInfraStatus().catch(() => null),
+        ]);
         setBooks(loadedBooks);
-        if (loadedBooks.length > 0 && loadedBooks[0].chapters.length > 0 && loadedBooks[0].chapters[0].labs.length > 0) {
-          setSelectedLab(loadedBooks[0].chapters[0].labs[0]);
+        if (status) {
+          setInfraStatus(status);
         }
       } catch (err: any) {
         setError(err.message || 'Erro ao carregar dados do catálogo');
@@ -73,8 +89,7 @@ export function App() {
       }
     }
 
-    init();
-    refreshInfra();
+    void init();
 
     const interval = setInterval(refreshInfra, 12000);
     return () => clearInterval(interval);
@@ -109,8 +124,6 @@ export function App() {
     );
   }
 
-  const selectedBook = books[0];
-
   return (
     <div className="min-h-screen bg-[#fbf9f4] dark:bg-[#141312] text-stone-900 dark:text-stone-100 flex flex-col font-serif">
       <Navbar
@@ -121,29 +134,35 @@ export function App() {
         selectedBookTitle={selectedBook?.title || 'Data-Intensive Labs'}
         theme={theme}
         onToggleTheme={() => setTheme((prev) => toggleTheme(prev))}
+        isBookshelfActive={currentView === 'bookshelf'}
+        onNavigateBookshelf={() => setCurrentView('bookshelf')}
       />
 
-      <div className="flex-1 flex overflow-hidden">
-        <Sidebar
-          books={books}
-          selectedLab={selectedLab}
-          onSelectLab={(lab) => setSelectedLab(lab)}
-        />
-
-        {selectedLab ? (
-          <LabWorkspace
-            key={selectedLab.id}
-            lab={selectedLab}
-            apiKey={apiKey}
-            provider={provider}
-            model={model}
+      {currentView === 'bookshelf' ? (
+        <Bookshelf books={books} onSelectBook={handleSelectBook} />
+      ) : (
+        <div className="flex-1 flex overflow-hidden">
+          <Sidebar
+            books={selectedBook ? [selectedBook] : books}
+            selectedLab={selectedLab}
+            onSelectLab={(lab) => setSelectedLab(lab)}
           />
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-stone-500 dark:text-stone-400 text-sm font-serif italic">
-            Selecione uma seção ou exercício na tábua de matérias ao lado para iniciar.
-          </div>
-        )}
-      </div>
+
+          {selectedLab ? (
+            <LabWorkspace
+              key={selectedLab.id}
+              lab={selectedLab}
+              apiKey={apiKey}
+              provider={provider}
+              model={model}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-stone-500 dark:text-stone-400 text-sm font-serif italic">
+              Selecione uma seção ou exercício na tábua de matérias ao lado para iniciar.
+            </div>
+          )}
+        </div>
+      )}
 
       <AiSettingsModal
         isOpen={isSettingsOpen}

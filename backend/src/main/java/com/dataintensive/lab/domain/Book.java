@@ -8,6 +8,7 @@ public record Book(
     String author,
     String tagLine,
     String coverColor,
+    String coverImageUrl,
     String description,
     List<Chapter> chapters
 ) {}

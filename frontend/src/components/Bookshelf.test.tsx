@@ -1,0 +1,67 @@
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { Bookshelf } from './Bookshelf';
+import type { Book } from '../types';
+
+const mockBooks: Book[] = [
+  {
+    id: 'ddia',
+    title: 'Designing Data-Intensive Applications',
+    author: 'Martin Kleppmann',
+    tagLine: 'O guia definitivo para arquitetar sistemas distribuídos, confiáveis e escaláveis.',
+    coverColor: '#059669',
+    coverImageUrl: '/covers/ddia.svg',
+    description: 'Aprenda na prática os trade-offs fundamentais por trás dos motores de banco de dados.',
+    chapters: [
+      {
+        id: 'ddia-cap-03',
+        number: 3,
+        title: 'Modelos de Dados e Linguagens de Consulta',
+        subtitle: 'Modelos de Dados, Grafos, OLAP e CQRS',
+        summary: 'Explore as estruturas fundamentais.',
+        labs: [
+          {
+            id: 'ddia-cap-03-lab-01',
+            number: 1,
+            slug: 'relacional-vs-documentos',
+            title: 'Relacional vs Documentos',
+            summary: 'Analise a incompatibilidade.',
+            keyConcepts: ['Impedance Mismatch'],
+            engineType: 'POSTGRES',
+            databaseName: 'tbl_lab',
+            resetSchemaSql: 'DROP TABLE...',
+            challenges: [],
+          },
+        ],
+      },
+    ],
+  },
+];
+
+describe('Bookshelf Component', () => {
+  it('deve renderizar o cabeçalho e estatísticas da biblioteca', () => {
+    render(<Bookshelf books={mockBooks} onSelectBook={vi.fn()} />);
+
+    expect(screen.getByText(/Biblioteca de Livros Técnicos/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 Livro Disponível/i)).toBeInTheDocument();
+  });
+
+  it('deve exibir informações do livro e capa clássica', () => {
+    render(<Bookshelf books={mockBooks} onSelectBook={vi.fn()} />);
+
+    expect(screen.getByText('Designing Data-Intensive Applications')).toBeInTheDocument();
+    expect(screen.getByText(/Martin Kleppmann/i)).toBeInTheDocument();
+    expect(screen.getByText(/O guia definitivo para arquitetar sistemas/i)).toBeInTheDocument();
+  });
+
+  it('deve disparar onSelectBook ao clicar no card ou botão do livro', () => {
+    const handleSelectBook = vi.fn();
+    render(<Bookshelf books={mockBooks} onSelectBook={handleSelectBook} />);
+
+    const openButton = screen.getByRole('button', { name: /Abrir Caderno de Laboratório/i });
+    fireEvent.click(openButton);
+
+    expect(handleSelectBook).toHaveBeenCalledTimes(1);
+    expect(handleSelectBook).toHaveBeenCalledWith(mockBooks[0]);
+  });
+});

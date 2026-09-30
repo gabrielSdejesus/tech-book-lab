@@ -32,7 +32,7 @@ class CatalogServiceTest {
     @Test
     @DisplayName("Deve delegar ao repositório para listar todos os livros")
     void shouldListAllBooks() {
-        Book book = new Book("ddia", "Designing Data-Intensive Applications", "Martin Kleppmann", "Tag", "#059669", "Desc", List.of());
+        Book book = new Book("ddia", "Designing Data-Intensive Applications", "Martin Kleppmann", "Tag", "#059669", "/covers/ddia.svg", "Desc", List.of());
         when(catalogRepository.findAllBooks()).thenReturn(List.of(book));
 
         List<Book> books = catalogService.getAllBooks();
@@ -44,7 +44,7 @@ class CatalogServiceTest {
     @Test
     @DisplayName("Deve delegar ao repositório para buscar livro existente")
     void shouldFindBookByIdWhenExists() {
-        Book book = new Book("ddia", "Designing Data-Intensive Applications", "Martin Kleppmann", "Tag", "#059669", "Desc", List.of());
+        Book book = new Book("ddia", "Designing Data-Intensive Applications", "Martin Kleppmann", "Tag", "#059669", "/covers/ddia.svg", "Desc", List.of());
         when(catalogRepository.findBookById("ddia")).thenReturn(Optional.of(book));
 
         Optional<Book> result = catalogService.findBookById("ddia");
