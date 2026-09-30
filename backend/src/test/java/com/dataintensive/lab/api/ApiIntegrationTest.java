@@ -208,12 +208,12 @@ class ApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("POST /api/ai/assess - Deve exigir revisão quando código do aluno for vazio")
+    @DisplayName("POST /api/ai/assess - Deve exigir revisão quando código do aluno contiver apenas comentários")
     void shouldRequireRevisionForEmptyUserSubmission() throws Exception {
         Map<String, Object> payload = Map.of(
                 "labId", "ddia-cap-03-lab-01",
                 "challengeId", "lab-01-ch-1",
-                "userQuery", "",
+                "userQuery", "-- apenas comentarios sem instrucoes SQL",
                 "userReflection", "Reflexão sobre localidade de dados",
                 "providerOverride", "gemini",
                 "apiKeyOverride", "teste-key",
