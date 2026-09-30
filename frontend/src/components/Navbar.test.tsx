@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Navbar } from './Navbar';
 import type { InfraStatus } from '../types';
+import { LanguageProvider } from '../i18n/LanguageContext';
 
 describe('Navbar Component', () => {
   const defaultStatus: InfraStatus = {
@@ -195,6 +196,29 @@ describe('Navbar Component', () => {
     const toggleSidebarBtn = screen.getByRole('button', { name: /Alternar tábua de matérias/i });
     expect(toggleSidebarBtn).toHaveAttribute('aria-expanded', 'false');
     expect(toggleSidebarBtn).toHaveAttribute('title', 'Expandir tábua de matérias');
+  });
+
+  it('deve exibir títulos em inglês para alternar barra lateral quando o idioma for en', () => {
+    localStorage.setItem('tbl_locale', 'en');
+    render(
+      <LanguageProvider>
+        <Navbar
+          infraStatus={defaultStatus}
+          loadingInfra={false}
+          onRefreshInfra={vi.fn()}
+          onOpenSettings={vi.fn()}
+          selectedBookTitle="DDIA"
+          theme="dark"
+          onToggleTheme={vi.fn()}
+          isBookshelfActive={false}
+          isSidebarOpen={true}
+          onToggleSidebar={vi.fn()}
+        />
+      </LanguageProvider>
+    );
+
+    const toggleSidebarBtn = screen.getByRole('button', { name: /Toggle table of contents/i });
+    expect(toggleSidebarBtn).toHaveAttribute('title', 'Collapse table of contents');
   });
 });
 

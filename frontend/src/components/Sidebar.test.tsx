@@ -1,9 +1,13 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Sidebar } from './Sidebar';
 import type { Book, Lab } from '../types';
+import { LanguageProvider } from '../i18n/LanguageContext';
 
 describe('Sidebar Component', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
   const mockLab1: Lab = {
     id: 'ddia-cap-03-lab-01',
     number: 1,
@@ -102,5 +106,25 @@ describe('Sidebar Component', () => {
     fireEvent.click(collapseBtn);
 
     expect(handleToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it('deve renderizar os textos e acessibilidade em inglês quando o idioma for en', () => {
+    localStorage.setItem('tbl_locale', 'en');
+    render(
+      <LanguageProvider>
+        <Sidebar
+          books={[mockBook]}
+          selectedLab={mockLab1}
+          onSelectLab={vi.fn()}
+          isOpen={true}
+          onToggle={vi.fn()}
+        />
+      </LanguageProvider>
+    );
+
+    expect(screen.getByText('TABLE OF CONTENTS')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Collapse table of contents/i })).toBeInTheDocument();
+    expect(screen.getByText(/By Martin Kleppmann/i)).toBeInTheDocument();
+    expect(screen.getByText(/CHAPTER 3/i)).toBeInTheDocument();
   });
 });
