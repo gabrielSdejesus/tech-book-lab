@@ -130,4 +130,50 @@ describe('Navbar Component', () => {
     fireEvent.click(bookshelfBtn);
     expect(handleNavigate).toHaveBeenCalledTimes(1);
   });
+
+  it('deve disparar onToggleSidebar ao clicar no ícone do livro no cabeçalho em modo workspace', () => {
+    const handleToggleSidebar = vi.fn();
+    render(
+      <Navbar
+        infraStatus={defaultStatus}
+        loadingInfra={false}
+        onRefreshInfra={vi.fn()}
+        onOpenSettings={vi.fn()}
+        selectedBookTitle="DDIA"
+        theme="dark"
+        onToggleTheme={vi.fn()}
+        isBookshelfActive={false}
+        isSidebarOpen={true}
+        onToggleSidebar={handleToggleSidebar}
+      />
+    );
+
+    const toggleSidebarBtn = screen.getByRole('button', { name: /Alternar tábua de matérias/i });
+    expect(toggleSidebarBtn).toHaveAttribute('aria-expanded', 'true');
+    expect(toggleSidebarBtn).toHaveAttribute('title', 'Recolher tábua de matérias');
+
+    fireEvent.click(toggleSidebarBtn);
+    expect(handleToggleSidebar).toHaveBeenCalledTimes(1);
+  });
+
+  it('deve exibir título de expandir quando a barra lateral estiver recolhida', () => {
+    render(
+      <Navbar
+        infraStatus={defaultStatus}
+        loadingInfra={false}
+        onRefreshInfra={vi.fn()}
+        onOpenSettings={vi.fn()}
+        selectedBookTitle="DDIA"
+        theme="dark"
+        onToggleTheme={vi.fn()}
+        isBookshelfActive={false}
+        isSidebarOpen={false}
+        onToggleSidebar={vi.fn()}
+      />
+    );
+
+    const toggleSidebarBtn = screen.getByRole('button', { name: /Alternar tábua de matérias/i });
+    expect(toggleSidebarBtn).toHaveAttribute('aria-expanded', 'false');
+    expect(toggleSidebarBtn).toHaveAttribute('title', 'Expandir tábua de matérias');
+  });
 });
