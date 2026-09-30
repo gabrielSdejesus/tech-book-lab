@@ -39,6 +39,7 @@ export interface Book {
   author: string;
   tagLine: string;
   coverColor: string;
+  coverImageUrl?: string;
   description: string;
   chapters: Chapter[];
 }
