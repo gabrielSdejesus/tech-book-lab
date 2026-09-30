@@ -129,4 +129,19 @@ describe('LabWorkspace Component', () => {
       expect(screen.getByText(/Esquema restaurado para o estado original com sucesso!/i)).toBeInTheDocument();
     });
   });
+
+  it('deve exibir mensagem de erro amigável ao falhar execução com erro 400 (RFC 7807)', async () => {
+    vi.mocked(api.executeQuery).mockRejectedValueOnce(
+      new Error('Erro na execução da consulta: relation "tabela_fantasma" does not exist')
+    );
+
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    const executeBtn = screen.getByRole('button', { name: /Executar/i });
+    fireEvent.click(executeBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/relation "tabela_fantasma" does not exist/i)).toBeInTheDocument();
+    });
+  });
 });
