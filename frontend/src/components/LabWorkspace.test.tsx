@@ -23,7 +23,7 @@ describe('LabWorkspace Component', () => {
     summary: 'Comparativo de modelos',
     keyConcepts: ['Impedance Mismatch', 'JSONB'],
     engineType: 'POSTGRES',
-    databaseName: 'ddia_lab',
+    databaseName: 'tbl_lab',
     resetSchemaSql: 'DROP TABLE IF EXISTS test;',
     challenges: [
       {

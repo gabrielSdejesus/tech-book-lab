@@ -127,7 +127,7 @@ public class CatalogService {
             "Analise a incompatibilidade objeto-relacional (impedance mismatch) e o contraste entre tabelas 3NF e colunas JSONB.",
             List.of("Impedance Mismatch", "Normalização 3NF", "Localidade de Armazenamento", "PostgreSQL JSONB"),
             EngineType.POSTGRES,
-            "ddia_lab",
+            "tbl_lab",
             resetSql,
             challenges
         );
@@ -261,7 +261,7 @@ public class CatalogService {
             "Descubra as diferenças de projeto entre bancos transacionais (OLTP) e sistemas analíticos (OLAP) com Star Schema.",
             List.of("OLTP vs OLAP", "Star Schema", "Tabelas de Fatos", "Tabelas de Dimensões", "Slice and Dice"),
             EngineType.POSTGRES,
-            "ddia_lab",
+            "tbl_lab",
             resetSql,
             challenges
         );
@@ -332,7 +332,7 @@ public class CatalogService {
             "Implemente o padrão de segregação de responsabilidade de leitura e escrita a partir de um log imutável de eventos.",
             List.of("Event Sourcing", "CQRS", "Append-Only Log", "Materialized Views", "Consistência Eventual"),
             EngineType.POSTGRES,
-            "ddia_lab",
+            "tbl_lab",
             resetSql,
             challenges
         );
