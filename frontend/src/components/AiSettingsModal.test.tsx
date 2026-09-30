@@ -113,4 +113,52 @@ describe('AiSettingsModal Component', () => {
       expect(handleClose).toHaveBeenCalled();
     }, { timeout: 1500 });
   });
+
+  it('deve respeitar e preservar o modelo selecionado pelo usuário mesmo após teste de conexão', async () => {
+    vi.mocked(api.testAiConnection).mockResolvedValueOnce({
+      valid: true,
+      message: 'Conexão validada',
+      model: 'gemini-3.8-flash', // backend retornando modelo diferente ou fallback
+      latencyMs: 90
+    });
+
+    const handleSaveModel = vi.fn();
+
+    render(
+      <AiSettingsModal
+        isOpen={true}
+        onClose={vi.fn()}
+        apiKey="test-key"
+        onSaveApiKey={vi.fn()}
+        provider="gemini"
+        onSaveProvider={vi.fn()}
+        model="gemini-3.8-flash"
+        onSaveModel={handleSaveModel}
+      />
+    );
+
+    const select = screen.getByRole('combobox');
+    fireEvent.change(select, { target: { value: 'gemini-2.5-flash' } });
+    expect(select).toHaveValue('gemini-2.5-flash');
+
+    const testBtn = screen.getByRole('button', { name: /Testar/i });
+    fireEvent.click(testBtn);
+
+    await waitFor(() => {
+      expect(api.testAiConnection).toHaveBeenCalledWith({
+        provider: 'gemini',
+        apiKey: 'test-key',
+        modelOverride: 'gemini-2.5-flash'
+      });
+    });
+
+    // O valor do select não deve ser revertido para o modelo retornado pelo teste
+    expect(select).toHaveValue('gemini-2.5-flash');
+
+    const saveBtn = screen.getByRole('button', { name: /Salvar Configurações/i });
+    fireEvent.click(saveBtn);
+
+    expect(handleSaveModel).toHaveBeenCalledWith('gemini-2.5-flash');
+  });
 });
+

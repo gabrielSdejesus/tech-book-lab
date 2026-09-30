@@ -31,21 +31,33 @@ public class AiAssessmentService {
     public AiAssessmentService(
             CatalogService catalogService,
             ObjectMapper objectMapper,
-            @Value("${lab.ai.provider:gemini}") String defaultProvider,
-            @Value("${lab.ai.gemini.api-key:}") String geminiApiKey,
-            @Value("${lab.ai.gemini.model:gemini-3.8-flash}") String geminiModel,
-            @Value("${lab.ai.ollama.base-url:http://localhost:11434}") String ollamaBaseUrl,
-            @Value("${lab.ai.ollama.model:qwen2.5-coder:1.5b}") String ollamaModel) {
+            HttpClient httpClient,
+            String defaultProvider,
+            String geminiApiKey,
+            String geminiModel,
+            String ollamaBaseUrl,
+            String ollamaModel) {
         this.catalogService = catalogService;
         this.objectMapper = objectMapper;
+        this.httpClient = httpClient != null ? httpClient : HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
         this.defaultProvider = defaultProvider;
         this.geminiApiKey = geminiApiKey;
         this.geminiModel = (geminiModel != null && !geminiModel.isBlank()) ? geminiModel : "gemini-3.8-flash";
         this.ollamaBaseUrl = ollamaBaseUrl;
         this.ollamaModel = ollamaModel;
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
-                .build();
+    }
+
+    public AiAssessmentService(
+            CatalogService catalogService,
+            ObjectMapper objectMapper,
+            @Value("${lab.ai.provider:gemini}") String defaultProvider,
+            @Value("${lab.ai.gemini.api-key:}") String geminiApiKey,
+            @Value("${lab.ai.gemini.model:gemini-3.8-flash}") String geminiModel,
+            @Value("${lab.ai.ollama.base-url:http://localhost:11434}") String ollamaBaseUrl,
+            @Value("${lab.ai.ollama.model:qwen2.5-coder:1.5b}") String ollamaModel) {
+        this(catalogService, objectMapper, null, defaultProvider, geminiApiKey, geminiModel, ollamaBaseUrl, ollamaModel);
     }
 
     public AiTestConnectionResponse testConnection(AiTestConnectionRequest request) {

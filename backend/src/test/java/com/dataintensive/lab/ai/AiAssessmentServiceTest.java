@@ -147,4 +147,63 @@ class AiAssessmentServiceTest {
         assertThat(response.status()).isEqualTo("NEEDS_REVISION");
         assertThat(response.feedback()).containsIgnoringCase("chave de api não informada");
     }
+
+    @Test
+    @DisplayName("Deve falhar no teste de conexão e não substituir por modelo descoberto quando modelOverride for 404")
+    void shouldNotReplaceRequestedModelWithDiscoveredModelWhen404Occurs() throws Exception {
+        java.net.http.HttpClient mockClient = mock(java.net.http.HttpClient.class);
+        @SuppressWarnings("unchecked")
+        java.net.http.HttpResponse<String> mockResp = (java.net.http.HttpResponse<String>) mock(java.net.http.HttpResponse.class);
+        when(mockResp.statusCode()).thenReturn(404);
+        when(mockResp.body()).thenReturn("{\"error\": {\"message\": \"Model gemini-2.5-flash not found\"}}");
+        when(mockClient.<String>send(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(mockResp);
+
+        AiAssessmentService service = new AiAssessmentService(
+                catalogService,
+                objectMapper,
+                mockClient,
+                "gemini",
+                "valid-key",
+                "gemini-3.8-flash",
+                "http://localhost:11434",
+                "qwen2.5-coder:1.5b"
+        );
+
+        AiTestConnectionRequest request = new AiTestConnectionRequest("gemini", "valid-key", "gemini-2.5-flash");
+        AiTestConnectionResponse response = service.testConnection(request);
+
+        assertThat(response.valid()).isFalse();
+        assertThat(response.message()).containsIgnoringCase("não encontrado");
+    }
+
+    @Test
+    @DisplayName("Deve respeitar modelOverride para Ollama no teste de conexão")
+    void shouldRespectModelOverrideForOllamaInTestConnection() throws Exception {
+        java.net.http.HttpClient mockClient = mock(java.net.http.HttpClient.class);
+        @SuppressWarnings("unchecked")
+        java.net.http.HttpResponse<String> mockResp = (java.net.http.HttpResponse<String>) mock(java.net.http.HttpResponse.class);
+        when(mockResp.statusCode()).thenReturn(200);
+        when(mockResp.body()).thenReturn("{\"models\": [{\"name\": \"qwen2.5-coder:7b\"}]}");
+        when(mockClient.<String>send(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(mockResp);
+
+        AiAssessmentService service = new AiAssessmentService(
+                catalogService,
+                objectMapper,
+                mockClient,
+                "gemini",
+                "valid-key",
+                "gemini-3.8-flash",
+                "http://localhost:11434",
+                "qwen2.5-coder:1.5b"
+        );
+
+        AiTestConnectionRequest request = new AiTestConnectionRequest("ollama", null, "qwen2.5-coder:7b");
+        AiTestConnectionResponse response = service.testConnection(request);
+
+        assertThat(response.valid()).isTrue();
+        assertThat(response.model()).isEqualTo("qwen2.5-coder:7b");
+    }
 }
+
