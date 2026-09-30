@@ -3,6 +3,7 @@ package com.dataintensive.lab.ai;
 import com.dataintensive.lab.catalog.CatalogService;
 import com.dataintensive.lab.domain.AssessmentLanguage;
 import com.dataintensive.lab.domain.Challenge;
+import com.dataintensive.lab.domain.DomainValidationException;
 import com.dataintensive.lab.domain.Lab;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -79,6 +80,10 @@ public class AiAssessmentService {
 
         long startTime = System.currentTimeMillis();
 
+        if (!"gemini".equalsIgnoreCase(provider) && !"ollama".equalsIgnoreCase(provider)) {
+            throw new DomainValidationException("Provedor de IA não suportado: " + provider + ". Provedores suportados: gemini, ollama");
+        }
+
         if ("gemini".equalsIgnoreCase(provider)) {
             if (key == null || key.isBlank()) {
                 return new AiTestConnectionResponse(false, "Nenhuma API Key informada para o Google Gemini.", null, 0);
@@ -151,14 +156,17 @@ public class AiAssessmentService {
         AssessmentLanguage lang = AssessmentLanguage.from(request.language());
 
         Optional<Lab> labOpt = catalogService.findLabById(request.labId());
-        Lab lab = labOpt.orElse(null);
-        Challenge challenge = null;
-        if (lab != null && request.challengeId() != null) {
-            challenge = lab.challenges().stream()
-                    .filter(c -> c.id().equalsIgnoreCase(request.challengeId()))
-                    .findFirst()
-                    .orElse(null);
+        if (labOpt.isEmpty()) {
+            throw new DomainValidationException("Laboratório não encontrado com id: " + request.labId());
         }
+        Lab lab = labOpt.get();
+
+        Challenge challenge = lab.challenges().stream()
+                .filter(c -> c.id().equalsIgnoreCase(request.challengeId()))
+                .findFirst()
+                .orElseThrow(() -> new DomainValidationException(
+                        "Desafio não encontrado com id: " + request.challengeId() + " no laboratório: " + request.labId()
+                ));
 
         // Validação: Bloqueia submissão de código vazio ou template inicial inalterado
         if (isUntouchedOrEmpty(request.userQuery(), challenge)) {

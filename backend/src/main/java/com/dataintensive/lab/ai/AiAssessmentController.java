@@ -19,7 +19,7 @@ public class AiAssessmentController {
     }
 
     @PostMapping("/test-connection")
-    public ResponseEntity<AiTestConnectionResponse> testConnection(@RequestBody AiTestConnectionRequest request) {
+    public ResponseEntity<AiTestConnectionResponse> testConnection(@Valid @RequestBody AiTestConnectionRequest request) {
         AiTestConnectionResponse response = aiAssessmentService.testConnection(request);
         return ResponseEntity.ok(response);
     }
