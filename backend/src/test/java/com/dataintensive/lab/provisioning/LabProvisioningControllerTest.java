@@ -145,4 +145,20 @@ class LabProvisioningControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("STOPPED"));
     }
+
+    @Test
+    @DisplayName("POST /api/lab/{labId}/provision com challengeId deve provisionar motor da tarefa e retornar dados correspondentes")
+    void shouldProvisionWithChallengeId() throws Exception {
+        when(catalogRepository.findLabById(validLabId)).thenReturn(Optional.of(mockLab));
+        when(containerManager.isEngineHealthy(EngineType.POSTGRES, 5432)).thenReturn(true);
+
+        mockMvc.perform(post("/api/lab/{labId}/provision", validLabId)
+                        .param("challengeId", "lab-01-ch-1")
+                        .header("X-Session-Id", validSessionId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.labId").value(validLabId))
+                .andExpect(jsonPath("$.challengeId").value("lab-01-ch-1"))
+                .andExpect(jsonPath("$.engineType").value("POSTGRES"))
+                .andExpect(jsonPath("$.status").value("READY"));
+    }
 }

@@ -1,13 +1,9 @@
 import React from 'react';
-import { RefreshCw, BookOpen, Sliders, Moon, Sun, Library } from 'lucide-react';
-import type { InfraStatus } from '../types';
+import { BookOpen, Sliders, Moon, Sun, Library } from 'lucide-react';
 import type { Theme } from '../utils/theme';
 import { useLanguage } from '../i18n/LanguageContext';
 
 interface Props {
-  infraStatus: InfraStatus | null;
-  loadingInfra: boolean;
-  onRefreshInfra: () => void;
   onOpenSettings: () => void;
   selectedBookTitle: string;
   theme: Theme;
@@ -19,9 +15,6 @@ interface Props {
 }
 
 export const Navbar: React.FC<Props> = ({
-  infraStatus,
-  loadingInfra,
-  onRefreshInfra,
   onOpenSettings,
   selectedBookTitle,
   theme,
@@ -100,42 +93,6 @@ export const Navbar: React.FC<Props> = ({
             <span>{t.common.bookshelf.toUpperCase()}</span>
           </button>
         )}
-        {/* Infra Status Stamps */}
-        <div className="flex items-center gap-2 bg-[#efebe1] dark:bg-[#23211e] border border-stone-800 dark:border-stone-700 px-3 py-1.5 text-xs font-mono book-shadow-sm">
-          <span className="text-[10px] text-stone-500 dark:text-stone-400 uppercase tracking-widest font-sans font-bold mr-1">
-            MOTORES:
-          </span>
-
-          <div className="flex items-center gap-1.5" title={infraStatus?.postgresMessage || 'Checando...'}>
-            <span
-              className={`w-2.5 h-2.5 border border-stone-800 dark:border-stone-600 ${
-                infraStatus?.postgresReady ? 'bg-[#15803d]' : 'bg-[#b91c1c]'
-              }`}
-            />
-            <span className="text-stone-800 dark:text-stone-200 font-bold">PG:5432</span>
-          </div>
-
-          <span className="text-stone-400 dark:text-stone-600 font-sans">|</span>
-
-          <div className="flex items-center gap-1.5" title={infraStatus?.neo4jMessage || 'Checando...'}>
-            <span
-              className={`w-2.5 h-2.5 border border-stone-800 dark:border-stone-600 ${
-                infraStatus?.neo4jReady ? 'bg-[#15803d]' : 'bg-[#b91c1c]'
-              }`}
-            />
-            <span className="text-stone-800 dark:text-stone-200 font-bold">NEO4J:7687</span>
-          </div>
-
-          <button
-            onClick={onRefreshInfra}
-            disabled={loadingInfra}
-            title="Sondar conectividade dos bancos de dados"
-            className="text-stone-600 dark:text-stone-400 hover:text-stone-950 dark:hover:text-stone-100 p-0.5 rounded ml-1 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3 h-3 ${loadingInfra ? 'animate-spin text-[#8f1d1d]' : ''}`} />
-          </button>
-        </div>
-
         {/* Theme Toggle Button */}
         <button
           onClick={onToggleTheme}

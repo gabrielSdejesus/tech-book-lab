@@ -1,6 +1,7 @@
 package com.dataintensive.lab.provisioning;
 
 import com.dataintensive.lab.catalog.CatalogRepository;
+import com.dataintensive.lab.domain.Challenge;
 import com.dataintensive.lab.domain.EngineType;
 import com.dataintensive.lab.domain.Lab;
 import org.slf4j.Logger;
@@ -27,29 +28,56 @@ public class LabProvisioningService {
     }
 
     public LabSession provisionLab(SessionId sessionId, String labId) {
+        return provisionLab(sessionId, labId, null);
+    }
+
+    public LabSession provisionLab(SessionId sessionId, String labId, String challengeId) {
         Lab lab = catalogRepository.findLabById(labId)
                 .orElseThrow(() -> new LabNotFoundException(labId));
 
-        int port = resolveDefaultPort(lab.engineType());
+        EngineType requiredEngine = resolveRequiredEngine(lab, challengeId);
+        int port = resolveDefaultPort(requiredEngine);
 
-        // Anti-DoS Invariant: Cota de 1 laboratório ativo por sessão
+        // Anti-DoS Invariant: Cota de 1 motor ativo por sessão
         LabSession currentSession = activeSessions.get(sessionId.value());
-        if (currentSession != null && !currentSession.labId().equals(labId) && currentSession.status() == LabEnvironmentStatus.READY) {
-            log.info("Sessão {} solicitou novo laboratório {}. Desprovisionando motor anterior {}...",
-                    sessionId, labId, currentSession.engineType());
-            containerManager.stopEngine(currentSession.engineType());
-            activeSessions.put(sessionId.value(), currentSession.withStatus(LabEnvironmentStatus.STOPPED));
+        if (currentSession != null && currentSession.status() == LabEnvironmentStatus.READY) {
+            boolean differentLab = !currentSession.labId().equals(labId);
+            boolean differentEngine = currentSession.engineType() != requiredEngine;
+
+            if (differentLab || differentEngine) {
+                log.info("Sessão {} alternou ambiente (Lab: {}, Motor: {} -> {}). Desprovisionando motor anterior {}...",
+                        sessionId, labId, currentSession.engineType(), requiredEngine, currentSession.engineType());
+                containerManager.stopEngine(currentSession.engineType());
+                activeSessions.put(sessionId.value(), currentSession.withStatus(LabEnvironmentStatus.STOPPED));
+            } else {
+                // Mesmo motor já em execução e saudável
+                if (containerManager.isEngineHealthy(requiredEngine, port)) {
+                    LabSession updated = new LabSession(
+                            sessionId,
+                            lab.id(),
+                            challengeId,
+                            requiredEngine,
+                            LabEnvironmentStatus.READY,
+                            Instant.now(),
+                            port,
+                            null
+                    );
+                    activeSessions.put(sessionId.value(), updated);
+                    return updated;
+                }
+            }
         }
 
-        containerManager.startEngine(lab.engineType());
+        containerManager.startEngine(requiredEngine);
 
-        boolean healthy = containerManager.isEngineHealthy(lab.engineType(), port);
+        boolean healthy = containerManager.isEngineHealthy(requiredEngine, port);
         LabEnvironmentStatus status = healthy ? LabEnvironmentStatus.READY : LabEnvironmentStatus.PROVISIONING;
 
         LabSession session = new LabSession(
                 sessionId,
                 lab.id(),
-                lab.engineType(),
+                challengeId,
+                requiredEngine,
                 status,
                 Instant.now(),
                 port,
@@ -61,17 +89,23 @@ public class LabProvisioningService {
     }
 
     public LabSession getLabStatus(SessionId sessionId, String labId) {
+        return getLabStatus(sessionId, labId, null);
+    }
+
+    public LabSession getLabStatus(SessionId sessionId, String labId, String challengeId) {
         Lab lab = catalogRepository.findLabById(labId)
                 .orElseThrow(() -> new LabNotFoundException(labId));
 
+        EngineType requiredEngine = resolveRequiredEngine(lab, challengeId);
+        int port = resolveDefaultPort(requiredEngine);
         LabSession session = activeSessions.get(sessionId.value());
-        int port = resolveDefaultPort(lab.engineType());
 
-        if (session == null || !session.labId().equals(labId)) {
+        if (session == null || !session.labId().equals(labId) || session.engineType() != requiredEngine) {
             return new LabSession(
                     sessionId,
                     lab.id(),
-                    lab.engineType(),
+                    challengeId,
+                    requiredEngine,
                     LabEnvironmentStatus.NOT_PROVISIONED,
                     Instant.now(),
                     port,
@@ -141,6 +175,20 @@ public class LabProvisioningService {
         if (session != null) {
             activeSessions.put(sessionId.value(), session.withHeartbeat(time));
         }
+    }
+
+    private EngineType resolveRequiredEngine(Lab lab, String challengeId) {
+        if (challengeId != null && lab.challenges() != null) {
+            for (Challenge ch : lab.challenges()) {
+                if (ch.id().equals(challengeId)) {
+                    if (ch.engineType() != null) {
+                        return ch.engineType();
+                    }
+                    break;
+                }
+            }
+        }
+        return lab.engineType();
     }
 
     private int resolveDefaultPort(EngineType engineType) {

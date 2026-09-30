@@ -1,24 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Navbar } from './Navbar';
-import type { InfraStatus } from '../types';
 import { LanguageProvider } from '../i18n/LanguageContext';
 
 describe('Navbar Component', () => {
-  const defaultStatus: InfraStatus = {
-    postgresReady: true,
-    postgresMessage: 'Postgres ativo',
-    neo4jReady: true,
-    neo4jMessage: 'Neo4j ativo',
-    timestamp: Date.now()
-  };
-
   it('deve renderizar o título do sistema e o livro selecionado', () => {
     render(
       <Navbar
-        infraStatus={defaultStatus}
-        loadingInfra={false}
-        onRefreshInfra={vi.fn()}
         onOpenSettings={vi.fn()}
         selectedBookTitle="Designing Data-Intensive Applications"
         theme="dark"
@@ -36,9 +24,6 @@ describe('Navbar Component', () => {
     const handleToggle = vi.fn();
     render(
       <Navbar
-        infraStatus={defaultStatus}
-        loadingInfra={false}
-        onRefreshInfra={vi.fn()}
         onOpenSettings={vi.fn()}
         selectedBookTitle="DDIA"
         theme="dark"
@@ -56,9 +41,6 @@ describe('Navbar Component', () => {
   it('deve exibir botão CLARO quando o tema for light', () => {
     render(
       <Navbar
-        infraStatus={defaultStatus}
-        loadingInfra={false}
-        onRefreshInfra={vi.fn()}
         onOpenSettings={vi.fn()}
         selectedBookTitle="DDIA"
         theme="light"
@@ -73,9 +55,6 @@ describe('Navbar Component', () => {
     const handleOpenSettings = vi.fn();
     render(
       <Navbar
-        infraStatus={defaultStatus}
-        loadingInfra={false}
-        onRefreshInfra={vi.fn()}
         onOpenSettings={handleOpenSettings}
         selectedBookTitle="DDIA"
         theme="dark"
@@ -89,13 +68,9 @@ describe('Navbar Component', () => {
     expect(handleOpenSettings).toHaveBeenCalledTimes(1);
   });
 
-  it('deve acionar refresh dos motores ao clicar no botão de atualização de infra', () => {
-    const handleRefresh = vi.fn();
+  it('não deve exibir indicador global de motores na barra de navegação superior', () => {
     render(
       <Navbar
-        infraStatus={defaultStatus}
-        loadingInfra={false}
-        onRefreshInfra={handleRefresh}
         onOpenSettings={vi.fn()}
         selectedBookTitle="DDIA"
         theme="dark"
@@ -103,19 +78,15 @@ describe('Navbar Component', () => {
       />
     );
 
-    const refreshBtn = screen.getByTitle(/Sondar conectividade/i);
-    fireEvent.click(refreshBtn);
-
-    expect(handleRefresh).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/MOTORES:/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/PG:5432/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/NEO4J:7687/i)).not.toBeInTheDocument();
   });
 
   it('deve exibir botão de retorno à estante quando isBookshelfActive for false e onNavigateBookshelf for fornecido', () => {
     const handleNavigate = vi.fn();
     render(
       <Navbar
-        infraStatus={defaultStatus}
-        loadingInfra={false}
-        onRefreshInfra={vi.fn()}
         onOpenSettings={vi.fn()}
         selectedBookTitle="DDIA"
         theme="dark"
@@ -135,9 +106,6 @@ describe('Navbar Component', () => {
   it('deve renderizar o seletor de idiomas PT e EN', () => {
     render(
       <Navbar
-        infraStatus={defaultStatus}
-        loadingInfra={false}
-        onRefreshInfra={vi.fn()}
         onOpenSettings={vi.fn()}
         selectedBookTitle="DDIA"
         theme="dark"
@@ -156,9 +124,6 @@ describe('Navbar Component', () => {
     const handleToggleSidebar = vi.fn();
     render(
       <Navbar
-        infraStatus={defaultStatus}
-        loadingInfra={false}
-        onRefreshInfra={vi.fn()}
         onOpenSettings={vi.fn()}
         selectedBookTitle="DDIA"
         theme="dark"
@@ -180,9 +145,6 @@ describe('Navbar Component', () => {
   it('deve exibir título de expandir quando a barra lateral estiver recolhida', () => {
     render(
       <Navbar
-        infraStatus={defaultStatus}
-        loadingInfra={false}
-        onRefreshInfra={vi.fn()}
         onOpenSettings={vi.fn()}
         selectedBookTitle="DDIA"
         theme="dark"
@@ -203,9 +165,6 @@ describe('Navbar Component', () => {
     render(
       <LanguageProvider>
         <Navbar
-          infraStatus={defaultStatus}
-          loadingInfra={false}
-          onRefreshInfra={vi.fn()}
           onOpenSettings={vi.fn()}
           selectedBookTitle="DDIA"
           theme="dark"
@@ -219,15 +178,13 @@ describe('Navbar Component', () => {
 
     const toggleSidebarBtn = screen.getByRole('button', { name: /Toggle table of contents/i });
     expect(toggleSidebarBtn).toHaveAttribute('title', 'Collapse table of contents');
+    localStorage.removeItem('tbl_locale');
   });
 
   it('deve permitir navegar para estante via teclado com Enter e Space no container da marca', () => {
     const handleNavigate = vi.fn();
     render(
       <Navbar
-        infraStatus={defaultStatus}
-        loadingInfra={false}
-        onRefreshInfra={vi.fn()}
         onOpenSettings={vi.fn()}
         selectedBookTitle="DDIA"
         theme="dark"
@@ -246,23 +203,4 @@ describe('Navbar Component', () => {
     fireEvent.keyDown(brandBtn, { key: ' ' });
     expect(handleNavigate).toHaveBeenCalledTimes(2);
   });
-
-  it('deve exibir disabled e disabled:cursor-not-allowed no botão de atualização de infraestrutura quando estiver carregando', () => {
-    render(
-      <Navbar
-        infraStatus={defaultStatus}
-        loadingInfra={true}
-        onRefreshInfra={vi.fn()}
-        onOpenSettings={vi.fn()}
-        selectedBookTitle="DDIA"
-        theme="dark"
-        onToggleTheme={vi.fn()}
-      />
-    );
-
-    const refreshBtn = screen.getByTitle(/Sondar conectividade/i);
-    expect(refreshBtn).toBeDisabled();
-    expect(refreshBtn).toHaveClass('disabled:cursor-not-allowed');
-  });
 });
-

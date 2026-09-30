@@ -10,5 +10,19 @@ public record Challenge(
     String scenario,
     String starterTemplate,
     List<String> guidelines,
-    String reflectionPrompt
-) {}
+    String reflectionPrompt,
+    EngineType engineType
+) {
+    public Challenge(
+        String id,
+        int order,
+        String title,
+        String description,
+        String scenario,
+        String starterTemplate,
+        List<String> guidelines,
+        String reflectionPrompt
+    ) {
+        this(id, order, title, description, scenario, starterTemplate, guidelines, reflectionPrompt, null);
+    }
+}
