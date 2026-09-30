@@ -39,6 +39,7 @@ public class LabProvisioningController {
         LabProvisionResponse response = new LabProvisionResponse(
                 session.labId(),
                 session.challengeId(),
+                session.containerName(),
                 session.engineType(),
                 session.status(),
                 session.status() == LabEnvironmentStatus.READY
@@ -67,6 +68,7 @@ public class LabProvisioningController {
         LabStatusResponse response = new LabStatusResponse(
                 session.labId(),
                 session.challengeId(),
+                session.containerName(),
                 session.engineType(),
                 session.status(),
                 session.allocatedPort(),

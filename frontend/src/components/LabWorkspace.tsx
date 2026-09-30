@@ -5,7 +5,6 @@ import {
   provisionLab,
   getLabStatus,
   sendHeartbeat,
-  teardownLab,
   type LabProvisionStatus
 } from '../services/labProvisioning';
 import {
@@ -81,7 +80,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
         if (init.status === 'READY') {
           heartbeatTimer = setInterval(() => {
             sendHeartbeat(lab.id).catch(() => {});
-          }, 60000);
+          }, 25000);
         } else if (init.status === 'PROVISIONING') {
           pollTimer = setInterval(async () => {
             try {
@@ -92,7 +91,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
                 setProvisionStatus('READY');
                 heartbeatTimer = setInterval(() => {
                   sendHeartbeat(lab.id).catch(() => {});
-                }, 60000);
+                }, 25000);
               } else if (statusRes.status === 'ERROR') {
                 clearInterval(pollTimer);
                 setProvisionStatus('ERROR');
@@ -116,12 +115,6 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
       if (heartbeatTimer) clearInterval(heartbeatTimer);
     };
   }, [lab.id, selectedChallenge?.id]);
-
-  useEffect(() => {
-    return () => {
-      teardownLab(lab.id).catch(() => {});
-    };
-  }, [lab.id]);
 
   const handleSelectChallenge = (ch: Challenge) => {
     setSelectedChallenge(ch);

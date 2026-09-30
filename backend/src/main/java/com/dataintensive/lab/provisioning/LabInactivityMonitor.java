@@ -16,8 +16,8 @@ public class LabInactivityMonitor {
         this.provisioningService = provisioningService;
     }
 
-    @Scheduled(fixedDelay = 60000)
+    @Scheduled(fixedDelay = 15000)
     public void monitorInactivity() {
-        provisioningService.cleanupInactiveSessions(Duration.ofMinutes(15));
+        provisioningService.cleanupInactiveSessions(Duration.ofMinutes(1));
     }
 }
