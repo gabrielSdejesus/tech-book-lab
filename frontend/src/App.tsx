@@ -16,8 +16,20 @@ export function App() {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [selectedLab, setSelectedLab] = useState<Lab | null>(null);
   const [currentView, setCurrentView] = useState<'bookshelf' | 'workspace'>('bookshelf');
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
+    const saved = localStorage.getItem('tbl_sidebar_open');
+    return saved !== null ? saved === 'true' : true;
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const handleToggleSidebar = () => {
+    setIsSidebarOpen((prev) => {
+      const next = !prev;
+      localStorage.setItem('tbl_sidebar_open', String(next));
+      return next;
+    });
+  };
 
   // Apply theme to document element
   useEffect(() => {
@@ -136,6 +148,8 @@ export function App() {
         onToggleTheme={() => setTheme((prev) => toggleTheme(prev))}
         isBookshelfActive={currentView === 'bookshelf'}
         onNavigateBookshelf={() => setCurrentView('bookshelf')}
+        isSidebarOpen={isSidebarOpen}
+        onToggleSidebar={handleToggleSidebar}
       />
 
       {currentView === 'bookshelf' ? (
@@ -146,6 +160,8 @@ export function App() {
             books={selectedBook ? [selectedBook] : books}
             selectedLab={selectedLab}
             onSelectLab={(lab) => setSelectedLab(lab)}
+            isOpen={isSidebarOpen}
+            onToggle={handleToggleSidebar}
           />
 
           {selectedLab ? (
