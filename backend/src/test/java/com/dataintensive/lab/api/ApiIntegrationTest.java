@@ -34,6 +34,7 @@ class ApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(1))))
                 .andExpect(jsonPath("$[0].id", is("ddia")))
+                .andExpect(jsonPath("$[0].coverImageUrl", is("/covers/ddia.svg")))
                 .andExpect(jsonPath("$[0].title", containsString("Data-Intensive")));
     }
 
@@ -43,6 +44,7 @@ class ApiIntegrationTest {
         mockMvc.perform(get("/api/books/ddia"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", is("ddia")))
+                .andExpect(jsonPath("$.coverImageUrl", is("/covers/ddia.svg")))
                 .andExpect(jsonPath("$.author", is("Martin Kleppmann")));
     }
 
