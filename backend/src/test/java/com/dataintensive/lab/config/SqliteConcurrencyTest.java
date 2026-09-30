@@ -32,7 +32,7 @@ class SqliteConcurrencyTest {
     @DisplayName("Deve executar leituras e escritas concorrentes sem erros de SQLITE_BUSY sob modo WAL")
     void shouldExecuteConcurrentReadsAndWritesWithoutDatabaseLocked() throws Exception {
         String dbUrl = "jdbc:sqlite:" + tempDir.resolve("concurrency-stress.db").toAbsolutePath();
-        try (HikariDataSource dataSource = CatalogDatabaseConfig.createSqliteDataSource(dbUrl)) {
+        try (HikariDataSource dataSource = SqliteTestDataSourceFactory.createDataSource(dbUrl)) {
             // Inicializar tabela de teste
             try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
                 stmt.execute("""
@@ -117,7 +117,7 @@ class SqliteConcurrencyTest {
     @DisplayName("Deve permitir leituras imediatas sem bloqueio enquanto transação de escrita está em andamento")
     void shouldAllowConcurrentReadersWhileWriteTransactionIsInFlight() throws Exception {
         String dbUrl = "jdbc:sqlite:" + tempDir.resolve("concurrency-readers.db").toAbsolutePath();
-        try (HikariDataSource dataSource = CatalogDatabaseConfig.createSqliteDataSource(dbUrl)) {
+        try (HikariDataSource dataSource = SqliteTestDataSourceFactory.createDataSource(dbUrl)) {
             try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
                 stmt.execute("CREATE TABLE read_write_isolation (id INTEGER PRIMARY KEY, title TEXT);");
                 stmt.execute("INSERT INTO read_write_isolation (id, title) VALUES (1, 'Initial Data');");
