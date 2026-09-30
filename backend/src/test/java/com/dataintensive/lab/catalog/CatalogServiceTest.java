@@ -1,96 +1,90 @@
 package com.dataintensive.lab.catalog;
 
 import com.dataintensive.lab.domain.Book;
-import com.dataintensive.lab.domain.Chapter;
 import com.dataintensive.lab.domain.EngineType;
 import com.dataintensive.lab.domain.Lab;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class CatalogServiceTest {
+
+    @Mock
+    private CatalogRepository catalogRepository;
 
     private CatalogService catalogService;
 
     @BeforeEach
     void setUp() {
-        catalogService = new CatalogService();
+        catalogService = new CatalogService(catalogRepository);
     }
 
     @Test
-    @DisplayName("Deve listar todos os livros disponíveis no catálogo")
+    @DisplayName("Deve delegar ao repositório para listar todos os livros")
     void shouldListAllBooks() {
+        Book book = new Book("ddia", "Designing Data-Intensive Applications", "Martin Kleppmann", "Tag", "#059669", "Desc", List.of());
+        when(catalogRepository.findAllBooks()).thenReturn(List.of(book));
+
         List<Book> books = catalogService.getAllBooks();
 
-        assertThat(books).isNotEmpty();
-        Book ddia = books.get(0);
-        assertThat(ddia.id()).isEqualTo("ddia");
-        assertThat(ddia.title()).isEqualTo("Designing Data-Intensive Applications");
-        assertThat(ddia.author()).isEqualTo("Martin Kleppmann");
-        assertThat(ddia.chapters()).isNotEmpty();
+        assertThat(books).containsExactly(book);
+        verify(catalogRepository).findAllBooks();
     }
 
     @Test
-    @DisplayName("Deve buscar livro por ID existente")
+    @DisplayName("Deve delegar ao repositório para buscar livro existente")
     void shouldFindBookByIdWhenExists() {
-        Optional<Book> book = catalogService.findBookById("ddia");
+        Book book = new Book("ddia", "Designing Data-Intensive Applications", "Martin Kleppmann", "Tag", "#059669", "Desc", List.of());
+        when(catalogRepository.findBookById("ddia")).thenReturn(Optional.of(book));
 
-        assertThat(book).isPresent();
-        assertThat(book.get().title()).contains("Data-Intensive");
+        Optional<Book> result = catalogService.findBookById("ddia");
+
+        assertThat(result).contains(book);
+        verify(catalogRepository).findBookById("ddia");
     }
 
     @Test
-    @DisplayName("Deve retornar vazio ao buscar livro inexistente")
+    @DisplayName("Deve delegar ao repositório para retornar vazio ao buscar livro inexistente")
     void shouldReturnEmptyWhenBookDoesNotExist() {
-        Optional<Book> book = catalogService.findBookById("livro-inexistente");
+        when(catalogRepository.findBookById("livro-inexistente")).thenReturn(Optional.empty());
 
-        assertThat(book).isEmpty();
+        Optional<Book> result = catalogService.findBookById("livro-inexistente");
+
+        assertThat(result).isEmpty();
+        verify(catalogRepository).findBookById("livro-inexistente");
     }
 
     @Test
-    @DisplayName("Deve encontrar Lab 1 pelo ID e validar motor Postgres e desafios")
-    void shouldFindLab1ById() {
-        Optional<Lab> lab = catalogService.findLabById("ddia-cap-03-lab-01");
+    @DisplayName("Deve delegar ao repositório para encontrar Lab por ID")
+    void shouldFindLabById() {
+        Lab lab = new Lab("ddia-cap-03-lab-01", 1, "relacional-vs-documentos", "Relacional", "Sum", List.of(), EngineType.POSTGRES, "tbl_lab", "DROP TABLE...", List.of());
+        when(catalogRepository.findLabById("ddia-cap-03-lab-01")).thenReturn(Optional.of(lab));
 
-        assertThat(lab).isPresent();
-        assertThat(lab.get().engineType()).isEqualTo(EngineType.POSTGRES);
-        assertThat(lab.get().databaseName()).isEqualTo("tbl_lab");
-        assertThat(lab.get().challenges()).hasSize(2);
-        assertThat(lab.get().resetSchemaSql()).contains("DROP TABLE IF EXISTS");
+        Optional<Lab> result = catalogService.findLabById("ddia-cap-03-lab-01");
+
+        assertThat(result).contains(lab);
+        verify(catalogRepository).findLabById("ddia-cap-03-lab-01");
     }
 
     @Test
-    @DisplayName("Deve encontrar Lab 2 pelo ID e validar motor Neo4j")
-    void shouldFindLab2ById() {
-        Optional<Lab> lab = catalogService.findLabById("ddia-cap-03-lab-02");
-
-        assertThat(lab).isPresent();
-        assertThat(lab.get().engineType()).isEqualTo(EngineType.NEO4J);
-        assertThat(lab.get().databaseName()).isEqualTo("neo4j");
-        assertThat(lab.get().resetSchemaSql()).contains("MATCH (n) DETACH DELETE n");
-    }
-
-    @Test
-    @DisplayName("Deve encontrar Lab por slug")
+    @DisplayName("Deve delegar ao repositório para encontrar Lab por slug")
     void shouldFindLabBySlug() {
-        Optional<Lab> lab = catalogService.findLabById("relacional-vs-documentos");
+        Lab lab = new Lab("ddia-cap-03-lab-01", 1, "relacional-vs-documentos", "Relacional", "Sum", List.of(), EngineType.POSTGRES, "tbl_lab", "DROP TABLE...", List.of());
+        when(catalogRepository.findLabById("relacional-vs-documentos")).thenReturn(Optional.of(lab));
 
-        assertThat(lab).isPresent();
-        assertThat(lab.get().id()).isEqualTo("ddia-cap-03-lab-01");
-    }
+        Optional<Lab> result = catalogService.findLabById("relacional-vs-documentos");
 
-    @Test
-    @DisplayName("Deve conter o título correto 'Modelos de Dados e Linguagens de Consulta' para o Capítulo 3")
-    void shouldHaveCorrectTitleForChapter3() {
-        Book ddia = catalogService.findBookById("ddia").orElseThrow();
-        assertThat(ddia.chapters()).isNotEmpty();
-        Chapter ch3 = ddia.chapters().get(0);
-        assertThat(ch3.number()).isEqualTo(3);
-        assertThat(ch3.title()).isEqualTo("Modelos de Dados e Linguagens de Consulta");
+        assertThat(result).contains(lab);
+        verify(catalogRepository).findLabById("relacional-vs-documentos");
     }
 }

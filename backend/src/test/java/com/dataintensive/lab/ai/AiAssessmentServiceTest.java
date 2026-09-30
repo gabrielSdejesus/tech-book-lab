@@ -1,14 +1,21 @@
 package com.dataintensive.lab.ai;
 
+import com.dataintensive.lab.catalog.CatalogRepository;
 import com.dataintensive.lab.catalog.CatalogService;
+import com.dataintensive.lab.domain.Challenge;
+import com.dataintensive.lab.domain.EngineType;
+import com.dataintensive.lab.domain.Lab;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class AiAssessmentServiceTest {
 
@@ -18,7 +25,32 @@ class AiAssessmentServiceTest {
 
     @BeforeEach
     void setUp() {
-        catalogService = new CatalogService();
+        CatalogRepository catalogRepository = mock(CatalogRepository.class);
+        Challenge ch1 = new Challenge(
+                "lab-01-ch-1",
+                1,
+                "Modelagem 3NF (Relacional Estrito)",
+                "Crie o modelo 3NF",
+                "Cada usuário tem nome, bio",
+                "-- 1. Crie as tabelas normalizadas\nCREATE TABLE usuarios (\n    id INT PRIMARY KEY,\n    nome VARCHAR(255),\n    bio VARCHAR(500)\n);",
+                List.of(),
+                "Reflexão"
+        );
+        Lab lab1 = new Lab(
+                "ddia-cap-03-lab-01",
+                1,
+                "relacional-vs-documentos",
+                "Relacional vs Documentos",
+                "Comparativo",
+                List.of("Impedance Mismatch"),
+                EngineType.POSTGRES,
+                "tbl_lab",
+                "DROP TABLE...",
+                List.of(ch1)
+        );
+        when(catalogRepository.findLabById("ddia-cap-03-lab-01")).thenReturn(Optional.of(lab1));
+
+        catalogService = new CatalogService(catalogRepository);
         objectMapper = new ObjectMapper();
         aiAssessmentService = new AiAssessmentService(
                 catalogService,
