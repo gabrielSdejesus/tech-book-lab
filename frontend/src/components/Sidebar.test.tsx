@@ -70,4 +70,37 @@ describe('Sidebar Component', () => {
     fireEvent.click(lab2Button);
     expect(handleSelectLab).toHaveBeenCalledWith(mockLab2);
   });
+
+  it('deve aplicar classes de recolhimento quando isOpen for false', () => {
+    render(
+      <Sidebar
+        books={[mockBook]}
+        selectedLab={mockLab1}
+        onSelectLab={vi.fn()}
+        isOpen={false}
+      />
+    );
+
+    const aside = screen.getByRole('complementary', { name: /Tábua de Matérias/i });
+    expect(aside).toHaveClass('w-0');
+    expect(aside).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('deve disparar onToggle ao clicar no botão de recolher da barra lateral', () => {
+    const handleToggle = vi.fn();
+    render(
+      <Sidebar
+        books={[mockBook]}
+        selectedLab={mockLab1}
+        onSelectLab={vi.fn()}
+        isOpen={true}
+        onToggle={handleToggle}
+      />
+    );
+
+    const collapseBtn = screen.getByRole('button', { name: /Recolher tábua de matérias/i });
+    fireEvent.click(collapseBtn);
+
+    expect(handleToggle).toHaveBeenCalledTimes(1);
+  });
 });
