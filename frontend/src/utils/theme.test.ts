@@ -68,4 +68,32 @@ describe('Theme Management (TDD Seam)', () => {
     expect(classes.has('dark')).toBe(false);
     expect(fakeStorage.getItem('lab_theme')).toBe('light');
   });
+
+  it('deve definir style.colorScheme correspondente ao tema aplicado', () => {
+    const fakeElement = {
+      classList: {
+        add: () => {},
+        remove: () => {}
+      },
+      style: {
+        colorScheme: ''
+      }
+    };
+
+    applyTheme('light', fakeElement as any, fakeStorage);
+    expect(fakeElement.style.colorScheme).toBe('light');
+
+    applyTheme('dark', fakeElement as any, fakeStorage);
+    expect(fakeElement.style.colorScheme).toBe('dark');
+  });
+
+  it('deve possuir a diretiva @custom-variant dark no index.css para suportar alternância de tema no Tailwind v4', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const cssPath = path.resolve(process.cwd(), 'src/index.css');
+    const css = fs.readFileSync(cssPath, 'utf-8');
+
+    expect(css).toMatch(/@custom-variant\s+dark\s+\(&:where\(\.dark,\s*\.dark\s*\*\)\);/);
+  });
 });
+
