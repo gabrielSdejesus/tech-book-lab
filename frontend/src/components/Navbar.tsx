@@ -32,10 +32,10 @@ export const Navbar: React.FC<Props> = ({
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-lg font-serif font-black tracking-tight text-stone-900 dark:text-stone-100 uppercase">
-              Data-Intensive <span className="text-[#8f1d1d] dark:text-[#df4444]">Laboratories</span>
+              Tech Book <span className="text-[#8f1d1d] dark:text-[#df4444]">Lab</span>
             </h1>
             <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 border border-stone-700 dark:border-stone-600 bg-[#ece7db] dark:bg-[#272522] text-stone-800 dark:text-stone-300 font-semibold tracking-wide">
-              Vol. I
+              TBL
             </span>
           </div>
           <p className="text-xs font-serif italic text-stone-600 dark:text-stone-400">

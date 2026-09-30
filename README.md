@@ -1,4 +1,4 @@
-# Data-Intensive Labs Platform 🚀
+# Tech Book Lab (TBL) 🚀
 
 Plataforma de laboratórios interativos para estudos práticos de livros de engenharia de software, bancos de dados e sistemas distribuídos — iniciando com **"Designing Data-Intensive Applications"** de Martin Kleppmann.
 
@@ -17,8 +17,8 @@ Plataforma de laboratórios interativos para estudos práticos de livros de enge
   - Workspace com editor de código (SQL/Cypher), atalhos de teclado (`Ctrl + Enter`), visualizador de dados tabulares, JSON e painel de análise do Tutor de IA.
   - Indicadores de saúde dos containers em tempo real.
 - **Infraestrutura (Docker Compose):**
-  - `ddia-postgres`: PostgreSQL 16 Alpine na porta `5432` (`ddia_lab`).
-  - `ddia-neo4j`: Neo4j 5 Community na porta `7474` (Web) e `7687` (Bolt).
+  - `tbl-postgres`: PostgreSQL 16 Alpine na porta `5432` (`tbl_lab`).
+  - `tbl-neo4j`: Neo4j 5 Community na porta `7474` (Web) e `7687` (Bolt).
 
 ---
 
