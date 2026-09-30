@@ -60,9 +60,18 @@ export const Navbar: React.FC<Props> = ({
         )}
 
         <div
-          className={onNavigateBookshelf ? 'cursor-pointer group' : ''}
+          role={onNavigateBookshelf ? 'button' : undefined}
+          tabIndex={onNavigateBookshelf ? 0 : undefined}
+          aria-label={onNavigateBookshelf ? (t.common.goToBookshelf || 'Ir para a Estante de Livros') : undefined}
+          className={`${onNavigateBookshelf ? 'cursor-pointer group focus-visible:outline-2 focus-visible:outline-[#8f1d1d] focus-visible:outline-offset-2 dark:focus-visible:outline-[#df4444]' : ''}`}
           onClick={onNavigateBookshelf}
-          title={onNavigateBookshelf ? 'Ir para a Estante de Livros' : undefined}
+          onKeyDown={(e) => {
+            if (onNavigateBookshelf && (e.key === 'Enter' || e.key === ' ')) {
+              e.preventDefault();
+              onNavigateBookshelf();
+            }
+          }}
+          title={onNavigateBookshelf ? (t.common.goToBookshelf || 'Ir para a Estante de Livros') : undefined}
         >
           <div className="flex items-center gap-2">
             <h1 className="text-lg font-serif font-black tracking-tight text-stone-900 dark:text-stone-100 uppercase group-hover:text-[#8f1d1d] dark:group-hover:text-[#df4444] transition-colors">
@@ -121,7 +130,7 @@ export const Navbar: React.FC<Props> = ({
             onClick={onRefreshInfra}
             disabled={loadingInfra}
             title="Sondar conectividade dos bancos de dados"
-            className="text-stone-600 dark:text-stone-400 hover:text-stone-950 dark:hover:text-stone-100 p-0.5 rounded ml-1 transition-colors"
+            className="text-stone-600 dark:text-stone-400 hover:text-stone-950 dark:hover:text-stone-100 p-0.5 rounded ml-1 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           >
             <RefreshCw className={`w-3 h-3 ${loadingInfra ? 'animate-spin text-[#8f1d1d]' : ''}`} />
           </button>

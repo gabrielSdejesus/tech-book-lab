@@ -196,7 +196,7 @@ export const AiSettingsModal: React.FC<Props> = ({
                     type="button"
                     onClick={handleTest}
                     disabled={testing || !tempKey.trim()}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-[#eee8db] dark:bg-[#282622] hover:bg-[#ded7c8] dark:hover:bg-[#33302b] border-2 border-stone-800 dark:border-stone-600 text-stone-900 dark:text-stone-100 text-xs font-mono font-bold uppercase book-shadow-sm book-shadow-pressed transition-all disabled:opacity-40"
+                    className="flex items-center gap-1.5 px-3 py-2 bg-[#eee8db] dark:bg-[#282622] hover:bg-[#ded7c8] dark:hover:bg-[#33302b] border-2 border-stone-800 dark:border-stone-600 text-stone-900 dark:text-stone-100 text-xs font-mono font-bold uppercase book-shadow-sm book-shadow-pressed transition-all disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
                   >
                     {testing ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -232,7 +232,7 @@ export const AiSettingsModal: React.FC<Props> = ({
                 type="button"
                 onClick={handleTest}
                 disabled={testing}
-                className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-[#eee8db] dark:bg-[#282622] hover:bg-[#ded7c8] dark:hover:bg-[#33302b] border-2 border-stone-800 dark:border-stone-600 text-stone-900 dark:text-stone-100 text-xs font-mono font-bold uppercase book-shadow-sm book-shadow-pressed transition-all"
+                className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-[#eee8db] dark:bg-[#282622] hover:bg-[#ded7c8] dark:hover:bg-[#33302b] border-2 border-stone-800 dark:border-stone-600 text-stone-900 dark:text-stone-100 text-xs font-mono font-bold uppercase book-shadow-sm book-shadow-pressed transition-all disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
               >
                 {testing ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />

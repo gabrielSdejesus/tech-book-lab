@@ -237,7 +237,7 @@ describe('Navbar Component', () => {
       />
     );
 
-    const brandBtn = screen.getByRole('button', { name: /Ir para a Estante de Livros/i });
+    const brandBtn = screen.getByRole('button', { name: /Ir para a Estante/i });
     expect(brandBtn).toHaveAttribute('tabIndex', '0');
 
     fireEvent.keyDown(brandBtn, { key: 'Enter' });
