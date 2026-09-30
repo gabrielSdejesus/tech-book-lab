@@ -59,7 +59,7 @@ class CatalogServiceTest {
 
         assertThat(lab).isPresent();
         assertThat(lab.get().engineType()).isEqualTo(EngineType.POSTGRES);
-        assertThat(lab.get().databaseName()).isEqualTo("ddia_lab");
+        assertThat(lab.get().databaseName()).isEqualTo("tbl_lab");
         assertThat(lab.get().challenges()).hasSize(2);
         assertThat(lab.get().resetSchemaSql()).contains("DROP TABLE IF EXISTS");
     }

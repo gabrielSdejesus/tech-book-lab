@@ -17,12 +17,12 @@ class QueryExecutionServiceTest {
     void setUp() {
         catalogService = new CatalogService();
         queryExecutionService = new QueryExecutionService(
-                "jdbc:postgresql://localhost:5432/ddia_lab",
+                "jdbc:postgresql://localhost:5432/tbl_lab",
                 "postgres",
                 "postgrespassword",
                 "bolt://localhost:7687",
                 "neo4j",
-                "ddiapassword",
+                "tblpassword",
                 catalogService
         );
     }

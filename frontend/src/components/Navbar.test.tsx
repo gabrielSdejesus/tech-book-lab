@@ -25,8 +25,9 @@ describe('Navbar Component', () => {
       />
     );
 
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/Data-Intensive/i);
-    expect(screen.getByText(/Laboratories/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/Tech Book/i);
+    expect(screen.getByText(/Lab/i)).toBeInTheDocument();
+    expect(screen.getByText(/TBL/i)).toBeInTheDocument();
     expect(screen.getByText(/Designing Data-Intensive Applications/i)).toBeInTheDocument();
   });
 

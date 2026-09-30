@@ -12,7 +12,7 @@ describe('Sidebar Component', () => {
     summary: 'Comparativo de modelos',
     keyConcepts: ['Impedance Mismatch'],
     engineType: 'POSTGRES',
-    databaseName: 'ddia_lab',
+    databaseName: 'tbl_lab',
     resetSchemaSql: 'DROP TABLE IF EXISTS...',
     challenges: []
   };
