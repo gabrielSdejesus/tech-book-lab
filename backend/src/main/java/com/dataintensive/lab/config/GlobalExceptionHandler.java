@@ -55,8 +55,41 @@ public class GlobalExceptionHandler {
                 ex.getMessage()
         );
         problemDetail.setTitle("Regra de negócio violada");
-        problemDetail.setType(URI.create("urn:problem:domain-validation-error"));
+        problemDetail.setType(URI.create("https://api.dataintensive.lab/errors/validation"));
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
+    }
+
+    @ExceptionHandler(com.dataintensive.lab.provisioning.LabNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleLabNotFound(com.dataintensive.lab.provisioning.LabNotFoundException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.NOT_FOUND,
+                ex.getMessage()
+        );
+        problemDetail.setTitle("Recurso Não Encontrado");
+        problemDetail.setType(URI.create("https://api.dataintensive.lab/errors/not-found"));
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
+    }
+
+    @ExceptionHandler(com.dataintensive.lab.provisioning.SessionExpiredException.class)
+    public ResponseEntity<ProblemDetail> handleSessionExpired(com.dataintensive.lab.provisioning.SessionExpiredException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.GONE,
+                ex.getMessage()
+        );
+        problemDetail.setTitle("Sessão Expirada");
+        problemDetail.setType(URI.create("https://api.dataintensive.lab/errors/session-expired"));
+        return ResponseEntity.status(HttpStatus.GONE).body(problemDetail);
+    }
+
+    @ExceptionHandler(com.dataintensive.lab.provisioning.LabEnvironmentNotReadyException.class)
+    public ResponseEntity<ProblemDetail> handleLabNotReady(com.dataintensive.lab.provisioning.LabEnvironmentNotReadyException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT,
+                ex.getMessage()
+        );
+        problemDetail.setTitle("Ambiente Não Pronto");
+        problemDetail.setType(URI.create("https://api.dataintensive.lab/errors/environment-not-ready"));
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(problemDetail);
     }
 
     @ExceptionHandler(QueryExecutionException.class)

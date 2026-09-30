@@ -10,6 +10,7 @@ import type {
   EngineType,
   ProblemDetail
 } from '../types';
+import { getSessionId } from './session';
 
 const API_BASE = '/api';
 
@@ -46,7 +47,10 @@ export async function getLabById(labId: string): Promise<Lab> {
 export async function executeQuery(query: string, engineType: EngineType, labId: string): Promise<QueryResult> {
   const res = await fetch(`${API_BASE}/query/execute`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Session-Id': getSessionId(),
+    },
     body: JSON.stringify({ query, engineType, labId })
   });
   if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha na comunicação com o servidor de execução'));
@@ -55,7 +59,10 @@ export async function executeQuery(query: string, engineType: EngineType, labId:
 
 export async function resetLab(labId: string): Promise<QueryResult> {
   const res = await fetch(`${API_BASE}/query/reset/${labId}`, {
-    method: 'POST'
+    method: 'POST',
+    headers: {
+      'X-Session-Id': getSessionId(),
+    }
   });
   if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao resetar banco do laboratório'));
   return res.json();
@@ -70,7 +77,10 @@ export async function getInfraStatus(): Promise<InfraStatus> {
 export async function assessWithAi(req: AiAssessmentRequest): Promise<AiAssessmentResponse> {
   const res = await fetch(`${API_BASE}/ai/assess`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Session-Id': getSessionId(),
+    },
     body: JSON.stringify(req)
   });
   if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao consultar Tutor de IA'));
@@ -80,7 +90,10 @@ export async function assessWithAi(req: AiAssessmentRequest): Promise<AiAssessme
 export async function testAiConnection(req: AiTestConnectionRequest): Promise<AiTestConnectionResponse> {
   const res = await fetch(`${API_BASE}/ai/test-connection`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Session-Id': getSessionId(),
+    },
     body: JSON.stringify(req)
   });
   if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao testar conexão com o provedor de IA'));

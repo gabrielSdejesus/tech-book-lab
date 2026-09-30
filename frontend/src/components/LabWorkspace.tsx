@@ -2,6 +2,13 @@ import React, { useState, useEffect } from 'react';
 import type { Lab, Challenge, QueryResult, AiAssessmentResponse } from '../types';
 import { executeQuery, resetLab, assessWithAi } from '../services/api';
 import {
+  provisionLab,
+  getLabStatus,
+  sendHeartbeat,
+  teardownLab,
+  type LabProvisionStatus
+} from '../services/labProvisioning';
+import {
   Play,
   RotateCcw,
   Sparkles,
@@ -40,6 +47,9 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
   const [resetting, setResetting] = useState(false);
   const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
 
+  const [provisionStatus, setProvisionStatus] = useState<LabProvisionStatus>('READY');
+  const [provisionMessage, setProvisionMessage] = useState<string>('');
+
   useEffect(() => {
     if (lab.challenges.length > 0) {
       const first = lab.challenges[0];
@@ -50,6 +60,58 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
       setAiResponse(null);
       setActiveTab('result');
     }
+  }, [lab.id]);
+
+  useEffect(() => {
+    let isMounted = true;
+    let pollTimer: any = null;
+    let heartbeatTimer: any = null;
+
+    const start = async () => {
+      try {
+        const init = await provisionLab(lab.id);
+        if (!isMounted) return;
+        setProvisionStatus(init.status);
+        setProvisionMessage(init.message || '');
+
+        if (init.status === 'READY') {
+          heartbeatTimer = setInterval(() => {
+            sendHeartbeat(lab.id).catch(() => {});
+          }, 60000);
+        } else if (init.status === 'PROVISIONING') {
+          pollTimer = setInterval(async () => {
+            try {
+              const statusRes = await getLabStatus(lab.id);
+              if (!isMounted) return;
+              if (statusRes.status === 'READY') {
+                clearInterval(pollTimer);
+                setProvisionStatus('READY');
+                heartbeatTimer = setInterval(() => {
+                  sendHeartbeat(lab.id).catch(() => {});
+                }, 60000);
+              } else if (statusRes.status === 'ERROR') {
+                clearInterval(pollTimer);
+                setProvisionStatus('ERROR');
+                setProvisionMessage(statusRes.errorMessage || 'Falha ao inicializar o ambiente.');
+              }
+            } catch {
+              // fallback polling
+            }
+          }, 2000);
+        }
+      } catch {
+        if (isMounted) setProvisionStatus('READY');
+      }
+    };
+
+    start();
+
+    return () => {
+      isMounted = false;
+      if (pollTimer) clearInterval(pollTimer);
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      teardownLab(lab.id).catch(() => {});
+    };
   }, [lab.id]);
 
   const handleSelectChallenge = (ch: Challenge) => {
@@ -310,7 +372,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
           <div className="flex items-center gap-3 pt-2">
             <button
               onClick={handleAssessWithAi}
-              disabled={assessing}
+              disabled={assessing || provisionStatus !== 'READY'}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-[#8f1d1d] hover:bg-[#771818] dark:bg-[#991b1b] dark:hover:bg-[#7f1d1d] border-2 border-stone-900 dark:border-stone-600 text-white text-xs font-mono font-bold uppercase tracking-wider book-shadow book-shadow-pressed transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             >
               {assessing ? (
@@ -329,7 +391,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
 
             <button
               onClick={handleReset}
-              disabled={resetting}
+              disabled={resetting || provisionStatus !== 'READY'}
               title={t.lab.resetTooltip}
               className="flex items-center gap-1.5 py-2.5 px-3 bg-[#eee8db] dark:bg-[#252320] hover:bg-[#ded7c8] dark:hover:bg-[#302c28] border-2 border-stone-800 dark:border-stone-600 text-stone-900 dark:text-stone-200 text-xs font-mono font-bold uppercase book-shadow-sm book-shadow-pressed transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -369,7 +431,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
 
             <button
               onClick={handleExecute}
-              disabled={executing}
+              disabled={executing || provisionStatus !== 'READY'}
               className="flex items-center gap-1.5 px-4 py-1.5 bg-[#1c1917] hover:bg-[#33302e] dark:bg-[#e6e2d8] dark:hover:bg-[#f3f0e8] dark:text-stone-950 border-2 border-stone-900 text-white text-xs font-mono font-bold uppercase book-shadow-sm book-shadow-pressed transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             >
               {executing ? (
@@ -381,6 +443,31 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
             </button>
           </div>
         </div>
+
+        {provisionStatus === 'PROVISIONING' && (
+          <div className="bg-amber-100 dark:bg-amber-950 border-b-2 border-amber-800 dark:border-amber-600 px-4 py-2 flex items-center gap-2 text-xs font-mono text-amber-900 dark:text-amber-200">
+            <Loader2 className="w-4 h-4 animate-spin text-amber-700 dark:text-amber-400" />
+            <span>Provisionando ambiente isolado de laboratório ({lab.engineType})... Aguarde para executar consultas.</span>
+          </div>
+        )}
+
+        {provisionStatus === 'ERROR' && (
+          <div className="bg-red-100 dark:bg-red-950 border-b-2 border-red-800 dark:border-red-600 px-4 py-2 flex items-center justify-between text-xs font-mono text-red-900 dark:text-red-200">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
+              <span>{provisionMessage || 'Falha ao inicializar contêiner do laboratório.'}</span>
+            </div>
+            <button
+              onClick={() => {
+                setProvisionStatus('PROVISIONING');
+                provisionLab(lab.id).then(r => setProvisionStatus(r.status)).catch(() => setProvisionStatus('ERROR'));
+              }}
+              className="px-2 py-1 bg-red-800 hover:bg-red-700 text-white text-[11px] font-bold uppercase transition-colors"
+            >
+              Tentar Novamente
+            </button>
+          </div>
+        )}
 
         {/* Code Workbench */}
         <div className="h-1/2 border-b-2 border-stone-800 dark:border-stone-700 relative flex flex-col bg-[#fdfcf9] dark:bg-[#161513]">

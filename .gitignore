@@ -8,6 +8,8 @@ GEMINI.md
 GLOSSARY.md
 glossary.md
 skills-lock.json
+specs/
+.worktrees/
 .gemini/
 .cursor/
 .windsurf/
