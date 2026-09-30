@@ -26,11 +26,20 @@ export const AiSettingsModal: React.FC<Props> = ({
 }) => {
   const [tempKey, setTempKey] = useState(apiKey);
   const [tempProvider, setTempProvider] = useState(provider);
-  const [tempModel, setTempModel] = useState(model || 'gemini-3.8-flash');
+  const [tempModel, setTempModel] = useState(model || 'gemini-2.5-flash');
   const [saved, setSaved] = useState(false);
 
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<AiTestConnectionResponse | null>(null);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setTempKey(apiKey);
+      setTempProvider(provider);
+      setTempModel(model || (provider === 'ollama' ? 'qwen2.5-coder:1.5b' : 'gemini-2.5-flash'));
+      setTestResult(null);
+    }
+  }, [isOpen, apiKey, provider, model]);
 
   if (!isOpen) return null;
 
@@ -44,9 +53,6 @@ export const AiSettingsModal: React.FC<Props> = ({
         modelOverride: tempModel
       });
       setTestResult(res);
-      if (res.valid && res.model) {
-        setTempModel(res.model);
-      }
     } catch (err: any) {
       setTestResult({
         valid: false,
@@ -100,6 +106,9 @@ export const AiSettingsModal: React.FC<Props> = ({
                 type="button"
                 onClick={() => {
                   setTempProvider('gemini');
+                  if (!tempModel || tempModel.includes('qwen') || tempModel.includes('llama')) {
+                    setTempModel('gemini-2.5-flash');
+                  }
                   setTestResult(null);
                 }}
                 className={`flex items-center justify-center gap-2 p-2.5 border-2 text-xs font-mono font-bold uppercase transition-all ${
@@ -114,6 +123,9 @@ export const AiSettingsModal: React.FC<Props> = ({
                 type="button"
                 onClick={() => {
                   setTempProvider('ollama');
+                  if (!tempModel || tempModel.includes('gemini')) {
+                    setTempModel('qwen2.5-coder:1.5b');
+                  }
                   setTestResult(null);
                 }}
                 className={`flex items-center justify-center gap-2 p-2.5 border-2 text-xs font-mono font-bold uppercase transition-all ${
@@ -142,9 +154,12 @@ export const AiSettingsModal: React.FC<Props> = ({
                   }}
                   className="w-full bg-[#fdfcf9] dark:bg-[#141312] border-2 border-stone-700 dark:border-stone-600 px-3 py-2 text-stone-900 dark:text-stone-100 text-xs font-mono focus:outline-none focus:border-stone-950 dark:focus:border-stone-400"
                 >
-                  <option value="gemini-3.8-flash">Gemini 3.8 Flash (Recomendado - Mais Recente)</option>
-                  <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite (Ultrarrápido)</option>
-                  <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                  <option value="gemini-2.5-flash">Gemini 2.5 Flash (Recomendado - Mais Recente)</option>
+                  <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                  <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                  <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                  <option value="gemini-3.8-flash">Gemini 3.8 Flash</option>
+                  <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite</option>
                 </select>
               </div>
 
@@ -192,9 +207,24 @@ export const AiSettingsModal: React.FC<Props> = ({
               </div>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-stone-700 dark:text-stone-400">
+                  Modelo Ollama
+                </label>
+                <input
+                  type="text"
+                  value={tempModel}
+                  onChange={(e) => {
+                    setTempModel(e.target.value);
+                    setTestResult(null);
+                  }}
+                  placeholder="ex: qwen2.5-coder:1.5b, llama3.2"
+                  className="w-full bg-[#fdfcf9] dark:bg-[#141312] border-2 border-stone-700 dark:border-stone-600 px-3 py-2 text-stone-900 dark:text-stone-100 text-xs font-mono focus:outline-none focus:border-stone-950 dark:focus:border-stone-400"
+                />
+              </div>
               <div className="p-3 bg-[#f5f0e4] dark:bg-[#1f1d1a] border border-stone-400 dark:border-stone-700 text-xs font-serif text-stone-800 dark:text-stone-300">
-                Ollama deve estar ativo localmente em <code className="font-mono font-bold">http://localhost:11434</code> com o modelo <code className="font-mono font-bold">qwen2.5-coder:1.5b</code>.
+                Ollama deve estar ativo localmente em <code className="font-mono font-bold">http://localhost:11434</code> com o modelo selecionado.
               </div>
               <button
                 type="button"

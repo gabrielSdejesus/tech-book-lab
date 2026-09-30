@@ -31,21 +31,34 @@ public class AiAssessmentService {
     public AiAssessmentService(
             CatalogService catalogService,
             ObjectMapper objectMapper,
-            @Value("${lab.ai.provider:gemini}") String defaultProvider,
-            @Value("${lab.ai.gemini.api-key:}") String geminiApiKey,
-            @Value("${lab.ai.gemini.model:gemini-3.8-flash}") String geminiModel,
-            @Value("${lab.ai.ollama.base-url:http://localhost:11434}") String ollamaBaseUrl,
-            @Value("${lab.ai.ollama.model:qwen2.5-coder:1.5b}") String ollamaModel) {
+            HttpClient httpClient,
+            String defaultProvider,
+            String geminiApiKey,
+            String geminiModel,
+            String ollamaBaseUrl,
+            String ollamaModel) {
         this.catalogService = catalogService;
         this.objectMapper = objectMapper;
+        this.httpClient = httpClient != null ? httpClient : HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
         this.defaultProvider = defaultProvider;
         this.geminiApiKey = geminiApiKey;
         this.geminiModel = (geminiModel != null && !geminiModel.isBlank()) ? geminiModel : "gemini-3.8-flash";
         this.ollamaBaseUrl = ollamaBaseUrl;
         this.ollamaModel = ollamaModel;
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
-                .build();
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public AiAssessmentService(
+            CatalogService catalogService,
+            ObjectMapper objectMapper,
+            @Value("${lab.ai.provider:gemini}") String defaultProvider,
+            @Value("${lab.ai.gemini.api-key:}") String geminiApiKey,
+            @Value("${lab.ai.gemini.model:gemini-3.8-flash}") String geminiModel,
+            @Value("${lab.ai.ollama.base-url:http://localhost:11434}") String ollamaBaseUrl,
+            @Value("${lab.ai.ollama.model:qwen2.5-coder:1.5b}") String ollamaModel) {
+        this(catalogService, objectMapper, null, defaultProvider, geminiApiKey, geminiModel, ollamaBaseUrl, ollamaModel);
     }
 
     public AiTestConnectionResponse testConnection(AiTestConnectionRequest request) {
@@ -57,7 +70,8 @@ public class AiAssessmentService {
                 ? request.apiKey().trim()
                 : geminiApiKey;
 
-        String targetModel = (request.modelOverride() != null && !request.modelOverride().isBlank())
+        boolean isModelOverridden = request.modelOverride() != null && !request.modelOverride().isBlank();
+        String targetModel = isModelOverridden
                 ? request.modelOverride().trim()
                 : geminiModel;
 
@@ -68,7 +82,6 @@ public class AiAssessmentService {
                 return new AiTestConnectionResponse(false, "Nenhuma API Key informada para o Google Gemini.", null, 0);
             }
             try {
-                // Tenta com o modelo especificado ou descobre o modelo mais recente disponível
                 String modelToUse = targetModel;
                 String endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + modelToUse + ":generateContent?key=" + key;
                 Map<String, Object> payload = Map.of(
@@ -88,9 +101,12 @@ public class AiAssessmentService {
                 long latency = System.currentTimeMillis() - startTime;
 
                 if (resp.statusCode() == 200) {
-                    return new AiTestConnectionResponse(true, "Autenticação bem-sucedida com a versão mais recente da AI!", modelToUse, latency);
+                    return new AiTestConnectionResponse(true, "Autenticação bem-sucedida com o modelo " + modelToUse + "!", modelToUse, latency);
                 } else if (resp.statusCode() == 404) {
-                    // Se o modelo especificado não foi encontrado, tenta descobrir automaticamente os modelos suportados
+                    if (isModelOverridden) {
+                        String errorMsg = extractErrorMessage(resp.body());
+                        return new AiTestConnectionResponse(false, "Modelo solicitado (" + modelToUse + ") não encontrado (404): " + errorMsg, null, latency);
+                    }
                     String discoveredModel = discoverLatestGeminiModel(key);
                     if (discoveredModel != null) {
                         return new AiTestConnectionResponse(true, "Autenticação bem-sucedida! Modelo mais recente selecionado: " + discoveredModel, discoveredModel, latency);
@@ -106,6 +122,7 @@ public class AiAssessmentService {
                 return new AiTestConnectionResponse(false, "Erro de rede ao conectar com Google Gemini: " + e.getMessage(), null, latency);
             }
         } else if ("ollama".equalsIgnoreCase(provider)) {
+            String ollamaTarget = isModelOverridden ? targetModel : ollamaModel;
             try {
                 HttpRequest req = HttpRequest.newBuilder()
                         .uri(URI.create(ollamaBaseUrl + "/api/tags"))
@@ -115,7 +132,7 @@ public class AiAssessmentService {
                 HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
                 long latency = System.currentTimeMillis() - startTime;
                 if (resp.statusCode() == 200) {
-                    return new AiTestConnectionResponse(true, "Ollama conectado com sucesso!", ollamaModel, latency);
+                    return new AiTestConnectionResponse(true, "Ollama conectado com sucesso!", ollamaTarget, latency);
                 } else {
                     return new AiTestConnectionResponse(false, "Ollama respondeu com HTTP " + resp.statusCode(), null, latency);
                 }
@@ -162,9 +179,10 @@ public class AiAssessmentService {
                 ? request.apiKeyOverride().trim()
                 : geminiApiKey;
 
-        String targetModel = (request.modelOverride() != null && !request.modelOverride().isBlank())
+        boolean isModelOverridden = request.modelOverride() != null && !request.modelOverride().isBlank();
+        String targetModel = isModelOverridden
                 ? request.modelOverride().trim()
-                : geminiModel;
+                : ("gemini".equalsIgnoreCase(provider) ? geminiModel : ollamaModel);
 
         if ("gemini".equalsIgnoreCase(provider) && (key == null || key.isBlank())) {
             return new AiAssessmentResponse(
@@ -181,9 +199,9 @@ public class AiAssessmentService {
 
         try {
             if ("gemini".equalsIgnoreCase(provider)) {
-                return callGemini(prompt, key, targetModel);
+                return callGemini(prompt, key, targetModel, isModelOverridden);
             } else if ("ollama".equalsIgnoreCase(provider)) {
-                return callOllama(prompt);
+                return callOllama(prompt, targetModel);
             }
         } catch (Exception e) {
             System.err.println("Erro ao chamar serviço de IA (" + provider + "): " + e.getMessage());
@@ -270,7 +288,7 @@ public class AiAssessmentService {
         );
     }
 
-    private AiAssessmentResponse callGemini(String prompt, String apiKey, String modelName) throws Exception {
+    private AiAssessmentResponse callGemini(String prompt, String apiKey, String modelName, boolean isModelOverridden) throws Exception {
         String effectiveModel = modelName != null && !modelName.isBlank() ? modelName : geminiModel;
         String endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + effectiveModel + ":generateContent?key=" + apiKey;
 
@@ -305,11 +323,15 @@ public class AiAssessmentService {
             }
         }
 
-        // Se deu 404 para o modelo específico, tenta fallback automático descobrindo os modelos disponíveis
+        // Se deu 404 para o modelo e NÃO foi especificado um modelo override pelo usuário, tenta fallback automático
         if (response.statusCode() == 404) {
+            if (isModelOverridden) {
+                String err = extractErrorMessage(response.body());
+                throw new RuntimeException("Modelo especificado '" + effectiveModel + "' não foi encontrado no Google Gemini (404): " + err);
+            }
             String autoModel = discoverLatestGeminiModel(apiKey);
             if (autoModel != null && !autoModel.equalsIgnoreCase(effectiveModel)) {
-                return callGemini(prompt, apiKey, autoModel);
+                return callGemini(prompt, apiKey, autoModel, false);
             }
         }
 
@@ -365,11 +387,12 @@ public class AiAssessmentService {
         return null;
     }
 
-    private AiAssessmentResponse callOllama(String prompt) throws Exception {
+    private AiAssessmentResponse callOllama(String prompt, String modelName) throws Exception {
+        String effectiveModel = modelName != null && !modelName.isBlank() ? modelName : ollamaModel;
         String endpoint = ollamaBaseUrl + "/api/generate";
 
         Map<String, Object> payload = Map.of(
-            "model", ollamaModel,
+            "model", effectiveModel,
             "prompt", prompt,
             "stream", false,
             "format", "json"
@@ -389,7 +412,7 @@ public class AiAssessmentService {
         if (response.statusCode() == 200) {
             JsonNode root = objectMapper.readTree(response.body());
             String responseText = root.path("response").asText();
-            return parseAiJsonResponse(responseText, "Ollama Local (" + ollamaModel + ")");
+            return parseAiJsonResponse(responseText, "Ollama Local (" + effectiveModel + ")");
         }
         throw new RuntimeException("Falha na chamada Ollama HTTP " + response.statusCode());
     }
