@@ -9,6 +9,7 @@ export interface Challenge {
   starterTemplate: string;
   guidelines: string[];
   reflectionPrompt: string;
+  engineType?: EngineType;
 }
 
 export interface Lab {

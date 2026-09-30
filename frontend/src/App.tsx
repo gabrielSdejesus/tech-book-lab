@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import type { Book, Lab, InfraStatus } from './types';
+import type { Book, Lab } from './types';
 import type { Theme } from './utils/theme';
 import { getInitialTheme, toggleTheme, applyTheme } from './utils/theme';
-import { getBooks, getInfraStatus } from './services/api';
+import { getBooks } from './services/api';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { Bookshelf } from './components/Bookshelf';
@@ -47,10 +47,6 @@ function AppContent() {
     applyTheme(theme);
   }, [theme]);
 
-  // Infra state
-  const [infraStatus, setInfraStatus] = useState<InfraStatus | null>(null);
-  const [loadingInfra, setLoadingInfra] = useState(false);
-
   // AI settings
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('gemini_api_key') || '');
@@ -72,18 +68,6 @@ function AppContent() {
     localStorage.setItem('gemini_model', mod);
   };
 
-  const refreshInfra = async () => {
-    setLoadingInfra(true);
-    try {
-      const status = await getInfraStatus();
-      setInfraStatus(status);
-    } catch {
-      // Ignora erro de rede temporário
-    } finally {
-      setLoadingInfra(false);
-    }
-  };
-
   const handleSelectBook = (book: Book) => {
     setSelectedBook(book);
     if (book.chapters && book.chapters.length > 0 && book.chapters[0].labs && book.chapters[0].labs.length > 0) {
@@ -97,14 +81,8 @@ function AppContent() {
   useEffect(() => {
     async function init() {
       try {
-        const [loadedBooks, status] = await Promise.all([
-          getBooks(),
-          getInfraStatus().catch(() => null),
-        ]);
+        const loadedBooks = await getBooks();
         setBooks(loadedBooks);
-        if (status) {
-          setInfraStatus(status);
-        }
       } catch (err: any) {
         setError(err.message || 'Erro ao carregar dados do catálogo');
       } finally {
@@ -113,9 +91,6 @@ function AppContent() {
     }
 
     void init();
-
-    const interval = setInterval(refreshInfra, 12000);
-    return () => clearInterval(interval);
   }, []);
 
   if (loading) {
@@ -157,9 +132,6 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-[#fbf9f4] dark:bg-[#141312] text-stone-900 dark:text-stone-100 flex flex-col font-serif">
       <Navbar
-        infraStatus={infraStatus}
-        loadingInfra={loadingInfra}
-        onRefreshInfra={refreshInfra}
         onOpenSettings={() => setIsSettingsOpen(true)}
         selectedBookTitle={selectedBook?.title || 'Data-Intensive Labs'}
         theme={theme}

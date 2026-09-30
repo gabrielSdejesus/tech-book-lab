@@ -50,6 +50,8 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
   const [provisionStatus, setProvisionStatus] = useState<LabProvisionStatus>('READY');
   const [provisionMessage, setProvisionMessage] = useState<string>('');
 
+  const activeEngine = selectedChallenge?.engineType || lab.engineType;
+
   useEffect(() => {
     if (lab.challenges.length > 0) {
       const first = lab.challenges[0];
@@ -69,7 +71,9 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
 
     const start = async () => {
       try {
-        const init = await provisionLab(lab.id);
+        setProvisionStatus('PROVISIONING');
+        setProvisionMessage('Provisionando ambiente de laboratório para a tarefa...');
+        const init = await provisionLab(lab.id, selectedChallenge?.id);
         if (!isMounted) return;
         setProvisionStatus(init.status);
         setProvisionMessage(init.message || '');
@@ -81,7 +85,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
         } else if (init.status === 'PROVISIONING') {
           pollTimer = setInterval(async () => {
             try {
-              const statusRes = await getLabStatus(lab.id);
+              const statusRes = await getLabStatus(lab.id, selectedChallenge?.id);
               if (!isMounted) return;
               if (statusRes.status === 'READY') {
                 clearInterval(pollTimer);
@@ -110,6 +114,11 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
       isMounted = false;
       if (pollTimer) clearInterval(pollTimer);
       if (heartbeatTimer) clearInterval(heartbeatTimer);
+    };
+  }, [lab.id, selectedChallenge?.id]);
+
+  useEffect(() => {
+    return () => {
       teardownLab(lab.id).catch(() => {});
     };
   }, [lab.id]);
@@ -128,7 +137,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
     setExecuting(true);
     setFeedbackToast(null);
     try {
-      const res = await executeQuery(queryCode, lab.engineType, lab.id);
+      const res = await executeQuery(queryCode, activeEngine, lab.id);
       setQueryResult(res);
       setActiveTab('result');
     } catch (err: any) {
@@ -409,12 +418,12 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
           <div className="flex items-center gap-2.5">
             <span
               className={`px-2 py-0.5 text-[10px] font-mono font-bold uppercase border-2 ${
-                lab.engineType === 'NEO4J'
+                activeEngine === 'NEO4J'
                   ? 'bg-[#efe3d5] dark:bg-[#2d2419] text-[#713f12] dark:text-[#fde047] border-stone-800 dark:border-stone-600'
                   : 'bg-[#e5ebe4] dark:bg-[#1a2e1d] text-[#14532d] dark:text-[#86efac] border-stone-800 dark:border-stone-600'
               }`}
             >
-              {lab.engineType === 'NEO4J' ? t.lab.engineNeo4j : t.lab.enginePostgres}
+              {activeEngine === 'NEO4J' ? t.lab.engineNeo4j : t.lab.enginePostgres}
             </span>
             <span className="text-[10px] font-mono text-stone-500 dark:text-stone-400 hidden sm:inline">
               {t.lab.ctrlEnterHint}
@@ -431,7 +440,14 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
 
             <button
               onClick={handleExecute}
-              disabled={executing || provisionStatus !== 'READY'}
+              disabled={executing || provisionStatus !== 'READY' || !queryCode.trim()}
+              title={
+                provisionStatus === 'PROVISIONING'
+                  ? (locale === 'pt' ? 'Aguarde o provisionamento do banco de dados...' : 'Waiting for database provisioning...')
+                  : provisionStatus === 'ERROR'
+                  ? (locale === 'pt' ? 'Banco de dados não disponível' : 'Database unavailable')
+                  : t.lab.execute
+              }
               className="flex items-center gap-1.5 px-4 py-1.5 bg-[#1c1917] hover:bg-[#33302e] dark:bg-[#e6e2d8] dark:hover:bg-[#f3f0e8] dark:text-stone-950 border-2 border-stone-900 text-white text-xs font-mono font-bold uppercase book-shadow-sm book-shadow-pressed transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             >
               {executing ? (
@@ -447,7 +463,11 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
         {provisionStatus === 'PROVISIONING' && (
           <div className="bg-amber-100 dark:bg-amber-950 border-b-2 border-amber-800 dark:border-amber-600 px-4 py-2 flex items-center gap-2 text-xs font-mono text-amber-900 dark:text-amber-200">
             <Loader2 className="w-4 h-4 animate-spin text-amber-700 dark:text-amber-400" />
-            <span>Provisionando ambiente isolado de laboratório ({lab.engineType})... Aguarde para executar consultas.</span>
+            <span>
+              {provisionMessage || (locale === 'pt'
+                ? `Provisionando ambiente isolado de laboratório (${activeEngine === 'NEO4J' ? 'Neo4j 5' : 'PostgreSQL 16'})... Aguarde para executar consultas.`
+                : `Provisioning isolated lab environment (${activeEngine === 'NEO4J' ? 'Neo4j 5' : 'PostgreSQL 16'})... Please wait before running queries.`)}
+            </span>
           </div>
         )}
 
@@ -460,7 +480,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
             <button
               onClick={() => {
                 setProvisionStatus('PROVISIONING');
-                provisionLab(lab.id).then(r => setProvisionStatus(r.status)).catch(() => setProvisionStatus('ERROR'));
+                provisionLab(lab.id, selectedChallenge?.id).then(r => setProvisionStatus(r.status)).catch(() => setProvisionStatus('ERROR'));
               }}
               className="px-2 py-1 bg-red-800 hover:bg-red-700 text-white text-[11px] font-bold uppercase transition-colors"
             >
@@ -534,12 +554,40 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
             </button>
           </div>
 
-          {queryResult && (
-            <div className="flex items-center gap-1.5 text-[11px] text-stone-600 dark:text-stone-400 font-mono">
-              <Clock className="w-3.5 h-3.5 text-stone-500" />
-              <span>{queryResult.executionTimeMs}ms</span>
+          <div className="flex items-center gap-3">
+            {/* Contextual Active Engine Badge */}
+            <div
+              data-testid="active-engine-badge"
+              className="flex items-center gap-1.5 px-2 py-0.5 border border-stone-400 dark:border-stone-700 bg-[#f7f4ec] dark:bg-[#1a1917] text-[10px] font-mono"
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  provisionStatus === 'READY'
+                    ? 'bg-emerald-500 animate-pulse'
+                    : provisionStatus === 'PROVISIONING'
+                    ? 'bg-amber-500 animate-spin'
+                    : 'bg-red-500'
+                }`}
+              />
+              <span className="font-bold text-stone-700 dark:text-stone-300">
+                {activeEngine === 'NEO4J' ? 'NEO4J:7687' : 'PG:5432'}
+              </span>
+              <span className="text-stone-500 dark:text-stone-400 uppercase text-[9px]">
+                {provisionStatus === 'READY'
+                  ? 'ON'
+                  : provisionStatus === 'PROVISIONING'
+                  ? 'BOOTING'
+                  : 'OFF'}
+              </span>
             </div>
-          )}
+
+            {queryResult && (
+              <div className="flex items-center gap-1.5 text-[11px] text-stone-600 dark:text-stone-400 font-mono">
+                <Clock className="w-3.5 h-3.5 text-stone-500" />
+                <span>{queryResult.executionTimeMs}ms</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Output Panel Content */}

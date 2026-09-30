@@ -140,7 +140,7 @@ public class JdbcCatalogRepository implements CatalogRepository {
 
     private List<Challenge> findChallengesByLabId(String labId) {
         List<ChallengeRow> challengeRows = jdbcClient.sql("""
-                SELECT id, lab_id, order_index, title, description, scenario, starter_template, reflection_prompt
+                SELECT id, lab_id, order_index, title, description, scenario, starter_template, reflection_prompt, engine_type
                 FROM challenges
                 WHERE lab_id = :labId
                 ORDER BY order_index ASC
@@ -163,6 +163,14 @@ public class JdbcCatalogRepository implements CatalogRepository {
                 .query(String.class)
                 .list();
 
+        EngineType engineType = null;
+        if (row.engine_type() != null && !row.engine_type().isBlank()) {
+            try {
+                engineType = EngineType.valueOf(row.engine_type().toUpperCase());
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+
         return new Challenge(
                 row.id(),
                 row.order_index(),
@@ -171,7 +179,8 @@ public class JdbcCatalogRepository implements CatalogRepository {
                 row.scenario(),
                 row.starter_template(),
                 guidelines,
-                row.reflection_prompt()
+                row.reflection_prompt(),
+                engineType
         );
     }
 
@@ -179,5 +188,5 @@ public class JdbcCatalogRepository implements CatalogRepository {
     public record BookRow(String id, String title, String author, String tag_line, String cover_color, String cover_image_url, String description) {}
     public record ChapterRow(String id, String book_id, int number, String title, String subtitle, String summary) {}
     public record LabRow(String id, String chapter_id, int number, String slug, String title, String summary, String engine_type, String database_name, String reset_schema_sql) {}
-    public record ChallengeRow(String id, String lab_id, int order_index, String title, String description, String scenario, String starter_template, String reflection_prompt) {}
+    public record ChallengeRow(String id, String lab_id, int order_index, String title, String description, String scenario, String starter_template, String reflection_prompt, String engine_type) {}
 }

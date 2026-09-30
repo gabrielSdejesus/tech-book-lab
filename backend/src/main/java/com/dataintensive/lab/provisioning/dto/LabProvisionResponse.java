@@ -5,9 +5,21 @@ import com.dataintensive.lab.provisioning.LabEnvironmentStatus;
 
 public record LabProvisionResponse(
         String labId,
+        String challengeId,
         EngineType engineType,
         LabEnvironmentStatus status,
         String message,
         int allocatedPort,
         int estimatedWaitSeconds
-) {}
+) {
+    public LabProvisionResponse(
+            String labId,
+            EngineType engineType,
+            LabEnvironmentStatus status,
+            String message,
+            int allocatedPort,
+            int estimatedWaitSeconds
+    ) {
+        this(labId, null, engineType, status, message, allocatedPort, estimatedWaitSeconds);
+    }
+}

@@ -4,6 +4,7 @@ export type LabProvisionStatus = 'NOT_PROVISIONED' | 'PROVISIONING' | 'READY' | 
 
 export interface LabProvisionResponse {
   labId: string;
+  challengeId?: string;
   engineType: string;
   status: LabProvisionStatus;
   message: string;
@@ -13,6 +14,7 @@ export interface LabProvisionResponse {
 
 export interface LabStatusResponse {
   labId: string;
+  challengeId?: string;
   engineType: string;
   status: LabProvisionStatus;
   allocatedPort: number;
@@ -41,8 +43,9 @@ function getHeaders(): HeadersInit {
   };
 }
 
-export async function provisionLab(labId: string): Promise<LabProvisionResponse> {
-  const res = await fetch(`/api/lab/${encodeURIComponent(labId)}/provision`, {
+export async function provisionLab(labId: string, challengeId?: string): Promise<LabProvisionResponse> {
+  const query = challengeId ? `?challengeId=${encodeURIComponent(challengeId)}` : '';
+  const res = await fetch(`/api/lab/${encodeURIComponent(labId)}/provision${query}`, {
     method: 'POST',
     headers: getHeaders(),
   });
@@ -52,8 +55,9 @@ export async function provisionLab(labId: string): Promise<LabProvisionResponse>
   return res.json();
 }
 
-export async function getLabStatus(labId: string): Promise<LabStatusResponse> {
-  const res = await fetch(`/api/lab/${encodeURIComponent(labId)}/status`, {
+export async function getLabStatus(labId: string, challengeId?: string): Promise<LabStatusResponse> {
+  const query = challengeId ? `?challengeId=${encodeURIComponent(challengeId)}` : '';
+  const res = await fetch(`/api/lab/${encodeURIComponent(labId)}/status${query}`, {
     method: 'GET',
     headers: getHeaders(),
   });

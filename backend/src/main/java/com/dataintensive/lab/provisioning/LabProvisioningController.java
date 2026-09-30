@@ -28,15 +28,17 @@ public class LabProvisioningController {
     @PostMapping("/{labId}/provision")
     public ResponseEntity<LabProvisionResponse> provisionLab(
             @PathVariable String labId,
+            @RequestParam(required = false) String challengeId,
             @RequestHeader(value = "X-Session-Id", required = false) String rawSessionId) {
 
         SessionId sessionId = SessionId.of(rawSessionId);
         validateLabId(labId);
 
-        LabSession session = provisioningService.provisionLab(sessionId, labId);
+        LabSession session = provisioningService.provisionLab(sessionId, labId, challengeId);
 
         LabProvisionResponse response = new LabProvisionResponse(
                 session.labId(),
+                session.challengeId(),
                 session.engineType(),
                 session.status(),
                 session.status() == LabEnvironmentStatus.READY
@@ -53,16 +55,18 @@ public class LabProvisioningController {
     @GetMapping("/{labId}/status")
     public ResponseEntity<LabStatusResponse> getLabStatus(
             @PathVariable String labId,
+            @RequestParam(required = false) String challengeId,
             @RequestHeader(value = "X-Session-Id", required = false) String rawSessionId) {
 
         SessionId sessionId = SessionId.of(rawSessionId);
         validateLabId(labId);
 
-        LabSession session = provisioningService.getLabStatus(sessionId, labId);
+        LabSession session = provisioningService.getLabStatus(sessionId, labId, challengeId);
         long uptime = Duration.between(session.lastHeartbeatAt(), Instant.now()).toSeconds();
 
         LabStatusResponse response = new LabStatusResponse(
                 session.labId(),
+                session.challengeId(),
                 session.engineType(),
                 session.status(),
                 session.allocatedPort(),
