@@ -14,6 +14,8 @@ interface Props {
   onToggleTheme: () => void;
   isBookshelfActive?: boolean;
   onNavigateBookshelf?: () => void;
+  isSidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
 }
 
 export const Navbar: React.FC<Props> = ({
@@ -26,23 +28,44 @@ export const Navbar: React.FC<Props> = ({
   onToggleTheme,
   isBookshelfActive = false,
   onNavigateBookshelf,
+  isSidebarOpen = true,
+  onToggleSidebar,
 }) => {
   const { locale, setLocale, t } = useLanguage();
 
   return (
     <header className="h-18 border-b-2 border-stone-800 dark:border-stone-700 bg-[#f7f4ec] dark:bg-[#1a1917] px-6 flex items-center justify-between sticky top-0 z-40 select-none transition-colors">
       {/* Brand & Masthead */}
-      <div
-        className={`flex items-center gap-4 ${onNavigateBookshelf ? 'cursor-pointer group' : ''}`}
-        onClick={onNavigateBookshelf}
-        title={onNavigateBookshelf ? 'Ir para a Estante de Livros' : undefined}
-      >
-        <div className="w-10 h-10 border-2 border-stone-800 dark:border-stone-600 bg-[#8f1d1d] flex items-center justify-center text-white book-shadow-sm group-hover:scale-105 transition-transform">
-          <BookOpen className="w-5 h-5 stroke-[2.2]" />
-        </div>
-        <div>
+      <div className="flex items-center gap-4">
+        {!isBookshelfActive && onToggleSidebar ? (
+          <button
+            onClick={onToggleSidebar}
+            aria-label={t.sidebar.toggleSidebar}
+            aria-expanded={isSidebarOpen}
+            title={isSidebarOpen ? t.sidebar.collapseSidebar : t.sidebar.expandSidebar}
+            className="w-10 h-10 border-2 border-stone-800 dark:border-stone-600 bg-[#8f1d1d] hover:bg-[#771818] flex items-center justify-center text-white book-shadow-sm book-shadow-pressed transition-all"
+          >
+            <BookOpen className="w-5 h-5 stroke-[2.2]" />
+          </button>
+        ) : (
+          <div
+            className={`w-10 h-10 border-2 border-stone-800 dark:border-stone-600 bg-[#8f1d1d] flex items-center justify-center text-white book-shadow-sm ${
+              onNavigateBookshelf ? 'cursor-pointer hover:scale-105 transition-transform' : ''
+            }`}
+            onClick={onNavigateBookshelf}
+            title={onNavigateBookshelf ? 'Ir para a Estante de Livros' : undefined}
+          >
+            <BookOpen className="w-5 h-5 stroke-[2.2]" />
+          </div>
+        )}
+
+        <div
+          className={onNavigateBookshelf ? 'cursor-pointer group' : ''}
+          onClick={onNavigateBookshelf}
+          title={onNavigateBookshelf ? 'Ir para a Estante de Livros' : undefined}
+        >
           <div className="flex items-center gap-2">
-            <h1 className="text-lg font-serif font-black tracking-tight text-stone-900 dark:text-stone-100 uppercase">
+            <h1 className="text-lg font-serif font-black tracking-tight text-stone-900 dark:text-stone-100 uppercase group-hover:text-[#8f1d1d] dark:group-hover:text-[#df4444] transition-colors">
               Tech Book <span className="text-[#8f1d1d] dark:text-[#df4444]">Lab</span>
             </h1>
             <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 border border-stone-700 dark:border-stone-600 bg-[#ece7db] dark:bg-[#272522] text-stone-800 dark:text-stone-300 font-semibold tracking-wide">

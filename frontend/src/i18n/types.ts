@@ -36,6 +36,9 @@ export interface TranslationSchema {
     chapter: string;
     practicalLabs: string;
     keyConcepts: string;
+    collapseSidebar: string;
+    expandSidebar: string;
+    toggleSidebar: string;
   };
   lab: {
     laboratory: string;

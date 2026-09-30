@@ -42,6 +42,9 @@ export const translations: Record<'pt' | 'en', TranslationSchema> = {
       chapter: 'CAPÍTULO',
       practicalLabs: 'Laboratórios Práticos',
       keyConcepts: 'Conceitos Fundamentais',
+      collapseSidebar: 'Recolher tábua de matérias',
+      expandSidebar: 'Expandir tábua de matérias',
+      toggleSidebar: 'Alternar tábua de matérias',
     },
     lab: {
       laboratory: 'LABORATÓRIO',
@@ -174,6 +177,9 @@ export const translations: Record<'pt' | 'en', TranslationSchema> = {
       chapter: 'CHAPTER',
       practicalLabs: 'Hands-on Labs',
       keyConcepts: 'Fundamental Concepts',
+      collapseSidebar: 'Collapse table of contents',
+      expandSidebar: 'Expand table of contents',
+      toggleSidebar: 'Toggle table of contents',
     },
     lab: {
       laboratory: 'LABORATORY',
