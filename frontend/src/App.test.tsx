@@ -93,4 +93,49 @@ describe('App Component Flow', () => {
       expect(screen.getByText(/Biblioteca de Livros Técnicos/i)).toBeInTheDocument();
     });
   });
+
+  it('deve alternar o menu lateral através do ícone do livro no cabeçalho e persistir no localStorage', async () => {
+    localStorage.clear();
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Designing Data-Intensive Applications')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Abrir Caderno de Laboratório/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('sidebar')).toBeInTheDocument();
+    });
+
+    const sidebar = screen.getByTestId('sidebar');
+    expect(sidebar).toHaveClass('w-80');
+
+    const toggleBtn = screen.getByRole('button', { name: /Alternar tábua de matérias/i });
+    fireEvent.click(toggleBtn);
+
+    expect(sidebar).toHaveClass('w-0');
+    expect(localStorage.getItem('tbl_sidebar_open')).toBe('false');
+
+    fireEvent.click(toggleBtn);
+    expect(sidebar).toHaveClass('w-80');
+    expect(localStorage.getItem('tbl_sidebar_open')).toBe('true');
+  });
+
+  it('deve inicializar com o menu lateral recolhido se estiver salvo no localStorage', async () => {
+    localStorage.setItem('tbl_sidebar_open', 'false');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Designing Data-Intensive Applications')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Abrir Caderno de Laboratório/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('sidebar')).toBeInTheDocument();
+    });
+
+    const sidebar = screen.getByTestId('sidebar');
+    expect(sidebar).toHaveClass('w-0');
+  });
 });
