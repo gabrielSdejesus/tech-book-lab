@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, BookOpen, Sliders, Moon, Sun } from 'lucide-react';
+import { RefreshCw, BookOpen, Sliders, Moon, Sun, Library } from 'lucide-react';
 import type { InfraStatus } from '../types';
 import type { Theme } from '../utils/theme';
 
@@ -11,6 +11,8 @@ interface Props {
   selectedBookTitle: string;
   theme: Theme;
   onToggleTheme: () => void;
+  isBookshelfActive?: boolean;
+  onNavigateBookshelf?: () => void;
 }
 
 export const Navbar: React.FC<Props> = ({
@@ -20,13 +22,19 @@ export const Navbar: React.FC<Props> = ({
   onOpenSettings,
   selectedBookTitle,
   theme,
-  onToggleTheme
+  onToggleTheme,
+  isBookshelfActive = false,
+  onNavigateBookshelf,
 }) => {
   return (
     <header className="h-18 border-b-2 border-stone-800 dark:border-stone-700 bg-[#f7f4ec] dark:bg-[#1a1917] px-6 flex items-center justify-between sticky top-0 z-40 select-none transition-colors">
       {/* Brand & Masthead */}
-      <div className="flex items-center gap-4">
-        <div className="w-10 h-10 border-2 border-stone-800 dark:border-stone-600 bg-[#8f1d1d] flex items-center justify-center text-white book-shadow-sm">
+      <div
+        className={`flex items-center gap-4 ${onNavigateBookshelf ? 'cursor-pointer group' : ''}`}
+        onClick={onNavigateBookshelf}
+        title={onNavigateBookshelf ? 'Ir para a Estante de Livros' : undefined}
+      >
+        <div className="w-10 h-10 border-2 border-stone-800 dark:border-stone-600 bg-[#8f1d1d] flex items-center justify-center text-white book-shadow-sm group-hover:scale-105 transition-transform">
           <BookOpen className="w-5 h-5 stroke-[2.2]" />
         </div>
         <div>
@@ -39,13 +47,24 @@ export const Navbar: React.FC<Props> = ({
             </span>
           </div>
           <p className="text-xs font-serif italic text-stone-600 dark:text-stone-400">
-            Caderno de Estudos Práticos &bull; {selectedBookTitle}
+            Caderno de Estudos Práticos &bull; {isBookshelfActive ? 'Catálogo Geral' : selectedBookTitle}
           </p>
         </div>
       </div>
 
       {/* Hardware / Engine Status & Controls */}
       <div className="flex items-center gap-3">
+        {/* Bookshelf Navigation Button (when inside workspace) */}
+        {!isBookshelfActive && onNavigateBookshelf && (
+          <button
+            onClick={onNavigateBookshelf}
+            title="Retornar à estante de livros"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#efebe1] dark:bg-[#23211e] hover:bg-[#e4dfd3] dark:hover:bg-[#2e2b27] border-2 border-stone-800 dark:border-stone-700 text-stone-900 dark:text-stone-200 text-xs font-mono font-bold tracking-tight transition-all book-shadow-sm book-shadow-pressed"
+          >
+            <Library className="w-3.5 h-3.5 text-[#8f1d1d] dark:text-[#df4444]" />
+            <span>ESTANTE DE LIVROS</span>
+          </button>
+        )}
         {/* Infra Status Stamps */}
         <div className="flex items-center gap-2 bg-[#efebe1] dark:bg-[#23211e] border border-stone-800 dark:border-stone-700 px-3 py-1.5 text-xs font-mono book-shadow-sm">
           <span className="text-[10px] text-stone-500 dark:text-stone-400 uppercase tracking-widest font-sans font-bold mr-1">
