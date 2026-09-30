@@ -54,12 +54,14 @@ describe('labProvisioning API client', () => {
     expect(result.status).toBe('READY');
   });
 
-  it('deve chamar POST /api/lab/:labId/heartbeat com header X-Session-Id', async () => {
+  it('deve chamar POST /api/lab/:labId/heartbeat com header X-Session-Id e retornar TTL de 60s (1 minuto)', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         status: 'ACK',
-        ttlRemainingSeconds: 900,
+        labId: 'ddia-cap-03-lab-01',
+        ttlRemainingSeconds: 60,
+        lastHeartbeatAt: Date.now(),
       }),
     } as any);
 
@@ -73,6 +75,7 @@ describe('labProvisioning API client', () => {
       },
     });
     expect(result.status).toBe('ACK');
+    expect(result.ttlRemainingSeconds).toBe(60);
   });
 
   it('deve chamar POST /api/lab/:labId/teardown com header X-Session-Id', async () => {
