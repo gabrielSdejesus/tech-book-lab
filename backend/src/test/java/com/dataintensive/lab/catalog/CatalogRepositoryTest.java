@@ -77,4 +77,41 @@ class CatalogRepositoryTest {
         assertThat(lab).isPresent();
         assertThat(lab.get().id()).isEqualTo("ddia-cap-03-lab-01");
     }
+
+    @Test
+    @DisplayName("Deve garantir que todos os templates SQL de criação de tabela contenham a cláusula IF NOT EXISTS")
+    void shouldContainIdempotentIfNotExistsInStarterTemplates() {
+        List<Book> books = catalogRepository.findAllBooks();
+        assertThat(books).isNotEmpty();
+
+        List<com.dataintensive.lab.domain.Challenge> allChallenges = books.stream()
+                .flatMap(b -> b.chapters().stream())
+                .flatMap(c -> c.labs().stream())
+                .flatMap(l -> l.challenges().stream())
+                .toList();
+
+        // Desafio 1 Lab 1: usuarios
+        var ch1 = allChallenges.stream().filter(c -> c.id().equals("lab-01-ch-1")).findFirst().orElseThrow();
+        assertThat(ch1.starterTemplate()).contains("CREATE TABLE IF NOT EXISTS usuarios");
+
+        // Desafio 2 Lab 1: usuarios_documento
+        var ch2 = allChallenges.stream().filter(c -> c.id().equals("lab-01-ch-2")).findFirst().orElseThrow();
+        assertThat(ch2.starterTemplate()).contains("CREATE TABLE IF NOT EXISTS usuarios_documento");
+
+        // Desafio 2 Lab 2: locais
+        var ch3 = allChallenges.stream().filter(c -> c.id().equals("lab-02-ch-2")).findFirst().orElseThrow();
+        assertThat(ch3.starterTemplate()).contains("CREATE TABLE IF NOT EXISTS locais");
+
+        // Desafio 1 Lab 3: dim_tempo
+        var ch4 = allChallenges.stream().filter(c -> c.id().equals("lab-03-ch-1")).findFirst().orElseThrow();
+        assertThat(ch4.starterTemplate()).contains("CREATE TABLE IF NOT EXISTS dim_tempo");
+
+        // Desafio 1 Lab 4: pedidos_eventos
+        var ch5 = allChallenges.stream().filter(c -> c.id().equals("lab-04-ch-1")).findFirst().orElseThrow();
+        assertThat(ch5.starterTemplate()).contains("CREATE TABLE IF NOT EXISTS pedidos_eventos");
+
+        // Desafio 2 Lab 4: pedidos_resumo_leitura
+        var ch6 = allChallenges.stream().filter(c -> c.id().equals("lab-04-ch-2")).findFirst().orElseThrow();
+        assertThat(ch6.starterTemplate()).contains("CREATE TABLE IF NOT EXISTS pedidos_resumo_leitura");
+    }
 }
