@@ -80,6 +80,24 @@ describe('Bookshelf Component', () => {
     expect(screen.getByText(/1 Available Book/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Open Lab Notebook/i })).toBeInTheDocument();
   });
+
+  it('deve possuir role="button", tabIndex={0} e permitir seleção de livro via teclado com Enter e Space', () => {
+    const handleSelectBook = vi.fn();
+    render(<Bookshelf books={mockBooks} onSelectBook={handleSelectBook} />);
+
+    const bookCards = screen.getAllByRole('button', { name: new RegExp(mockBooks[0].title, 'i') });
+    const card = bookCards[0];
+
+    expect(card).toHaveAttribute('tabIndex', '0');
+
+    // Aciona com tecla Enter
+    fireEvent.keyDown(card, { key: 'Enter' });
+    expect(handleSelectBook).toHaveBeenCalledTimes(1);
+
+    // Aciona com tecla Space
+    fireEvent.keyDown(card, { key: ' ' });
+    expect(handleSelectBook).toHaveBeenCalledTimes(2);
+  });
 });
 
 

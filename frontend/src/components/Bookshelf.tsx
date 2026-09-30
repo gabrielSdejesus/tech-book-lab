@@ -86,8 +86,17 @@ export const Bookshelf: React.FC<Props> = ({ books, onSelectBook }) => {
               return (
                 <article
                   key={book.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={book.title}
                   onClick={() => onSelectBook(book)}
-                  className="group cursor-pointer bg-[#f7f4ec] dark:bg-[#1a1917] border-2 border-stone-800 dark:border-stone-700 p-6 md:p-8 book-shadow-md hover:book-shadow-lg transition-all flex flex-col md:flex-row gap-6 md:gap-8 items-start select-none"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onSelectBook(book);
+                    }
+                  }}
+                  className="group cursor-pointer bg-[#f7f4ec] dark:bg-[#1a1917] border-2 border-stone-800 dark:border-stone-700 p-6 md:p-8 book-shadow-md hover:book-shadow-lg hover:border-stone-900 dark:hover:border-stone-500 focus-visible:ring-2 focus-visible:ring-[#8f1d1d] focus-visible:outline-none dark:focus-visible:ring-[#df4444] transition-all flex flex-col md:flex-row gap-6 md:gap-8 items-start select-none"
                 >
                   {/* Book Cover Visual (Fixed Aspect Classic Ratio) */}
                   <div className="w-48 sm:w-56 md:w-64 shrink-0 mx-auto md:mx-0">
