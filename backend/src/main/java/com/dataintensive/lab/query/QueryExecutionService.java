@@ -1,8 +1,10 @@
 package com.dataintensive.lab.query;
 
 import com.dataintensive.lab.catalog.CatalogService;
+import com.dataintensive.lab.domain.DomainValidationException;
 import com.dataintensive.lab.domain.EngineType;
 import com.dataintensive.lab.domain.Lab;
+import com.dataintensive.lab.domain.QueryExecutionException;
 import jakarta.annotation.PreDestroy;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.GraphDatabase;
@@ -61,6 +63,13 @@ public class QueryExecutionService {
             return QueryResult.error("A consulta fornecida está vazia.", 0);
         }
 
+        if (request.labId() != null) {
+            Optional<Lab> labOpt = catalogService.findLabById(request.labId());
+            if (labOpt.isEmpty()) {
+                throw new DomainValidationException("Laboratório não encontrado com id: " + request.labId());
+            }
+        }
+
         EngineType engine = request.engineType() != null ? request.engineType() : EngineType.POSTGRES;
 
         long startTime = System.currentTimeMillis();
@@ -71,14 +80,14 @@ public class QueryExecutionService {
             };
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
-            return QueryResult.error(e.getMessage(), duration);
+            throw new QueryExecutionException(e.getMessage(), duration);
         }
     }
 
     public QueryResult resetLab(String labId) {
         Optional<Lab> labOpt = catalogService.findLabById(labId);
         if (labOpt.isEmpty()) {
-            return QueryResult.error("Laboratório não encontrado com id: " + labId, 0);
+            throw new DomainValidationException("Laboratório não encontrado com id: " + labId);
         }
 
         Lab lab = labOpt.get();

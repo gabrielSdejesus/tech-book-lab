@@ -1,5 +1,7 @@
 package com.dataintensive.lab.config;
 
+import com.dataintensive.lab.domain.DomainValidationException;
+import com.dataintensive.lab.domain.QueryExecutionException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -43,6 +45,29 @@ public class GlobalExceptionHandler {
         );
         problemDetail.setTitle("Requisição JSON inválida");
         problemDetail.setType(URI.create("urn:problem:malformed-json"));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
+    }
+
+    @ExceptionHandler(DomainValidationException.class)
+    public ResponseEntity<ProblemDetail> handleDomainValidation(DomainValidationException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage()
+        );
+        problemDetail.setTitle("Regra de negócio violada");
+        problemDetail.setType(URI.create("urn:problem:domain-validation-error"));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
+    }
+
+    @ExceptionHandler(QueryExecutionException.class)
+    public ResponseEntity<ProblemDetail> handleQueryExecution(QueryExecutionException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage()
+        );
+        problemDetail.setTitle("Erro na execução da consulta");
+        problemDetail.setType(URI.create("urn:problem:query-execution-error"));
+        problemDetail.setProperty("executionTimeMs", ex.getExecutionTimeMs());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 }
