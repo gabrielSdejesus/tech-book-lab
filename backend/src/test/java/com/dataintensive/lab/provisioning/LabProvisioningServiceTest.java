@@ -1,6 +1,7 @@
 package com.dataintensive.lab.provisioning;
 
 import com.dataintensive.lab.catalog.CatalogRepository;
+import com.dataintensive.lab.domain.Challenge;
 import com.dataintensive.lab.domain.EngineType;
 import com.dataintensive.lab.domain.Lab;
 import org.junit.jupiter.api.BeforeEach;
@@ -171,5 +172,68 @@ class LabProvisioningServiceTest {
 
         LabSession status = provisioningService.getLabStatus(sessionId, validLabId);
         assertThat(status.status()).isEqualTo(LabEnvironmentStatus.STOPPED);
+    }
+
+    @Test
+    @DisplayName("Deve provisionar motor específico da tarefa quando challengeId for informado (Ex: Lab 3.2 Desafio 2 usa POSTGRES)")
+    void shouldProvisionChallengeSpecificEngineWhenChallengeIdProvided() {
+        Challenge ch1 = new Challenge("lab-02-ch-1", 1, "Cypher", "Desc", "Cenário", "RETURN 1;", List.of(), "Reflexão", EngineType.NEO4J);
+        Challenge ch2 = new Challenge("lab-02-ch-2", 2, "SQL Recursivo", "Desc", "Cenário", "WITH RECURSIVE...", List.of(), "Reflexão", EngineType.POSTGRES);
+        Lab hybridLab = new Lab(
+                "ddia-cap-03-lab-02",
+                2,
+                "grafos-propriedades",
+                "Grafos de Propriedades vs SQL Recursivo",
+                "Sumário",
+                List.of(),
+                EngineType.NEO4J,
+                "neo4j",
+                "MATCH (n) DETACH DELETE n;",
+                List.of(ch1, ch2)
+        );
+
+        when(catalogRepository.findLabById("ddia-cap-03-lab-02")).thenReturn(Optional.of(hybridLab));
+        when(containerManager.isEngineHealthy(EngineType.POSTGRES, 5432)).thenReturn(true);
+
+        LabSession session = provisioningService.provisionLab(sessionId, "ddia-cap-03-lab-02", "lab-02-ch-2");
+
+        assertThat(session.engineType()).isEqualTo(EngineType.POSTGRES);
+        assertThat(session.allocatedPort()).isEqualTo(5432);
+        assertThat(session.challengeId()).isEqualTo("lab-02-ch-2");
+        verify(containerManager).startEngine(EngineType.POSTGRES);
+    }
+
+    @Test
+    @DisplayName("Deve alternar motores ao trocar de desafio no mesmo laboratório híbrido (Neo4j -> Postgres)")
+    void shouldSwitchEngineWhenSwitchingBetweenChallengesInHybridLab() {
+        Challenge ch1 = new Challenge("lab-02-ch-1", 1, "Cypher", "Desc", "Cenário", "RETURN 1;", List.of(), "Reflexão", EngineType.NEO4J);
+        Challenge ch2 = new Challenge("lab-02-ch-2", 2, "SQL Recursivo", "Desc", "Cenário", "WITH RECURSIVE...", List.of(), "Reflexão", EngineType.POSTGRES);
+        Lab hybridLab = new Lab(
+                "ddia-cap-03-lab-02",
+                2,
+                "grafos-propriedades",
+                "Grafos de Propriedades vs SQL Recursivo",
+                "Sumário",
+                List.of(),
+                EngineType.NEO4J,
+                "neo4j",
+                "MATCH (n) DETACH DELETE n;",
+                List.of(ch1, ch2)
+        );
+
+        when(catalogRepository.findLabById("ddia-cap-03-lab-02")).thenReturn(Optional.of(hybridLab));
+        when(containerManager.isEngineHealthy(EngineType.NEO4J, 7687)).thenReturn(true);
+        when(containerManager.isEngineHealthy(EngineType.POSTGRES, 5432)).thenReturn(true);
+
+        // Desafio 1 -> sobe Neo4j
+        provisioningService.provisionLab(sessionId, "ddia-cap-03-lab-02", "lab-02-ch-1");
+        verify(containerManager).startEngine(EngineType.NEO4J);
+
+        // Usuário clica no Desafio 2 -> deve parar Neo4j e subir Postgres
+        LabSession session2 = provisioningService.provisionLab(sessionId, "ddia-cap-03-lab-02", "lab-02-ch-2");
+        verify(containerManager).stopEngine(EngineType.NEO4J);
+        verify(containerManager).startEngine(EngineType.POSTGRES);
+        assertThat(session2.engineType()).isEqualTo(EngineType.POSTGRES);
+        assertThat(session2.challengeId()).isEqualTo("lab-02-ch-2");
     }
 }

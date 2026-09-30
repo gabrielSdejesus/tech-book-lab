@@ -89,13 +89,9 @@ describe('Navbar Component', () => {
     expect(handleOpenSettings).toHaveBeenCalledTimes(1);
   });
 
-  it('deve acionar refresh dos motores ao clicar no botão de atualização de infra', () => {
-    const handleRefresh = vi.fn();
+  it('não deve exibir indicador global de motores na barra de navegação superior', () => {
     render(
       <Navbar
-        infraStatus={defaultStatus}
-        loadingInfra={false}
-        onRefreshInfra={handleRefresh}
         onOpenSettings={vi.fn()}
         selectedBookTitle="DDIA"
         theme="dark"
@@ -103,10 +99,9 @@ describe('Navbar Component', () => {
       />
     );
 
-    const refreshBtn = screen.getByTitle(/Sondar conectividade/i);
-    fireEvent.click(refreshBtn);
-
-    expect(handleRefresh).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/MOTORES:/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/PG:5432/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/NEO4J:7687/i)).not.toBeInTheDocument();
   });
 
   it('deve exibir botão de retorno à estante quando isBookshelfActive for false e onNavigateBookshelf for fornecido', () => {
