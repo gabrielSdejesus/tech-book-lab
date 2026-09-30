@@ -18,15 +18,29 @@ export function toggleTheme(current: Theme): Theme {
   return current === 'dark' ? 'light' : 'dark';
 }
 
+export interface ThemeTargetElement {
+  classList: {
+    add: (c: string) => void;
+    remove: (c: string) => void;
+  };
+  style?: {
+    colorScheme?: string;
+  };
+}
+
 export function applyTheme(
   theme: Theme,
-  docElement: { classList: { add: (c: string) => void; remove: (c: string) => void } } = document.documentElement,
+  docElement: ThemeTargetElement = document.documentElement,
   storage: Storage = localStorage
 ): void {
   if (theme === 'dark') {
     docElement.classList.add('dark');
   } else {
     docElement.classList.remove('dark');
+  }
+
+  if (docElement.style) {
+    docElement.style.colorScheme = theme;
   }
 
   try {
