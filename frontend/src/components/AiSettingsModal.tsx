@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Key, Cpu, Check, AlertCircle, Loader2, Zap, Sliders } from 'lucide-react';
 import { testAiConnection } from '../services/api';
 import type { AiTestConnectionResponse } from '../types';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface Props {
   isOpen: boolean;
@@ -24,6 +25,7 @@ export const AiSettingsModal: React.FC<Props> = ({
   model,
   onSaveModel
 }) => {
+  const { t } = useLanguage();
   const [tempKey, setTempKey] = useState(apiKey);
   const [tempProvider, setTempProvider] = useState(provider);
   const [tempModel, setTempModel] = useState(model || 'gemini-2.5-flash');
@@ -56,7 +58,7 @@ export const AiSettingsModal: React.FC<Props> = ({
     } catch (err: any) {
       setTestResult({
         valid: false,
-        message: err.message || 'Erro ao contatar backend para teste.',
+        message: err.message || t.aiModal.contactError,
         model: null,
         latencyMs: 0
       });
@@ -82,7 +84,7 @@ export const AiSettingsModal: React.FC<Props> = ({
         <div className="flex items-center justify-between border-b-2 border-stone-800 dark:border-stone-700 pb-3">
           <div className="flex items-center gap-2 text-stone-900 dark:text-stone-100 font-serif font-black text-lg">
             <Sliders className="w-5 h-5 text-[#8f1d1d] dark:text-[#df4444]" />
-            <span>Configuração do Tutor de Inteligência Artificial</span>
+            <span>{t.aiModal.title}</span>
           </div>
           <button
             onClick={onClose}
@@ -94,12 +96,12 @@ export const AiSettingsModal: React.FC<Props> = ({
 
         <div className="space-y-4 text-xs font-serif text-stone-800 dark:text-stone-200">
           <p className="leading-relaxed text-stone-700 dark:text-stone-300">
-            Defina o provedor e a chave de acesso. O Tutor de IA avaliará a conformidade de suas consultas com os conceitos fundamentais de sistemas intensivos em dados.
+            {t.aiModal.description}
           </p>
 
           <div className="space-y-1.5">
             <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-stone-700 dark:text-stone-400">
-              Provedor de IA
+              {t.aiModal.providerLabel}
             </label>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -144,7 +146,7 @@ export const AiSettingsModal: React.FC<Props> = ({
             <div className="space-y-3">
               <div className="space-y-1">
                 <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-stone-700 dark:text-stone-400">
-                  Versão do Modelo
+                  {t.aiModal.modelVersion}
                 </label>
                 <select
                   value={tempModel}
@@ -154,7 +156,7 @@ export const AiSettingsModal: React.FC<Props> = ({
                   }}
                   className="w-full bg-[#fdfcf9] dark:bg-[#141312] border-2 border-stone-700 dark:border-stone-600 px-3 py-2 text-stone-900 dark:text-stone-100 text-xs font-mono focus:outline-none focus:border-stone-950 dark:focus:border-stone-400"
                 >
-                  <option value="gemini-2.5-flash">Gemini 2.5 Flash (Recomendado - Mais Recente)</option>
+                  <option value="gemini-2.5-flash">Gemini 2.5 Flash {t.aiModal.recommendedLatest}</option>
                   <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
                   <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
                   <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
@@ -175,7 +177,7 @@ export const AiSettingsModal: React.FC<Props> = ({
                     rel="noreferrer"
                     className="text-[10px] font-serif italic text-[#8f1d1d] dark:text-[#df4444] hover:underline"
                   >
-                    Obter chave gratuita no Google AI Studio &rarr;
+                    {t.aiModal.getFreeKey}
                   </a>
                 </label>
 
@@ -187,7 +189,7 @@ export const AiSettingsModal: React.FC<Props> = ({
                       setTempKey(e.target.value);
                       setTestResult(null);
                     }}
-                    placeholder="Cole sua API Key (AIzaSy...)"
+                    placeholder={t.aiModal.apiKeyPlaceholder}
                     className="flex-1 bg-[#fdfcf9] dark:bg-[#141312] border-2 border-stone-700 dark:border-stone-600 px-3 py-2 text-stone-950 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-600 focus:outline-none focus:border-stone-900 dark:focus:border-stone-400 text-xs font-mono"
                   />
                   <button
@@ -201,7 +203,7 @@ export const AiSettingsModal: React.FC<Props> = ({
                     ) : (
                       <Zap className="w-3.5 h-3.5 text-[#8f1d1d] dark:text-[#df4444]" />
                     )}
-                    <span>{testing ? 'Testando...' : 'Testar'}</span>
+                    <span>{testing ? t.aiModal.testing : t.aiModal.test}</span>
                   </button>
                 </div>
               </div>
@@ -210,7 +212,7 @@ export const AiSettingsModal: React.FC<Props> = ({
             <div className="space-y-3">
               <div className="space-y-1">
                 <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-stone-700 dark:text-stone-400">
-                  Modelo Ollama
+                  {t.aiModal.ollamaModel}
                 </label>
                 <input
                   type="text"
@@ -224,7 +226,7 @@ export const AiSettingsModal: React.FC<Props> = ({
                 />
               </div>
               <div className="p-3 bg-[#f5f0e4] dark:bg-[#1f1d1a] border border-stone-400 dark:border-stone-700 text-xs font-serif text-stone-800 dark:text-stone-300">
-                Ollama deve estar ativo localmente em <code className="font-mono font-bold">http://localhost:11434</code> com o modelo selecionado.
+                {t.aiModal.ollamaNotice}
               </div>
               <button
                 type="button"
@@ -237,7 +239,7 @@ export const AiSettingsModal: React.FC<Props> = ({
                 ) : (
                   <Zap className="w-3.5 h-3.5 text-[#8f1d1d] dark:text-[#df4444]" />
                 )}
-                <span>Testar Conexão com Ollama</span>
+                <span>{t.aiModal.testOllama}</span>
               </button>
             </div>
           )}
@@ -256,12 +258,12 @@ export const AiSettingsModal: React.FC<Props> = ({
                 ) : (
                   <AlertCircle className="w-4 h-4 text-[#b91c1c] dark:text-[#f87171]" />
                 )}
-                <span>{testResult.valid ? 'CHAVE VALIDADA COM SUCESSO' : 'FALHA NA VALIDAÇÃO'}</span>
+                <span>{testResult.valid ? t.aiModal.keyValidatedSuccess : t.aiModal.validationFailed}</span>
               </div>
               <p className="font-serif leading-relaxed text-stone-900 dark:text-stone-200">{testResult.message}</p>
               {testResult.model && (
                 <div className="text-[10px] text-stone-600 dark:text-stone-400 pt-0.5">
-                  Versão ativa: <strong>{testResult.model}</strong> ({testResult.latencyMs}ms)
+                  {t.aiModal.activeVersion(testResult.model, testResult.latencyMs)}
                 </div>
               )}
             </div>
@@ -273,14 +275,14 @@ export const AiSettingsModal: React.FC<Props> = ({
             onClick={onClose}
             className="px-4 py-2 border border-stone-400 dark:border-stone-600 bg-[#eee8db] dark:bg-[#252320] hover:bg-[#ded7c8] dark:hover:bg-[#302c28] text-xs font-mono font-bold uppercase text-stone-800 dark:text-stone-300"
           >
-            Cancelar
+            {t.aiModal.cancel}
           </button>
           <button
             onClick={handleSave}
             className="flex items-center gap-1.5 px-4 py-2 bg-[#8f1d1d] hover:bg-[#771818] dark:bg-[#991b1b] dark:hover:bg-[#7f1d1d] border-2 border-stone-950 dark:border-stone-600 text-white text-xs font-mono font-bold uppercase book-shadow-sm book-shadow-pressed transition-all"
           >
             {saved ? <Check className="w-4 h-4" /> : null}
-            <span>{saved ? 'Salvo!' : 'Salvar Configurações'}</span>
+            <span>{saved ? t.aiModal.saved : t.aiModal.saveSettings}</span>
           </button>
         </div>
       </div>

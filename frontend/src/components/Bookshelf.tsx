@@ -2,6 +2,7 @@ import React from 'react';
 import type { Book } from '../types';
 import { BookCover } from './BookCover';
 import { BookOpen, Layers, Terminal, Sparkles, ArrowRight } from 'lucide-react';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface Props {
   books: Book[];
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export const Bookshelf: React.FC<Props> = ({ books, onSelectBook }) => {
+  const { t, locale } = useLanguage();
   const totalChapters = books.reduce((acc, b) => acc + (b.chapters?.length || 0), 0);
   const totalLabs = books.reduce(
     (acc, b) => acc + (b.chapters?.reduce((cAcc, c) => cAcc + (c.labs?.length || 0), 0) || 0),
@@ -24,18 +26,17 @@ export const Bookshelf: React.FC<Props> = ({ books, onSelectBook }) => {
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-mono uppercase px-2 py-0.5 border border-stone-700 dark:border-stone-600 bg-[#efebe1] dark:bg-[#201e1b] text-[#8f1d1d] dark:text-[#df4444] font-bold tracking-widest">
-                  CADERNO DE LABORATÓRIO &bull; CATÁLOGO
+                  {t.bookshelf.catalogTag}
                 </span>
                 <span className="text-xs font-mono text-stone-500 dark:text-stone-400">
-                  v1.0 &bull; 2026
+                  {t.bookshelf.version}
                 </span>
               </div>
               <h1 className="text-2xl md:text-4xl font-serif font-black tracking-tight text-stone-900 dark:text-stone-100 uppercase">
-                Biblioteca de Livros Técnicos
+                {t.bookshelf.title}
               </h1>
               <p className="text-sm md:text-base font-serif italic text-stone-600 dark:text-stone-400 max-w-3xl leading-relaxed">
-                Navegue pelas obras de referência da engenharia de dados e sistemas distribuídos.
-                Selecione um volume para iniciar os estudos teóricos e colocar a mão na massa em laboratórios com motores reais e avaliação por IA.
+                {t.bookshelf.subtitle}
               </p>
             </div>
 
@@ -44,34 +45,36 @@ export const Bookshelf: React.FC<Props> = ({ books, onSelectBook }) => {
               <div className="bg-[#f7f4ec] dark:bg-[#1b1917] border-2 border-stone-800 dark:border-stone-700 px-3 py-2 book-shadow-sm flex items-center gap-2">
                 <BookOpen className="w-4 h-4 text-[#8f1d1d] dark:text-[#df4444]" />
                 <span className="font-bold text-stone-900 dark:text-stone-100">
-                  {books.length} {books.length === 1 ? 'Livro Disponível' : 'Livros Disponíveis'}
+                  {t.bookshelf.booksAvailable(books.length)}
                 </span>
               </div>
               <div className="bg-[#f7f4ec] dark:bg-[#1b1917] border-2 border-stone-800 dark:border-stone-700 px-3 py-2 book-shadow-sm flex items-center gap-2">
                 <Layers className="w-4 h-4 text-[#059669]" />
                 <span className="font-bold text-stone-900 dark:text-stone-100">
-                  {totalChapters} Capítulos Práticos
+                  {t.bookshelf.chaptersCount(totalChapters)}
                 </span>
               </div>
               <div className="bg-[#f7f4ec] dark:bg-[#1b1917] border-2 border-stone-800 dark:border-stone-700 px-3 py-2 book-shadow-sm flex items-center gap-2">
                 <Terminal className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                 <span className="font-bold text-stone-900 dark:text-stone-100">
-                  {totalLabs} Laboratórios Ativos
+                  {t.bookshelf.labsActive(totalLabs)}
                 </span>
               </div>
             </div>
           </div>
         </section>
 
+
         {/* Bookshelf Catalog Grid */}
         <section className="space-y-6">
           <div className="flex items-center justify-between border-b border-stone-300 dark:border-stone-800 pb-2">
+
             <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 flex items-center gap-2">
               <Sparkles className="w-3.5 h-3.5 text-[#8f1d1d] dark:text-[#df4444]" />
-              Acervo de Obras Clássicas
+              {t.bookshelf.classicCollection}
             </h2>
             <span className="text-[11px] font-serif italic text-stone-500 dark:text-stone-400">
-              Clique em um livro para entrar no laboratório
+              {t.bookshelf.clickToEnter}
             </span>
           </div>
 
@@ -99,7 +102,7 @@ export const Bookshelf: React.FC<Props> = ({ books, onSelectBook }) => {
                           className="px-2 py-0.5 text-[10px] font-mono font-black uppercase text-white border border-stone-800 dark:border-stone-600 book-shadow-sm"
                           style={{ backgroundColor: book.coverColor || '#059669' }}
                         >
-                          OBRA CLÁSSICA
+                          {locale === 'pt' ? 'OBRA CLÁSSICA' : 'CLASSIC WORK'}
                         </span>
                         <div className="flex items-center gap-1.5">
                           {engineTypes.map((engine) => (
@@ -122,7 +125,8 @@ export const Bookshelf: React.FC<Props> = ({ books, onSelectBook }) => {
                           {book.title}
                         </h3>
                         <p className="text-xs font-serif italic text-stone-600 dark:text-stone-400 mt-0.5">
-                          Por <strong className="font-semibold text-stone-800 dark:text-stone-200">{book.author}</strong>
+                          {locale === 'pt' ? 'Por' : 'By'}{' '}
+                          <strong className="font-semibold text-stone-800 dark:text-stone-200">{book.author}</strong>
                         </p>
                       </div>
 
@@ -138,7 +142,7 @@ export const Bookshelf: React.FC<Props> = ({ books, onSelectBook }) => {
                     {/* Chapters preview */}
                     <div className="pt-4 border-t border-stone-300 dark:border-stone-800 space-y-3">
                       <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-                        Estrutura do Caderno ({book.chapters?.length || 0} capítulos &bull; {allLabs.length} laboratórios):
+                        {t.bookshelf.notebookStructure(book.chapters?.length || 0, allLabs.length)}
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -148,13 +152,20 @@ export const Bookshelf: React.FC<Props> = ({ books, onSelectBook }) => {
                             className="bg-[#efebe1] dark:bg-[#23211e] border border-stone-300 dark:border-stone-700 px-3 py-2 text-xs font-serif space-y-0.5"
                           >
                             <span className="text-[10px] font-mono font-bold text-[#8f1d1d] dark:text-[#df4444]">
-                              CAPÍTULO {ch.number}
+                              {locale === 'pt' ? 'CAPÍTULO' : 'CHAPTER'} {ch.number}
                             </span>
                             <div className="font-semibold truncate text-stone-900 dark:text-stone-100">
                               {ch.title}
                             </div>
                             <div className="text-[10px] font-mono text-stone-500 dark:text-stone-400">
-                              {ch.labs.length} exercícios práticos
+                              {ch.labs.length}{' '}
+                              {locale === 'pt'
+                                ? ch.labs.length === 1
+                                  ? 'exercício prático'
+                                  : 'exercícios práticos'
+                                : ch.labs.length === 1
+                                ? 'hands-on lab'
+                                : 'hands-on labs'}
                             </div>
                           </div>
                         ))}
@@ -169,7 +180,7 @@ export const Bookshelf: React.FC<Props> = ({ books, onSelectBook }) => {
                           }}
                           className="px-5 py-2.5 bg-[#8f1d1d] hover:bg-[#771818] border-2 border-stone-900 dark:border-stone-600 text-white text-xs font-mono font-bold uppercase tracking-wide flex items-center gap-2 book-shadow-sm book-shadow-pressed transition-all"
                         >
-                          <span>Abrir Caderno de Laboratório</span>
+                          <span>{t.bookshelf.openNotebook}</span>
                           <ArrowRight className="w-4 h-4 stroke-[2.2]" />
                         </button>
                       </div>
@@ -182,7 +193,7 @@ export const Bookshelf: React.FC<Props> = ({ books, onSelectBook }) => {
             {books.length === 0 && (
               <div className="p-12 text-center border-2 border-dashed border-stone-400 dark:border-stone-700 bg-[#efebe1] dark:bg-[#1a1917]">
                 <p className="font-serif italic text-stone-600 dark:text-stone-400 text-sm">
-                  Nenhum livro técnico encontrado no catálogo.
+                  {t.bookshelf.emptyCatalog}
                 </p>
               </div>
             )}
@@ -190,5 +201,6 @@ export const Bookshelf: React.FC<Props> = ({ books, onSelectBook }) => {
         </section>
       </div>
     </main>
+
   );
 };

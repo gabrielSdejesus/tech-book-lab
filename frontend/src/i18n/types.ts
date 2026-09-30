@@ -11,6 +11,7 @@ export interface TranslationSchema {
     offline: string;
     cancel: string;
     save: string;
+    saved: string;
     close: string;
     loading: string;
     error: string;
@@ -60,6 +61,9 @@ export interface TranslationSchema {
     needsRevision: string;
     discussion: string;
     tabs: {
+      results: string;
+      aiTutor: string;
+      json: string;
       diagnosis: string;
       tradeOffs: string;
       performance: string;
@@ -67,6 +71,26 @@ export interface TranslationSchema {
     };
     confirmReset: string;
     executionError: string;
+    resetSuccessToast: string;
+    engineNeo4j: string;
+    enginePostgres: string;
+    ctrlEnterHint: string;
+    reloadTemplate: string;
+    execute: string;
+    reset: string;
+    resetTooltip: string;
+    queryPlaceholder: string;
+    emptyResultsPrompt: string;
+    executionErrorTitle: string;
+    aiPromptInstruction: string;
+    aiExamining: string;
+    solutionApproved: string;
+    revisionNeeded: string;
+    modelLabel: string;
+    criticalAnalysis: string;
+    theoreticalTradeOffs: string;
+    performanceNotes: string;
+    alternativeApproaches: string;
   };
   aiModal: {
     title: string;
@@ -79,5 +103,21 @@ export interface TranslationSchema {
     geminiDescription: string;
     ollamaDescription: string;
     modelPlaceholder: string;
+    description: string;
+    providerLabel: string;
+    modelVersion: string;
+    recommendedLatest: string;
+    getFreeKey: string;
+    apiKeyPlaceholder: string;
+    test: string;
+    ollamaModel: string;
+    ollamaNotice: string;
+    testOllama: string;
+    keyValidatedSuccess: string;
+    validationFailed: string;
+    activeVersion: (model: string, latencyMs: number) => string;
+    contactError: string;
+    cancel: string;
+    saved: string;
   };
 }

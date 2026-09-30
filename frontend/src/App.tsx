@@ -9,9 +9,20 @@ import { Bookshelf } from './components/Bookshelf';
 import { LabWorkspace } from './components/LabWorkspace';
 import { AiSettingsModal } from './components/AiSettingsModal';
 import { Loader2, AlertCircle } from 'lucide-react';
+import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 
 export function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
+  );
+}
+
+function AppContent() {
+  const { locale } = useLanguage();
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
+
   const [books, setBooks] = useState<Book[]>([]);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [selectedLab, setSelectedLab] = useState<Lab | null>(null);
@@ -99,7 +110,9 @@ export function App() {
     return (
       <div className="min-h-screen bg-[#fbf9f4] dark:bg-[#141312] flex flex-col items-center justify-center text-stone-800 dark:text-stone-200 gap-3 font-serif">
         <Loader2 className="w-8 h-8 animate-spin text-[#8f1d1d] dark:text-[#df4444]" />
-        <span className="text-sm font-bold tracking-tight">Carregando Caderno de Laboratório...</span>
+        <span className="text-sm font-bold tracking-tight">
+          {locale === 'pt' ? 'Carregando Caderno de Laboratório...' : 'Loading Lab Notebook...'}
+        </span>
       </div>
     );
   }
@@ -109,19 +122,24 @@ export function App() {
       <div className="min-h-screen bg-[#fbf9f4] dark:bg-[#141312] flex flex-col items-center justify-center p-6 text-center font-serif">
         <div className="max-w-md p-6 bg-[#f7f4ec] dark:bg-[#1a1917] border-2 border-stone-800 dark:border-stone-700 book-shadow-lg space-y-4">
           <AlertCircle className="w-10 h-10 text-[#8f1d1d] dark:text-[#df4444] mx-auto" />
-          <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">Falha ao Conectar ao Servidor Backend</h2>
+          <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">
+            {locale === 'pt' ? 'Falha ao Conectar ao Servidor Backend' : 'Failed to Connect to Backend Server'}
+          </h2>
           <p className="text-xs text-stone-700 dark:text-stone-300 leading-relaxed font-serif">
-            Certifique-se de que a API Java Spring Boot está em execução na porta 8080.
+            {locale === 'pt'
+              ? 'Certifique-se de que a API Java Spring Boot está em execução na porta 8080.'
+              : 'Make sure the Java Spring Boot API is running on port 8080.'}
           </p>
           <button
             onClick={() => window.location.reload()}
             className="px-4 py-2 bg-[#8f1d1d] hover:bg-[#771818] border-2 border-stone-900 dark:border-stone-600 text-white text-xs font-mono font-bold uppercase book-shadow-sm book-shadow-pressed"
           >
-            Tentar Novamente
+            {locale === 'pt' ? 'Tentar Novamente' : 'Try Again'}
           </button>
         </div>
       </div>
     );
+
   }
 
   return (
@@ -158,8 +176,11 @@ export function App() {
             />
           ) : (
             <div className="flex-1 flex items-center justify-center text-stone-500 dark:text-stone-400 text-sm font-serif italic">
-              Selecione uma seção ou exercício na tábua de matérias ao lado para iniciar.
+              {locale === 'pt'
+                ? 'Selecione uma seção ou exercício na tábua de matérias ao lado para iniciar.'
+                : 'Select a section or exercise from the table of contents to begin.'}
             </div>
+
           )}
         </div>
       )}

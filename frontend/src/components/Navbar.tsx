@@ -2,6 +2,7 @@ import React from 'react';
 import { RefreshCw, BookOpen, Sliders, Moon, Sun, Library } from 'lucide-react';
 import type { InfraStatus } from '../types';
 import type { Theme } from '../utils/theme';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface Props {
   infraStatus: InfraStatus | null;
@@ -26,6 +27,8 @@ export const Navbar: React.FC<Props> = ({
   isBookshelfActive = false,
   onNavigateBookshelf,
 }) => {
+  const { locale, setLocale, t } = useLanguage();
+
   return (
     <header className="h-18 border-b-2 border-stone-800 dark:border-stone-700 bg-[#f7f4ec] dark:bg-[#1a1917] px-6 flex items-center justify-between sticky top-0 z-40 select-none transition-colors">
       {/* Brand & Masthead */}
@@ -58,11 +61,11 @@ export const Navbar: React.FC<Props> = ({
         {!isBookshelfActive && onNavigateBookshelf && (
           <button
             onClick={onNavigateBookshelf}
-            title="Retornar à estante de livros"
+            title={t.common.returnToBookshelf}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-[#efebe1] dark:bg-[#23211e] hover:bg-[#e4dfd3] dark:hover:bg-[#2e2b27] border-2 border-stone-800 dark:border-stone-700 text-stone-900 dark:text-stone-200 text-xs font-mono font-bold tracking-tight transition-all book-shadow-sm book-shadow-pressed"
           >
             <Library className="w-3.5 h-3.5 text-[#8f1d1d] dark:text-[#df4444]" />
-            <span>ESTANTE DE LIVROS</span>
+            <span>{t.common.bookshelf.toUpperCase()}</span>
           </button>
         )}
         {/* Infra Status Stamps */}
@@ -104,21 +107,50 @@ export const Navbar: React.FC<Props> = ({
         {/* Theme Toggle Button */}
         <button
           onClick={onToggleTheme}
-          title={theme === 'dark' ? 'Mudar para tema claro (Papel Marfim)' : 'Mudar para tema escuro (Terminal Noturno)'}
+          title={t.common.toggleTheme}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-[#efebe1] dark:bg-[#23211e] hover:bg-[#e4dfd3] dark:hover:bg-[#2e2b27] border-2 border-stone-800 dark:border-stone-700 text-stone-900 dark:text-stone-200 text-xs font-mono font-bold tracking-tight transition-all book-shadow-sm book-shadow-pressed"
         >
           {theme === 'dark' ? (
             <>
               <Moon className="w-3.5 h-3.5 text-amber-400" />
-              <span>ESCURO</span>
+              <span>{locale === 'pt' ? 'ESCURO' : 'DARK'}</span>
             </>
           ) : (
             <>
               <Sun className="w-3.5 h-3.5 text-amber-600" />
-              <span>CLARO</span>
+              <span>{locale === 'pt' ? 'CLARO' : 'LIGHT'}</span>
             </>
           )}
         </button>
+
+        {/* Language Selector PT | EN */}
+        <div className="flex items-center bg-[#efebe1] dark:bg-[#23211e] border-2 border-stone-800 dark:border-stone-700 text-xs font-mono font-bold book-shadow-sm overflow-hidden">
+          <button
+            onClick={() => setLocale('pt')}
+            className={`px-2.5 py-1.5 transition-colors ${
+              locale === 'pt'
+                ? 'bg-[#8f1d1d] text-white font-black'
+                : 'text-stone-700 dark:text-stone-300 hover:bg-[#e4dfd3] dark:hover:bg-[#2e2b27]'
+            }`}
+            title="Mudar idioma para Português (Brasil)"
+            aria-label="PT"
+          >
+            PT
+          </button>
+          <div className="w-[1px] h-4 bg-stone-800 dark:bg-stone-700" />
+          <button
+            onClick={() => setLocale('en')}
+            className={`px-2.5 py-1.5 transition-colors ${
+              locale === 'en'
+                ? 'bg-[#8f1d1d] text-white font-black'
+                : 'text-stone-700 dark:text-stone-300 hover:bg-[#e4dfd3] dark:hover:bg-[#2e2b27]'
+            }`}
+            title="Switch language to English"
+            aria-label="EN"
+          >
+            EN
+          </button>
+        </div>
 
         {/* AI Tutor Config Button */}
         <button
@@ -126,9 +158,10 @@ export const Navbar: React.FC<Props> = ({
           className="flex items-center gap-1.5 px-3 py-1.5 bg-[#fcfbf9] dark:bg-[#1f1d1a] hover:bg-[#efebe1] dark:hover:bg-[#292622] border-2 border-stone-800 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-xs font-mono font-bold tracking-tight transition-all book-shadow-sm book-shadow-pressed"
         >
           <Sliders className="w-3.5 h-3.5 text-[#8f1d1d] dark:text-[#df4444]" />
-          <span>CONFIGURAR TUTOR IA</span>
+          <span>{t.common.configureAi}</span>
         </button>
       </div>
     </header>
   );
 };
+

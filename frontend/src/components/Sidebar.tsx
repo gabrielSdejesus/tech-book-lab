@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Book, Lab, Chapter } from '../types';
 import { Bookmark, ChevronRight } from 'lucide-react';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface Props {
   books: Book[];
@@ -9,13 +10,15 @@ interface Props {
 }
 
 export const Sidebar: React.FC<Props> = ({ books, selectedLab, onSelectLab }) => {
+  const { t, locale } = useLanguage();
+
   return (
     <aside className="w-80 border-r-2 border-stone-800 dark:border-stone-700 bg-[#f5f2e9] dark:bg-[#181715] flex flex-col h-[calc(100vh-4.5rem)] overflow-y-auto select-none transition-colors">
       {/* Book Metadata Box */}
       <div className="p-4 border-b border-stone-300 dark:border-stone-700 bg-[#efebe1] dark:bg-[#1f1d1a]">
         <div className="text-[10px] font-mono uppercase tracking-widest text-stone-600 dark:text-stone-400 font-bold mb-1.5 flex items-center gap-1.5">
           <Bookmark className="w-3 h-3 text-[#8f1d1d] dark:text-[#df4444]" />
-          <span>TÁBUA DE MATÉRIAS</span>
+          <span>{t.sidebar.tableOfContents}</span>
         </div>
         {books.map((book) => (
           <div key={book.id} className="space-y-1">
@@ -23,7 +26,7 @@ export const Sidebar: React.FC<Props> = ({ books, selectedLab, onSelectLab }) =>
               {book.title}
             </h2>
             <p className="text-xs font-serif italic text-stone-600 dark:text-stone-400">
-              Por {book.author}
+              {locale === 'pt' ? 'Por' : 'By'} {book.author}
             </p>
           </div>
         ))}
@@ -36,12 +39,13 @@ export const Sidebar: React.FC<Props> = ({ books, selectedLab, onSelectLab }) =>
             {/* Chapter Header */}
             <div className="px-2 pt-1 pb-1 border-b border-stone-300 dark:border-stone-700">
               <span className="text-[10px] font-mono font-bold text-[#8f1d1d] dark:text-[#df4444] uppercase tracking-wider">
-                CAPÍTULO {chapter.number}
+                {locale === 'pt' ? 'CAPÍTULO' : 'CHAPTER'} {chapter.number}
               </span>
               <h3 className="text-xs font-serif font-bold text-stone-900 dark:text-stone-100 mt-0.5">
                 {chapter.title}
               </h3>
             </div>
+
 
             {/* Labs as numbered sections */}
             <div className="space-y-1.5">
@@ -82,8 +86,16 @@ export const Sidebar: React.FC<Props> = ({ books, selectedLab, onSelectLab }) =>
                           {lab.engineType}
                         </span>
                         <span className="text-[10px] font-mono text-stone-500 dark:text-stone-400">
-                          [{lab.challenges.length} desafios]
+                          [{lab.challenges.length}{' '}
+                          {locale === 'pt'
+                            ? lab.challenges.length === 1
+                              ? 'desafio'
+                              : 'desafios'
+                            : lab.challenges.length === 1
+                            ? 'challenge'
+                            : 'challenges'}]
                         </span>
+
                       </div>
                     </div>
                   </button>
