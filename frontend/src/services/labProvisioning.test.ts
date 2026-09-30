@@ -47,6 +47,7 @@ describe('labProvisioning API client', () => {
     expect(global.fetch).toHaveBeenCalledWith('/api/lab/ddia-cap-03-lab-01/status', {
       method: 'GET',
       headers: {
+        'Content-Type': 'application/json',
         'X-Session-Id': '12345678-1234-4234-8234-123456789abc',
       },
     });
