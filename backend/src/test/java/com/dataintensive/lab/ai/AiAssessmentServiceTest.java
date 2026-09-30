@@ -205,5 +205,69 @@ class AiAssessmentServiceTest {
         assertThat(response.valid()).isTrue();
         assertThat(response.model()).isEqualTo("qwen2.5-coder:7b");
     }
+
+    @Test
+    @DisplayName("Deve retornar mensagem de validação em inglês quando language for 'en' e submissão for vazia")
+    void shouldReturnEnglishValidationWhenSubmissionIsEmptyAndLanguageIsEn() {
+        AiAssessmentRequest request = new AiAssessmentRequest(
+                "ddia-cap-03-lab-01",
+                "lab-01-ch-1",
+                "",
+                null,
+                null,
+                null,
+                "gemini",
+                null,
+                "en"
+        );
+
+        AiAssessmentResponse response = aiAssessmentService.assess(request);
+
+        assertThat(response.status()).isEqualTo("NEEDS_REVISION");
+        assertThat(response.feedback()).containsIgnoringCase("No implementation detected");
+        assertThat(response.tradeOffAnalysis()).containsIgnoringCase("trade-offs");
+    }
+
+    @Test
+    @DisplayName("Deve retornar mensagem de validação em português por padrão ou quando language for 'pt'")
+    void shouldReturnPortugueseValidationWhenSubmissionIsEmptyAndLanguageIsPt() {
+        AiAssessmentRequest request = new AiAssessmentRequest(
+                "ddia-cap-03-lab-01",
+                "lab-01-ch-1",
+                "",
+                null,
+                null,
+                null,
+                "gemini",
+                null,
+                "pt"
+        );
+
+        AiAssessmentResponse response = aiAssessmentService.assess(request);
+
+        assertThat(response.status()).isEqualTo("NEEDS_REVISION");
+        assertThat(response.feedback()).containsIgnoringCase("Nenhuma implementação detectada");
+    }
+
+    @Test
+    @DisplayName("Deve lançar IllegalArgumentException quando idioma não for suportado no serviço")
+    void shouldThrowExceptionWhenLanguageIsNotSupported() {
+        AiAssessmentRequest request = new AiAssessmentRequest(
+                "ddia-cap-03-lab-01",
+                "lab-01-ch-1",
+                "SELECT 1;",
+                null,
+                null,
+                null,
+                "gemini",
+                null,
+                "es"
+        );
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> aiAssessmentService.assess(request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("es");
+    }
 }
+
 

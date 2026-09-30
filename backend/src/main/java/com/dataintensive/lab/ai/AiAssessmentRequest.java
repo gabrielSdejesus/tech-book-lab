@@ -8,5 +8,20 @@ public record AiAssessmentRequest(
     String userReflection,
     String apiKeyOverride,
     String providerOverride,
-    String modelOverride
-) {}
+    String modelOverride,
+    String language
+) {
+    public AiAssessmentRequest(
+        String labId,
+        String challengeId,
+        String userQuery,
+        String executionSummary,
+        String userReflection,
+        String apiKeyOverride,
+        String providerOverride,
+        String modelOverride
+    ) {
+        this(labId, challengeId, userQuery, executionSummary, userReflection, apiKeyOverride, providerOverride, modelOverride, "pt");
+    }
+}
+

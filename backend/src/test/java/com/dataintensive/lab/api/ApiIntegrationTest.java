@@ -151,4 +151,23 @@ class ApiIntegrationTest {
                 .andExpect(jsonPath("$.status", is("NEEDS_REVISION")))
                 .andExpect(jsonPath("$.feedback", containsString("Nenhuma implementação detectada")));
     }
+
+    @Test
+    @DisplayName("POST /api/ai/assess - Deve retornar 400 Bad Request ao submeter idioma não suportado")
+    void shouldRejectUnsupportedLanguageWithBadRequest() throws Exception {
+        Map<String, Object> payload = Map.of(
+                "labId", "ddia-cap-03-lab-01",
+                "challengeId", "lab-01-ch-1",
+                "userQuery", "SELECT * FROM usuarios;",
+                "language", "es"
+        );
+
+        mockMvc.perform(post("/api/ai/assess")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error", is("BAD_REQUEST")))
+                .andExpect(jsonPath("$.message", containsString("es")));
+    }
 }
+

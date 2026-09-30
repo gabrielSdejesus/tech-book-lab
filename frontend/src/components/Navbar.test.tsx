@@ -130,4 +130,25 @@ describe('Navbar Component', () => {
     fireEvent.click(bookshelfBtn);
     expect(handleNavigate).toHaveBeenCalledTimes(1);
   });
+
+  it('deve renderizar o seletor de idiomas PT e EN', () => {
+    render(
+      <Navbar
+        infraStatus={defaultStatus}
+        loadingInfra={false}
+        onRefreshInfra={vi.fn()}
+        onOpenSettings={vi.fn()}
+        selectedBookTitle="DDIA"
+        theme="dark"
+        onToggleTheme={vi.fn()}
+      />
+    );
+
+    const ptButton = screen.getByRole('button', { name: /^PT$/i });
+    const enButton = screen.getByRole('button', { name: /^EN$/i });
+
+    expect(ptButton).toBeInTheDocument();
+    expect(enButton).toBeInTheDocument();
+  });
 });
+

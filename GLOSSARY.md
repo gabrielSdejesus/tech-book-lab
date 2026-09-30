@@ -19,3 +19,12 @@ _Avoid_: Banner, Thumbnail, Avatar
 **Lab Workspace**:
 O ambiente interativo de estudos e execução onde o leitor resolve desafios práticos contra motores de banco de dados reais (PostgreSQL, Neo4j) e recebe feedback do Tutor de IA.
 _Avoid_: Playground, Sandbox, Terminal
+
+**Locale (Idioma da Plataforma)**:
+A preferência regional de idioma configurada pelo leitor (`pt-BR` como padrão soberano ou `en-US`), aplicada de ponta a ponta na interface do usuário, mensagens de validação e na geração de prompts de avaliação do Tutor de IA.
+_Avoid_: Tradução externa, Google Translate, Lang
+
+**Language Selector**:
+O controle de interface na barra de navegação (`Navbar`) que permite ao usuário alternar instantaneamente entre Português (`PT`) e Inglês (`EN`), com persistência de estado local.
+_Avoid_: Seletor de bandeiras, Combo de país
+
