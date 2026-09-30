@@ -7,6 +7,18 @@ spring:
   datasource:
     url: ${CATALOG_DB_URL:jdbc:sqlite:data/tbl_catalog.db}
     driver-class-name: org.sqlite.JDBC
+    hikari:
+      pool-name: TblCatalogHikariPool
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 10000
+      idle-timeout: 60000
+      max-lifetime: 1800000
+      data-source-properties:
+        journal_mode: WAL
+        synchronous: NORMAL
+        busy_timeout: 5000
+        foreign_keys: "true"
   flyway:
     enabled: true
     locations: classpath:db/migration
