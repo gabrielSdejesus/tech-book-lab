@@ -81,7 +81,7 @@ describe('Sidebar Component', () => {
       />
     );
 
-    const aside = screen.getByRole('complementary', { name: /Tábua de Matérias/i });
+    const aside = screen.getByTestId('sidebar');
     expect(aside).toHaveClass('w-0');
     expect(aside).toHaveAttribute('aria-hidden', 'true');
   });
