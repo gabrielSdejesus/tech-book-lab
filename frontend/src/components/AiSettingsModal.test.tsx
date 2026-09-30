@@ -160,5 +160,24 @@ describe('AiSettingsModal Component', () => {
 
     expect(handleSaveModel).toHaveBeenCalledWith('gemini-2.5-flash');
   });
+
+  it('deve possuir classe disabled:cursor-not-allowed e disabled no botão de teste quando a chave API estiver vazia', () => {
+    render(
+      <AiSettingsModal
+        isOpen={true}
+        onClose={vi.fn()}
+        apiKey=""
+        onSaveApiKey={vi.fn()}
+        provider="gemini"
+        onSaveProvider={vi.fn()}
+        model="gemini-3.8-flash"
+        onSaveModel={vi.fn()}
+      />
+    );
+
+    const testBtn = screen.getByRole('button', { name: /Testar/i });
+    expect(testBtn).toBeDisabled();
+    expect(testBtn).toHaveClass('disabled:cursor-not-allowed');
+  });
 });
 

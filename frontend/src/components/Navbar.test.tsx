@@ -220,5 +220,49 @@ describe('Navbar Component', () => {
     const toggleSidebarBtn = screen.getByRole('button', { name: /Toggle table of contents/i });
     expect(toggleSidebarBtn).toHaveAttribute('title', 'Collapse table of contents');
   });
+
+  it('deve permitir navegar para estante via teclado com Enter e Space no container da marca', () => {
+    const handleNavigate = vi.fn();
+    render(
+      <Navbar
+        infraStatus={defaultStatus}
+        loadingInfra={false}
+        onRefreshInfra={vi.fn()}
+        onOpenSettings={vi.fn()}
+        selectedBookTitle="DDIA"
+        theme="dark"
+        onToggleTheme={vi.fn()}
+        isBookshelfActive={false}
+        onNavigateBookshelf={handleNavigate}
+      />
+    );
+
+    const brandBtn = screen.getByRole('button', { name: /Ir para a Estante de Livros/i });
+    expect(brandBtn).toHaveAttribute('tabIndex', '0');
+
+    fireEvent.keyDown(brandBtn, { key: 'Enter' });
+    expect(handleNavigate).toHaveBeenCalledTimes(1);
+
+    fireEvent.keyDown(brandBtn, { key: ' ' });
+    expect(handleNavigate).toHaveBeenCalledTimes(2);
+  });
+
+  it('deve exibir disabled e disabled:cursor-not-allowed no botão de atualização de infraestrutura quando estiver carregando', () => {
+    render(
+      <Navbar
+        infraStatus={defaultStatus}
+        loadingInfra={true}
+        onRefreshInfra={vi.fn()}
+        onOpenSettings={vi.fn()}
+        selectedBookTitle="DDIA"
+        theme="dark"
+        onToggleTheme={vi.fn()}
+      />
+    );
+
+    const refreshBtn = screen.getByTitle(/Sondar conectividade/i);
+    expect(refreshBtn).toBeDisabled();
+    expect(refreshBtn).toHaveClass('disabled:cursor-not-allowed');
+  });
 });
 
