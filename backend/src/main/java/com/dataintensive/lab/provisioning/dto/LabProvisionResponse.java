@@ -6,6 +6,7 @@ import com.dataintensive.lab.provisioning.LabEnvironmentStatus;
 public record LabProvisionResponse(
         String labId,
         String challengeId,
+        String containerName,
         EngineType engineType,
         LabEnvironmentStatus status,
         String message,
@@ -14,12 +15,24 @@ public record LabProvisionResponse(
 ) {
     public LabProvisionResponse(
             String labId,
+            String challengeId,
             EngineType engineType,
             LabEnvironmentStatus status,
             String message,
             int allocatedPort,
             int estimatedWaitSeconds
     ) {
-        this(labId, null, engineType, status, message, allocatedPort, estimatedWaitSeconds);
+        this(labId, challengeId, null, engineType, status, message, allocatedPort, estimatedWaitSeconds);
+    }
+
+    public LabProvisionResponse(
+            String labId,
+            EngineType engineType,
+            LabEnvironmentStatus status,
+            String message,
+            int allocatedPort,
+            int estimatedWaitSeconds
+    ) {
+        this(labId, null, null, engineType, status, message, allocatedPort, estimatedWaitSeconds);
     }
 }

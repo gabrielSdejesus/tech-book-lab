@@ -82,8 +82,8 @@ class LabProvisioningServiceTest {
     }
 
     @Test
-    @DisplayName("Deve desprovisionar laboratório anterior ao solicitar novo lab na mesma sessão (Cota Anti-DoS)")
-    void shouldTeardownPreviousLabWhenNewOneRequestedInSameSession() {
+    @DisplayName("Não deve derrubar contêiner de outro lab na mesma sessão permitindo isolamento individualizado")
+    void shouldNotKillPreviousLabContainerWhenSwitchingToDifferentLab() {
         Lab secondLab = new Lab(
                 "ddia-cap-03-lab-02",
                 2,
@@ -104,20 +104,37 @@ class LabProvisioningServiceTest {
 
         // Provisiona o primeiro (PostgreSQL)
         provisioningService.provisionLab(sessionId, validLabId);
-        verify(containerManager).startEngine(EngineType.POSTGRES);
 
         // Provisiona o segundo (Neo4j) na mesma sessão
         LabSession newSession = provisioningService.provisionLab(sessionId, "ddia-cap-03-lab-02");
 
-        // Deve ter parado o PostgreSQL anterior antes de subir o Neo4j
-        verify(containerManager).stopEngine(EngineType.POSTGRES);
+        // O PostgreSQL do Lab 1 NÃO deve ser derrubado imediatamente (mantém vivo até inatividade)
+        verify(containerManager, never()).stopEngine(EngineType.POSTGRES);
         verify(containerManager).startEngine(EngineType.NEO4J);
         assertThat(newSession.engineType()).isEqualTo(EngineType.NEO4J);
         assertThat(newSession.status()).isEqualTo(LabEnvironmentStatus.READY);
+
+        // Ambos os labs devem permanecer registrados e consultáveis
+        LabSession session1 = provisioningService.getLabStatus(sessionId, validLabId);
+        assertThat(session1.status()).isEqualTo(LabEnvironmentStatus.READY);
     }
 
     @Test
-    @DisplayName("Deve atualizar heartbeat e renovar TTL de sessão ativa")
+    @DisplayName("Deve registrar nome único do contêiner e porta dinâmica no LabSession")
+    void shouldTrackUniqueContainerNameAndPortInLabSession() {
+        when(catalogRepository.findLabById(validLabId)).thenReturn(Optional.of(mockLab));
+        when(containerManager.isEngineHealthy(eq(EngineType.POSTGRES), anyInt())).thenReturn(true);
+
+        LabSession session = provisioningService.provisionLab(sessionId, validLabId);
+
+        assertThat(session.containerName())
+                .isNotNull()
+                .startsWith("user-")
+                .contains(validLabId);
+    }
+
+    @Test
+    @DisplayName("Deve atualizar heartbeat e renovar TTL de 1 minuto (60s) para sessão ativa")
     void shouldRenewHeartbeatForActiveSession() {
         when(catalogRepository.findLabById(validLabId)).thenReturn(Optional.of(mockLab));
         when(containerManager.isEngineHealthy(EngineType.POSTGRES, 5432)).thenReturn(true);
@@ -127,7 +144,7 @@ class LabProvisioningServiceTest {
         LabHeartbeatResult result = provisioningService.heartbeat(sessionId, validLabId);
 
         assertThat(result.status()).isEqualTo("ACK");
-        assertThat(result.ttlRemainingSeconds()).isGreaterThan(890);
+        assertThat(result.ttlRemainingSeconds()).isEqualTo(60);
     }
 
     @Test
@@ -153,19 +170,19 @@ class LabProvisioningServiceTest {
     }
 
     @Test
-    @DisplayName("Deve desprovisionar automaticamente sessões inativas há mais de 15 minutos")
-    void shouldAutoStopInactiveSessionsAfterTtl() {
+    @DisplayName("Deve desprovisionar automaticamente sessões inativas há mais de 1 minuto")
+    void shouldAutoStopInactiveSessionsAfterOneMinuteTtl() {
         when(catalogRepository.findLabById(validLabId)).thenReturn(Optional.of(mockLab));
         when(containerManager.isEngineHealthy(EngineType.POSTGRES, 5432)).thenReturn(true);
 
         LabSession session = provisioningService.provisionLab(sessionId, validLabId);
 
-        // Simula passagem de 16 minutos sem heartbeat
-        Instant pastTime = Instant.now().minus(Duration.ofMinutes(16));
+        // Simula passagem de 65 segundos sem heartbeat
+        Instant pastTime = Instant.now().minus(Duration.ofSeconds(65));
         provisioningService.overrideSessionLastHeartbeatForTest(sessionId, pastTime);
 
-        // Dispara limpeza de inatividade
-        int cleaned = provisioningService.cleanupInactiveSessions(Duration.ofMinutes(15));
+        // Dispara limpeza de inatividade com janela de 1 minuto
+        int cleaned = provisioningService.cleanupInactiveSessions(Duration.ofMinutes(1));
 
         assertThat(cleaned).isEqualTo(1);
         verify(containerManager).stopEngine(EngineType.POSTGRES);

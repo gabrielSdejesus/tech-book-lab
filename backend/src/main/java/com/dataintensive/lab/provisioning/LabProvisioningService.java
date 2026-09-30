@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -27,6 +28,10 @@ public class LabProvisioningService {
         this.containerManager = containerManager;
     }
 
+    private String toKey(SessionId sessionId, String labId) {
+        return sessionId.value() + ":" + labId;
+    }
+
     public LabSession provisionLab(SessionId sessionId, String labId) {
         return provisionLab(sessionId, labId, null);
     }
@@ -37,32 +42,33 @@ public class LabProvisioningService {
 
         EngineType requiredEngine = resolveRequiredEngine(lab, challengeId);
         int port = resolveDefaultPort(requiredEngine);
+        String sessionKey = toKey(sessionId, labId);
+        String containerName = DockerComposeLabManager.resolveContainerName(sessionId, lab.id(), requiredEngine);
 
-        // Anti-DoS Invariant: Cota de 1 motor ativo por sessão
-        LabSession currentSession = activeSessions.get(sessionId.value());
+        LabSession currentSession = activeSessions.get(sessionKey);
         if (currentSession != null && currentSession.status() == LabEnvironmentStatus.READY) {
-            boolean differentLab = !currentSession.labId().equals(labId);
             boolean differentEngine = currentSession.engineType() != requiredEngine;
 
-            if (differentLab || differentEngine) {
-                log.info("Sessão {} alternou ambiente (Lab: {}, Motor: {} -> {}). Desprovisionando motor anterior {}...",
-                        sessionId, labId, currentSession.engineType(), requiredEngine, currentSession.engineType());
+            if (differentEngine) {
+                log.info("Sessão {} alternou motor no laboratório {} ({} -> {}). Desprovisionando motor anterior...",
+                        sessionId, labId, currentSession.engineType(), requiredEngine);
                 containerManager.stopEngine(currentSession.engineType());
-                activeSessions.put(sessionId.value(), currentSession.withStatus(LabEnvironmentStatus.STOPPED));
+                activeSessions.put(sessionKey, currentSession.withStatus(LabEnvironmentStatus.STOPPED));
             } else {
                 // Mesmo motor já em execução e saudável
-                if (containerManager.isEngineHealthy(requiredEngine, port)) {
+                if (containerManager.isEngineHealthy(requiredEngine, currentSession.allocatedPort())) {
                     LabSession updated = new LabSession(
                             sessionId,
                             lab.id(),
                             challengeId,
+                            containerName,
                             requiredEngine,
                             LabEnvironmentStatus.READY,
                             Instant.now(),
-                            port,
+                            currentSession.allocatedPort(),
                             null
                     );
-                    activeSessions.put(sessionId.value(), updated);
+                    activeSessions.put(sessionKey, updated);
                     return updated;
                 }
             }
@@ -77,6 +83,7 @@ public class LabProvisioningService {
                 sessionId,
                 lab.id(),
                 challengeId,
+                containerName,
                 requiredEngine,
                 status,
                 Instant.now(),
@@ -84,7 +91,7 @@ public class LabProvisioningService {
                 null
         );
 
-        activeSessions.put(sessionId.value(), session);
+        activeSessions.put(sessionKey, session);
         return session;
     }
 
@@ -98,13 +105,16 @@ public class LabProvisioningService {
 
         EngineType requiredEngine = resolveRequiredEngine(lab, challengeId);
         int port = resolveDefaultPort(requiredEngine);
-        LabSession session = activeSessions.get(sessionId.value());
+        String sessionKey = toKey(sessionId, labId);
+        LabSession session = activeSessions.get(sessionKey);
 
         if (session == null || !session.labId().equals(labId) || session.engineType() != requiredEngine) {
+            String containerName = DockerComposeLabManager.resolveContainerName(sessionId, lab.id(), requiredEngine);
             return new LabSession(
                     sessionId,
                     lab.id(),
                     challengeId,
+                    containerName,
                     requiredEngine,
                     LabEnvironmentStatus.NOT_PROVISIONED,
                     Instant.now(),
@@ -116,38 +126,45 @@ public class LabProvisioningService {
         if (session.status() == LabEnvironmentStatus.PROVISIONING) {
             if (containerManager.isEngineHealthy(session.engineType(), session.allocatedPort())) {
                 session = session.withStatus(LabEnvironmentStatus.READY);
-                activeSessions.put(sessionId.value(), session);
+                activeSessions.put(sessionKey, session);
             }
         }
 
         return session;
     }
 
+    public Optional<LabSession> getSession(SessionId sessionId, String labId) {
+        return Optional.ofNullable(activeSessions.get(toKey(sessionId, labId)));
+    }
+
     public LabHeartbeatResult heartbeat(SessionId sessionId, String labId) {
-        LabSession session = activeSessions.get(sessionId.value());
+        String sessionKey = toKey(sessionId, labId);
+        LabSession session = activeSessions.get(sessionKey);
         if (session == null || session.status() == LabEnvironmentStatus.STOPPED) {
             throw new SessionExpiredException(sessionId.value());
         }
 
         Instant now = Instant.now();
         LabSession updated = session.withHeartbeat(now);
-        activeSessions.put(sessionId.value(), updated);
+        activeSessions.put(sessionKey, updated);
 
-        return new LabHeartbeatResult("ACK", labId, 900, now);
+        return new LabHeartbeatResult("ACK", labId, 60, now);
     }
 
     public LabSession teardown(SessionId sessionId, String labId) {
-        LabSession session = activeSessions.get(sessionId.value());
+        String sessionKey = toKey(sessionId, labId);
+        LabSession session = activeSessions.get(sessionKey);
         if (session != null) {
             containerManager.stopEngine(session.engineType());
             LabSession stopped = session.withStatus(LabEnvironmentStatus.STOPPED);
-            activeSessions.put(sessionId.value(), stopped);
+            activeSessions.put(sessionKey, stopped);
             return stopped;
         }
 
         Lab lab = catalogRepository.findLabById(labId)
                 .orElseThrow(() -> new LabNotFoundException(labId));
-        return new LabSession(sessionId, lab.id(), lab.engineType(), LabEnvironmentStatus.STOPPED, Instant.now(), resolveDefaultPort(lab.engineType()), null);
+        String containerName = DockerComposeLabManager.resolveContainerName(sessionId, lab.id(), lab.engineType());
+        return new LabSession(sessionId, lab.id(), null, containerName, lab.engineType(), LabEnvironmentStatus.STOPPED, Instant.now(), resolveDefaultPort(lab.engineType()), null);
     }
 
     public int cleanupInactiveSessions(Duration ttl) {
@@ -158,8 +175,8 @@ public class LabProvisioningService {
             LabSession session = entry.getValue();
             if (session.status() == LabEnvironmentStatus.READY || session.status() == LabEnvironmentStatus.PROVISIONING) {
                 if (Duration.between(session.lastHeartbeatAt(), now).compareTo(ttl) >= 0) {
-                    log.info("Sessão {} inativa há mais de {} minutos. Encerrando contêiner de laboratório {}...",
-                            session.sessionId(), ttl.toMinutes(), session.engineType());
+                    log.info("Sessão {} (lab {}) inativa há mais de {} segundos. Encerrando contêiner de laboratório {}...",
+                            session.sessionId(), session.labId(), ttl.toSeconds(), session.engineType());
                     containerManager.stopEngine(session.engineType());
                     activeSessions.put(entry.getKey(), session.withStatus(LabEnvironmentStatus.STOPPED));
                     stoppedCount++;
@@ -171,9 +188,18 @@ public class LabProvisioningService {
     }
 
     public void overrideSessionLastHeartbeatForTest(SessionId sessionId, Instant time) {
-        LabSession session = activeSessions.get(sessionId.value());
+        for (Map.Entry<String, LabSession> entry : activeSessions.entrySet()) {
+            if (entry.getValue().sessionId().equals(sessionId)) {
+                activeSessions.put(entry.getKey(), entry.getValue().withHeartbeat(time));
+            }
+        }
+    }
+
+    public void overrideSessionLastHeartbeatForTest(SessionId sessionId, String labId, Instant time) {
+        String sessionKey = toKey(sessionId, labId);
+        LabSession session = activeSessions.get(sessionKey);
         if (session != null) {
-            activeSessions.put(sessionId.value(), session.withHeartbeat(time));
+            activeSessions.put(sessionKey, session.withHeartbeat(time));
         }
     }
 

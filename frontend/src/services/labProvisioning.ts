@@ -5,6 +5,7 @@ export type LabProvisionStatus = 'NOT_PROVISIONED' | 'PROVISIONING' | 'READY' | 
 export interface LabProvisionResponse {
   labId: string;
   challengeId?: string;
+  containerName?: string;
   engineType: string;
   status: LabProvisionStatus;
   message: string;
@@ -15,6 +16,7 @@ export interface LabProvisionResponse {
 export interface LabStatusResponse {
   labId: string;
   challengeId?: string;
+  containerName?: string;
   engineType: string;
   status: LabProvisionStatus;
   allocatedPort: number;
