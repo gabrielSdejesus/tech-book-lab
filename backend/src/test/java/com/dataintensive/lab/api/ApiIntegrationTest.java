@@ -280,5 +280,69 @@ class ApiIntegrationTest {
                 .andExpect(jsonPath("$.error", is("BAD_REQUEST")))
                 .andExpect(jsonPath("$.message", containsString("es")));
     }
+
+    @Test
+    @DisplayName("POST /api/ai/test-connection - Deve rejeitar provedor não suportado com HTTP 400 Bad Request")
+    void shouldRejectUnsupportedProviderInTestConnectionWithBadRequest() throws Exception {
+        Map<String, Object> payload = Map.of(
+                "provider", "chatgpt"
+        );
+
+        mockMvc.perform(post("/api/ai/test-connection")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title", is("Regra de negócio violada")))
+                .andExpect(jsonPath("$.detail", containsString("chatgpt")));
+    }
+
+    @Test
+    @DisplayName("POST /api/ai/test-connection - Deve rejeitar provider em branco com HTTP 400")
+    void shouldRejectBlankProviderInTestConnection() throws Exception {
+        Map<String, Object> payload = Map.of(
+                "provider", "   "
+        );
+
+        mockMvc.perform(post("/api/ai/test-connection")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title", is("Erro de validação sintática")))
+                .andExpect(jsonPath("$.errors", hasItem(hasEntry("field", "provider"))));
+    }
+
+    @Test
+    @DisplayName("POST /api/ai/assess - Deve rejeitar labId inexistente com HTTP 400 Bad Request")
+    void shouldRejectAiAssessmentWithUnknownLabId() throws Exception {
+        Map<String, Object> payload = Map.of(
+                "labId", "lab-fantasma",
+                "challengeId", "ch-1",
+                "userQuery", "SELECT 1;"
+        );
+
+        mockMvc.perform(post("/api/ai/assess")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title", is("Regra de negócio violada")))
+                .andExpect(jsonPath("$.detail", containsString("Laboratório não encontrado")));
+    }
+
+    @Test
+    @DisplayName("POST /api/ai/assess - Deve rejeitar challengeId inexistente no laboratório com HTTP 400")
+    void shouldRejectAiAssessmentWithUnknownChallengeId() throws Exception {
+        Map<String, Object> payload = Map.of(
+                "labId", "ddia-cap-03-lab-01",
+                "challengeId", "desafio-fantasma",
+                "userQuery", "SELECT 1;"
+        );
+
+        mockMvc.perform(post("/api/ai/assess")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title", is("Regra de negócio violada")))
+                .andExpect(jsonPath("$.detail", containsString("Desafio não encontrado")));
+    }
 }
 
