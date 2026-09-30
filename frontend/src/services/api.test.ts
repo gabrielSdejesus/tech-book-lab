@@ -133,4 +133,90 @@ describe('API Service', () => {
     }));
     expect(result).toEqual(mockConnection);
   });
+
+  it('executeQuery deve extrair detail de ProblemDetail (RFC 7807) quando status for 400', async () => {
+    const problemDetail = {
+      type: 'urn:problem:query-execution-error',
+      title: 'Erro na execução da consulta',
+      status: 400,
+      detail: 'relation "tabela_fantasma" does not exist'
+    };
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      headers: { get: () => 'application/problem+json' },
+      json: async () => problemDetail
+    } as unknown as Response);
+
+    await expect(executeQuery('SELECT * FROM tabela_fantasma;', 'POSTGRES', 'ddia-cap-03-lab-01'))
+      .rejects.toThrow('relation "tabela_fantasma" does not exist');
+  });
+
+  it('executeQuery deve formatar lista de errors de ProblemDetail (RFC 7807) quando campos forem inválidos', async () => {
+    const problemDetail = {
+      type: 'urn:problem:validation-error',
+      title: 'Erro de validação sintática',
+      status: 400,
+      detail: 'Um ou mais campos da requisição são inválidos.',
+      errors: [
+        { field: 'query', message: 'A consulta SQL/Cypher é obrigatória' },
+        { field: 'engineType', message: 'O tipo de motor de banco é obrigatório' }
+      ]
+    };
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      headers: { get: () => 'application/problem+json' },
+      json: async () => problemDetail
+    } as unknown as Response);
+
+    await expect(executeQuery('', 'POSTGRES', 'ddia-cap-03-lab-01'))
+      .rejects.toThrow('query: A consulta SQL/Cypher é obrigatória, engineType: O tipo de motor de banco é obrigatório');
+  });
+
+  it('assessWithAi deve extrair detail de ProblemDetail em 400', async () => {
+    const problemDetail = {
+      type: 'urn:problem:domain-validation-error',
+      title: 'Regra de negócio violada',
+      status: 400,
+      detail: 'Laboratório não encontrado com id: lab-fantasma'
+    };
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      headers: { get: () => 'application/problem+json' },
+      json: async () => problemDetail
+    } as unknown as Response);
+
+    await expect(assessWithAi({
+      labId: 'lab-fantasma',
+      challengeId: 'ch-1',
+      userQuery: 'SELECT 1;',
+      executionSummary: '',
+      userReflection: ''
+    })).rejects.toThrow('Laboratório não encontrado com id: lab-fantasma');
+  });
+
+  it('testAiConnection deve extrair detail de ProblemDetail em 400', async () => {
+    const problemDetail = {
+      type: 'urn:problem:domain-validation-error',
+      title: 'Regra de negócio violada',
+      status: 400,
+      detail: 'Provedor de IA não suportado: chatgpt. Provedores suportados: gemini, ollama'
+    };
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      headers: { get: () => 'application/problem+json' },
+      json: async () => problemDetail
+    } as unknown as Response);
+
+    await expect(testAiConnection({ provider: 'chatgpt' }))
+      .rejects.toThrow('Provedor de IA não suportado: chatgpt. Provedores suportados: gemini, ollama');
+  });
 });
+

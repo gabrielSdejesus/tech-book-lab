@@ -1,6 +1,7 @@
 package com.dataintensive.lab.ai;
 
 import com.dataintensive.lab.domain.AssessmentLanguage;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,13 +19,13 @@ public class AiAssessmentController {
     }
 
     @PostMapping("/test-connection")
-    public ResponseEntity<AiTestConnectionResponse> testConnection(@RequestBody AiTestConnectionRequest request) {
+    public ResponseEntity<AiTestConnectionResponse> testConnection(@Valid @RequestBody AiTestConnectionRequest request) {
         AiTestConnectionResponse response = aiAssessmentService.testConnection(request);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/assess")
-    public ResponseEntity<?> assess(@RequestBody AiAssessmentRequest request) {
+    public ResponseEntity<?> assess(@Valid @RequestBody AiAssessmentRequest request) {
         try {
             AssessmentLanguage.from(request.language());
         } catch (IllegalArgumentException e) {
