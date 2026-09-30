@@ -19,3 +19,11 @@ _Avoid_: Banner, Thumbnail, Avatar
 **Lab Workspace**:
 O ambiente interativo de estudos e execução onde o leitor resolve desafios práticos contra motores de banco de dados reais (PostgreSQL, Neo4j) e recebe feedback do Tutor de IA.
 _Avoid_: Playground, Sandbox, Terminal
+
+**Table of Contents (Sidebar)**:
+O menu lateral retrátil que organiza a tábua de matérias, capítulos e laboratórios da obra técnica em estudo.
+_Avoid_: Drawer, Navigation Menu, Menu Lateral
+
+**Reading Focus Mode**:
+O estado do espaço de trabalho em que a barra lateral de capítulos é recolhida para maximizar a área útil do editor de código, instruções e visualização de tabelas de dados.
+_Avoid_: Zen Mode, Fullscreen, Maximize

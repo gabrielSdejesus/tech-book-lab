@@ -1,21 +1,50 @@
 import React from 'react';
 import type { Book, Lab, Chapter } from '../types';
-import { Bookmark, ChevronRight } from 'lucide-react';
+import { Bookmark, ChevronRight, PanelLeftClose } from 'lucide-react';
 
 interface Props {
   books: Book[];
   selectedLab: Lab | null;
   onSelectLab: (lab: Lab) => void;
+  isOpen?: boolean;
+  onToggle?: () => void;
 }
 
-export const Sidebar: React.FC<Props> = ({ books, selectedLab, onSelectLab }) => {
+export const Sidebar: React.FC<Props> = ({
+  books,
+  selectedLab,
+  onSelectLab,
+  isOpen = true,
+  onToggle,
+}) => {
   return (
-    <aside className="w-80 border-r-2 border-stone-800 dark:border-stone-700 bg-[#f5f2e9] dark:bg-[#181715] flex flex-col h-[calc(100vh-4.5rem)] overflow-y-auto select-none transition-colors">
+    <aside
+      data-testid="sidebar"
+      aria-label="Tábua de Matérias"
+      aria-hidden={!isOpen}
+      className={`bg-[#f5f2e9] dark:bg-[#181715] flex flex-col h-[calc(100vh-4.5rem)] select-none transition-all duration-300 ease-in-out shrink-0 ${
+        isOpen
+          ? 'w-80 border-r-2 border-stone-800 dark:border-stone-700 opacity-100 overflow-y-auto'
+          : 'w-0 border-r-0 opacity-0 overflow-hidden pointer-events-none'
+      }`}
+    >
       {/* Book Metadata Box */}
       <div className="p-4 border-b border-stone-300 dark:border-stone-700 bg-[#efebe1] dark:bg-[#1f1d1a]">
-        <div className="text-[10px] font-mono uppercase tracking-widest text-stone-600 dark:text-stone-400 font-bold mb-1.5 flex items-center gap-1.5">
-          <Bookmark className="w-3 h-3 text-[#8f1d1d] dark:text-[#df4444]" />
-          <span>TÁBUA DE MATÉRIAS</span>
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="text-[10px] font-mono uppercase tracking-widest text-stone-600 dark:text-stone-400 font-bold flex items-center gap-1.5">
+            <Bookmark className="w-3 h-3 text-[#8f1d1d] dark:text-[#df4444]" />
+            <span>TÁBUA DE MATÉRIAS</span>
+          </div>
+          {onToggle && (
+            <button
+              onClick={onToggle}
+              aria-label="Recolher tábua de matérias"
+              title="Recolher tábua de matérias"
+              className="text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100 p-1 hover:bg-[#e4dfd3] dark:hover:bg-[#2e2b27] border border-stone-400 dark:border-stone-600 transition-colors"
+            >
+              <PanelLeftClose className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
         {books.map((book) => (
           <div key={book.id} className="space-y-1">
