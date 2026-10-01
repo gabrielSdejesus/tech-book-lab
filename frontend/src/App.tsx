@@ -158,6 +158,10 @@ function AppContent() {
             <LabWorkspace
               key={selectedLab.id}
               lab={selectedLab}
+              chapterNumber={
+                selectedBook?.chapters?.find((c) => c.labs.some((l) => l.id === selectedLab.id))?.number ??
+                books.flatMap((b) => b.chapters).find((c) => c.labs.some((l) => l.id === selectedLab.id))?.number
+              }
               apiKey={apiKey}
               provider={provider}
               model={model}

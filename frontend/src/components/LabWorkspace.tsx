@@ -21,15 +21,17 @@ import {
   BookOpen
 } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
+import { formatSectionNumber } from '../utils/formatters';
 
 interface Props {
   lab: Lab;
+  chapterNumber?: number;
   apiKey: string;
   provider: string;
   model: string;
 }
 
-export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) => {
+export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, provider, model }) => {
   const { t, locale } = useLanguage();
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge>(lab.challenges[0]);
 
@@ -273,7 +275,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, apiKey, provider, model }) 
         <div className="p-6 border-b-2 border-stone-800 dark:border-stone-700 bg-[#f7f4ec] dark:bg-[#1a1917]">
           <div className="flex items-center gap-2 mb-1.5">
             <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#8f1d1d] dark:text-[#df4444]">
-              {t.lab.laboratory} &sect;&nbsp;3.{lab.number}
+              {t.lab.laboratory} &sect;&nbsp;{formatSectionNumber(chapterNumber, lab.number)}
             </span>
             <span className="text-stone-400 dark:text-stone-600">&bull;</span>
             <span className="text-xs font-mono text-stone-500 dark:text-stone-400 font-semibold">{lab.slug}</span>
