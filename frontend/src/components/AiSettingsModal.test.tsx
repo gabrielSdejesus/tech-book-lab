@@ -9,6 +9,7 @@ vi.mock('../services/api', () => ({
   executeQuery: vi.fn(),
   resetLab: vi.fn(),
   assessWithAi: vi.fn(),
+  getAiProviders: vi.fn(),
 }));
 
 describe('AiSettingsModal Component', () => {
@@ -176,6 +177,58 @@ describe('AiSettingsModal Component', () => {
     const testBtn = screen.getByRole('button', { name: /Testar/i });
     expect(testBtn).toBeDisabled();
     expect(testBtn).toHaveClass('disabled:cursor-not-allowed');
+  });
+
+  it('deve carregar provedores dinamicamente via getAiProviders e renderizar opções de modelos e provedores', async () => {
+    vi.mocked(api.getAiProviders).mockResolvedValueOnce([
+      {
+        id: 'gemini',
+        name: 'Google Gemini',
+        description: 'Gemini desc',
+        requiresApiKey: true,
+        apiKeyPlaceholder: 'Cole sua API Key...',
+        helpUrl: 'https://aistudio.google.com/',
+        defaultModel: 'gemini-2.5-flash',
+        models: [
+          { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', recommended: true }
+        ]
+      },
+      {
+        id: 'deepseek',
+        name: 'DeepSeek AI',
+        description: 'DeepSeek LLM API',
+        requiresApiKey: true,
+        apiKeyPlaceholder: 'sk-deepseek-...',
+        helpUrl: 'https://deepseek.com',
+        defaultModel: 'deepseek-chat',
+        models: [
+          { id: 'deepseek-chat', name: 'DeepSeek V3', recommended: true }
+        ]
+      }
+    ]);
+
+    render(
+      <AiSettingsModal
+        isOpen={true}
+        onClose={vi.fn()}
+        apiKey="minha-chave"
+        onSaveApiKey={vi.fn()}
+        provider="gemini"
+        onSaveProvider={vi.fn()}
+        model="gemini-2.5-flash"
+        onSaveModel={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /DeepSeek AI/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /DeepSeek AI/i }));
+
+    expect(screen.getByText('DeepSeek LLM API')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('sk-deepseek-...')).toBeInTheDocument();
+    expect(screen.getByText(/DeepSeek V3/i)).toBeInTheDocument();
   });
 });
 

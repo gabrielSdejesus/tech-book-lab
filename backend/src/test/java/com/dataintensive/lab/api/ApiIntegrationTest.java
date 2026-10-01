@@ -278,6 +278,18 @@ class ApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("GET /api/ai/providers - Deve retornar lista de provedores suportados e seus modelos")
+    void shouldReturnAiProvidersList() throws Exception {
+        mockMvc.perform(get("/api/ai/providers"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(2))))
+                .andExpect(jsonPath("$[*].id", hasItems("gemini", "ollama")))
+                .andExpect(jsonPath("$[?(@.id == 'gemini')].requiresApiKey", hasItem(true)))
+                .andExpect(jsonPath("$[?(@.id == 'gemini')].models", notNullValue()))
+                .andExpect(jsonPath("$[?(@.id == 'ollama')].requiresApiKey", hasItem(false)));
+    }
+
+    @Test
     @DisplayName("POST /api/ai/assess - Deve exigir revisão quando código do aluno contiver apenas comentários")
     void shouldRequireRevisionForEmptyUserSubmission() throws Exception {
         Map<String, Object> payload = Map.of(
