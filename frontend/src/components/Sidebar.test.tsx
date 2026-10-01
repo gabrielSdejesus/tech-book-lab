@@ -177,4 +177,19 @@ describe('Sidebar Component', () => {
     // Garante ausência de prefixo hardcoded § 3.
     expect(screen.queryByText(/§\s*3\./)).not.toBeInTheDocument();
   });
+
+  it('não deve renderizar os badges de tipo de motor (POSTGRES, NEO4J) nos sub-itens da barra lateral', () => {
+    render(<Sidebar books={[mockBook]} selectedLab={mockLab1} onSelectLab={vi.fn()} />);
+
+    expect(screen.getByText('Relacional vs Documentos')).toBeInTheDocument();
+    expect(screen.getByText('Grafos de Propriedades')).toBeInTheDocument();
+
+    // Badges de tipo de motor devem ser removidos dos sub-itens da barra lateral
+    expect(screen.queryByText('POSTGRES')).not.toBeInTheDocument();
+    expect(screen.queryByText('NEO4J')).not.toBeInTheDocument();
+
+    // Contadores de desafios continuam presentes
+    expect(screen.getAllByText(/\[0 desafios\]/)).toHaveLength(2);
+  });
 });
+

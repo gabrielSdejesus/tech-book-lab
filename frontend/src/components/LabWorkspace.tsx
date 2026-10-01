@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { formatSectionNumber } from '../utils/formatters';
+import { getEngineConfig } from '../config/engineConfig';
 
 interface Props {
   lab: Lab;
@@ -52,6 +53,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
   const [provisionMessage, setProvisionMessage] = useState<string>('');
 
   const activeEngine = selectedChallenge?.engineType || lab.engineType;
+  const activeEngineConfig = getEngineConfig(activeEngine);
 
   useEffect(() => {
     if (lab.challenges.length > 0) {
@@ -412,13 +414,9 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
         <div className="h-12 border-b-2 border-stone-800 dark:border-stone-700 bg-[#f7f4ec] dark:bg-[#1a1917] px-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <span
-              className={`px-2 py-0.5 text-[10px] font-mono font-bold uppercase border-2 ${
-                activeEngine === 'NEO4J'
-                  ? 'bg-[#efe3d5] dark:bg-[#2d2419] text-[#713f12] dark:text-[#fde047] border-stone-800 dark:border-stone-600'
-                  : 'bg-[#e5ebe4] dark:bg-[#1a2e1d] text-[#14532d] dark:text-[#86efac] border-stone-800 dark:border-stone-600'
-              }`}
+              className={`px-2 py-0.5 text-[10px] font-mono font-bold uppercase border-2 ${activeEngineConfig.toolbarClass}`}
             >
-              {activeEngine === 'NEO4J' ? t.lab.engineNeo4j : t.lab.enginePostgres}
+              {activeEngine === 'NEO4J' ? t.lab.engineNeo4j : activeEngine === 'POSTGRES' ? t.lab.enginePostgres : activeEngineConfig.name}
             </span>
             <span className="text-[10px] font-mono text-stone-500 dark:text-stone-400 hidden sm:inline">
               {t.lab.ctrlEnterHint}
@@ -460,8 +458,8 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
             <Loader2 className="w-4 h-4 animate-spin text-amber-700 dark:text-amber-400" />
             <span>
               {provisionMessage || (locale === 'pt'
-                ? `Provisionando ambiente isolado de laboratório (${activeEngine === 'NEO4J' ? 'Neo4j 5' : 'PostgreSQL 16'})... Aguarde para executar consultas.`
-                : `Provisioning isolated lab environment (${activeEngine === 'NEO4J' ? 'Neo4j 5' : 'PostgreSQL 16'})... Please wait before running queries.`)}
+                ? `Provisionando ambiente isolado de laboratório (${activeEngineConfig.name})... Aguarde para executar consultas.`
+                : `Provisioning isolated lab environment (${activeEngineConfig.name})... Please wait before running queries.`)}
             </span>
           </div>
         )}
@@ -565,7 +563,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
                 }`}
               />
               <span className="font-bold text-stone-700 dark:text-stone-300">
-                {activeEngine === 'NEO4J' ? 'NEO4J:7687' : 'PG:5432'}
+                {activeEngineConfig.connectionLabel}
               </span>
               <span className="text-stone-500 dark:text-stone-400 uppercase text-[9px]">
                 {provisionStatus === 'READY'
