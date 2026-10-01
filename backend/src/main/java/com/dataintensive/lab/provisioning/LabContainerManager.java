@@ -15,8 +15,4 @@ public interface LabContainerManager {
     default void stopIsolatedContainer(String containerName) {
         // Default fallback: do nothing or stop standard engine
     }
-
-    default boolean isContainerHealthy(String containerName, EngineType engine, int port) {
-        return isEngineHealthy(engine, port);
-    }
 }

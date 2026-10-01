@@ -6,10 +6,8 @@ import * as api from '../services/api';
 vi.mock('../services/api', () => ({
   testAiConnection: vi.fn(),
   getBooks: vi.fn(),
-  getLabById: vi.fn(),
   executeQuery: vi.fn(),
   resetLab: vi.fn(),
-  getInfraStatus: vi.fn(),
   assessWithAi: vi.fn(),
 }));
 

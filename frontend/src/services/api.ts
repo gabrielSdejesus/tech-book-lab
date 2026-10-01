@@ -1,8 +1,6 @@
 import type {
   Book,
-  Lab,
   QueryResult,
-  InfraStatus,
   AiAssessmentRequest,
   AiAssessmentResponse,
   AiTestConnectionRequest,
@@ -38,11 +36,7 @@ export async function getBooks(): Promise<Book[]> {
   return res.json();
 }
 
-export async function getLabById(labId: string): Promise<Lab> {
-  const res = await fetch(`${API_BASE}/labs/${labId}`);
-  if (!res.ok) throw new Error(await extractErrorMessage(res, `Falha ao carregar laboratório ${labId}`));
-  return res.json();
-}
+
 
 export async function executeQuery(query: string, engineType: EngineType, labId: string): Promise<QueryResult> {
   const res = await fetch(`${API_BASE}/query/execute`, {
@@ -68,11 +62,7 @@ export async function resetLab(labId: string): Promise<QueryResult> {
   return res.json();
 }
 
-export async function getInfraStatus(): Promise<InfraStatus> {
-  const res = await fetch(`${API_BASE}/infra/status`);
-  if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao consultar status dos containers'));
-  return res.json();
-}
+
 
 export async function assessWithAi(req: AiAssessmentRequest): Promise<AiAssessmentResponse> {
   const res = await fetch(`${API_BASE}/ai/assess`, {

@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { App } from './App';
 import * as api from './services/api';
-import type { Book, InfraStatus } from './types';
+import type { Book } from './types';
 
 const mockBook: Book = {
   id: 'ddia',
@@ -48,18 +48,9 @@ const mockBook: Book = {
   ],
 };
 
-const mockInfra: InfraStatus = {
-  postgresReady: true,
-  postgresMessage: 'Postgres OK',
-  neo4jReady: true,
-  neo4jMessage: 'Neo4j OK',
-  timestamp: 123456789,
-};
-
 describe('App Component Flow', () => {
   beforeEach(() => {
     vi.spyOn(api, 'getBooks').mockResolvedValue([mockBook]);
-    vi.spyOn(api, 'getInfraStatus').mockResolvedValue(mockInfra);
   });
 
   it('deve carregar inicialmente na Bookshelf e permitir navegar para o LabWorkspace e retornar', async () => {

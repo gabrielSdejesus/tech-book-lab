@@ -7,14 +7,6 @@ export interface TranslationSchema {
     returnToBookshelf: string;
     toggleTheme: string;
     configureAi: string;
-    connected: string;
-    offline: string;
-    cancel: string;
-    save: string;
-    saved: string;
-    close: string;
-    loading: string;
-    error: string;
   };
   bookshelf: {
     catalogTag: string;
@@ -32,49 +24,25 @@ export interface TranslationSchema {
   };
   sidebar: {
     tableOfContents: string;
-    notebookStructure: string;
-    chapter: string;
-    practicalLabs: string;
-    keyConcepts: string;
     collapseSidebar: string;
     expandSidebar: string;
     toggleSidebar: string;
   };
   lab: {
     laboratory: string;
-    labWorksheet: string;
     engineeringScenario: string;
-    practicalChallenge: string;
     requirementsAndConstraints: string;
     reflectiveQuestion: string;
-    conceptualReflection: string;
     reflectionPlaceholder: string;
-    queryEditor: string;
-    executeQuery: string;
-    resetDatabase: string;
     evaluateWithAi: string;
     evaluating: string;
-    executing: string;
-    resetting: string;
-    queryResult: string;
-    rowsInMs: (count: number, ms: number) => string;
     noResult: string;
-    aiEvaluation: string;
-    approved: string;
-    needsRevision: string;
-    discussion: string;
     tabs: {
       results: string;
       aiTutor: string;
       json: string;
-      diagnosis: string;
-      tradeOffs: string;
-      performance: string;
-      alternatives: string;
     };
     confirmReset: string;
-    executionError: string;
-    resetSuccessToast: string;
     engineNeo4j: string;
     enginePostgres: string;
     ctrlEnterHint: string;
@@ -97,15 +65,8 @@ export interface TranslationSchema {
   };
   aiModal: {
     title: string;
-    provider: string;
-    apiKey: string;
-    model: string;
-    testConnection: string;
     saveSettings: string;
     testing: string;
-    geminiDescription: string;
-    ollamaDescription: string;
-    modelPlaceholder: string;
     description: string;
     providerLabel: string;
     modelVersion: string;
