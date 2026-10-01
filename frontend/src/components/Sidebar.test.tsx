@@ -127,4 +127,54 @@ describe('Sidebar Component', () => {
     expect(screen.getByText(/By Martin Kleppmann/i)).toBeInTheDocument();
     expect(screen.getByText(/CHAPTER 3/i)).toBeInTheDocument();
   });
+
+  it('deve renderizar a numeração de seções dinamicamente conforme o capítulo pai (ex: § 1.1, § 1.2 e § 4.1)', () => {
+    const multiChapterBook: Book = {
+      id: 'dist-sys',
+      title: 'Distributed Systems Principles',
+      author: 'Andrew Tanenbaum',
+      tagLine: 'Conceitos fundamentais',
+      coverColor: '#1d4ed8',
+      description: 'Sistemas distribuídos modernos',
+      chapters: [
+        {
+          id: 'ds-cap-01',
+          number: 1,
+          title: 'Introdução e Arquiteturas',
+          subtitle: 'Visão Geral',
+          summary: 'Conceitos de sistemas distribuídos',
+          labs: [
+            { ...mockLab1, id: 'lab-1-1', number: 1, title: 'Modelos de Comunicação' },
+            { ...mockLab2, id: 'lab-1-2', number: 2, title: 'Chamadas RPC' }
+          ]
+        },
+        {
+          id: 'ds-cap-04',
+          number: 4,
+          title: 'Replicação e Consistência',
+          subtitle: 'Consistência',
+          summary: 'Quóruns e Paxos',
+          labs: [
+            { ...mockLab1, id: 'lab-4-1', number: 1, title: 'Consenso Distribuído' }
+          ]
+        }
+      ]
+    };
+
+    render(
+      <Sidebar
+        books={[multiChapterBook]}
+        selectedLab={multiChapterBook.chapters[0].labs[0]}
+        onSelectLab={vi.fn()}
+      />
+    );
+
+    // Valida que os rótulos de seção respeitam o número do capítulo pai
+    expect(screen.getByText(/§\s*1\.1/)).toBeInTheDocument();
+    expect(screen.getByText(/§\s*1\.2/)).toBeInTheDocument();
+    expect(screen.getByText(/§\s*4\.1/)).toBeInTheDocument();
+
+    // Garante ausência de prefixo hardcoded § 3.
+    expect(screen.queryByText(/§\s*3\./)).not.toBeInTheDocument();
+  });
 });
