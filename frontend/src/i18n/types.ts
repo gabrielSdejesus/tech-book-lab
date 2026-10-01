@@ -84,4 +84,7 @@ export interface TranslationSchema {
     cancel: string;
     saved: string;
   };
+  bookCover: {
+    defaultBanner: string;
+  };
 }

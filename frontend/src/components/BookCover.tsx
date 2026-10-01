@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Book } from '../types';
 import { BookOpen } from 'lucide-react';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface Props {
   book: Book;
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export const BookCover: React.FC<Props> = ({ book, className = '' }) => {
+  const { t } = useLanguage();
   const [imageError, setImageError] = useState(false);
 
   // If we have an image URL and it hasn't errored out, render the classic cover image
@@ -28,6 +30,16 @@ export const BookCover: React.FC<Props> = ({ book, className = '' }) => {
     );
   }
 
+  const bannerText =
+    book.bannerText ||
+    (book.category
+      ? book.edition
+        ? `${book.category} • ${book.edition}`
+        : book.category
+      : book.edition
+      ? book.edition
+      : t.bookCover.defaultBanner);
+
   // Graceful styled fallback honoring the classic editorial aesthetic
   return (
     <div
@@ -38,7 +50,7 @@ export const BookCover: React.FC<Props> = ({ book, className = '' }) => {
         className="w-full py-1.5 px-2 border border-stone-800 dark:border-stone-600 text-white text-center text-[9px] font-sans font-black tracking-widest uppercase mb-3 book-shadow-sm"
         style={{ backgroundColor: book.coverColor || '#059669' }}
       >
-        Sistemas &bull; Edição Técnica
+        {bannerText}
       </div>
 
       {/* Frame & Title */}

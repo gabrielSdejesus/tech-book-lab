@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { BookCover } from './BookCover';
 import type { Book } from '../types';
+import { LanguageProvider } from '../i18n/LanguageContext';
 
 const sampleBook: Book = {
   id: 'ddia',
@@ -67,7 +68,11 @@ describe('BookCover Component', () => {
   it('deve renderizar fallback internacionalizado em inglês quando o idioma for en', () => {
     localStorage.setItem('tbl_locale', 'en');
     const bookWithoutImage: Book = { ...sampleBook, coverImageUrl: undefined };
-    render(<BookCover book={bookWithoutImage} />);
+    render(
+      <LanguageProvider>
+        <BookCover book={bookWithoutImage} />
+      </LanguageProvider>
+    );
 
     expect(screen.getByText(/Systems\s*•\s*Technical Edition/i)).toBeInTheDocument();
     localStorage.removeItem('tbl_locale');
