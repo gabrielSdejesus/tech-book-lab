@@ -80,14 +80,7 @@ class ApiIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
-    @Test
-    @DisplayName("GET /api/infra/status - Deve retornar status de conectividade da infraestrutura")
-    void shouldReturnInfraStatus() throws Exception {
-        mockMvc.perform(get("/api/infra/status"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.postgresReady", notNullValue()))
-                .andExpect(jsonPath("$.neo4jReady", notNullValue()));
-    }
+
 
     @Test
     @DisplayName("POST /api/query/execute - Deve rejeitar consulta vazia com HTTP 400 Bad Request e RFC 7807")

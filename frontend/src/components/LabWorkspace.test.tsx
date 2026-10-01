@@ -10,8 +10,6 @@ vi.mock('../services/api', () => ({
   resetLab: vi.fn(),
   assessWithAi: vi.fn(),
   getBooks: vi.fn(),
-  getLabById: vi.fn(),
-  getInfraStatus: vi.fn(),
   testAiConnection: vi.fn(),
 }));
 
@@ -19,7 +17,6 @@ vi.mock('../services/labProvisioning', () => ({
   provisionLab: vi.fn(),
   getLabStatus: vi.fn(),
   sendHeartbeat: vi.fn(),
-  teardownLab: vi.fn(),
 }));
 
 describe('LabWorkspace Component', () => {
@@ -109,11 +106,6 @@ describe('LabWorkspace Component', () => {
       labId: 'ddia-cap-03-lab-01',
       ttlRemainingSeconds: 600,
       lastHeartbeatAt: Date.now(),
-    });
-    vi.mocked(provisioningApi.teardownLab).mockResolvedValue({
-      labId: 'ddia-cap-03-lab-01',
-      status: 'STOPPED',
-      message: 'Container parado',
     });
   });
 

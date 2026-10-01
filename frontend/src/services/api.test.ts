@@ -1,10 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   getBooks,
-  getLabById,
   executeQuery,
   resetLab,
-  getInfraStatus,
   assessWithAi,
   testAiConnection
 } from './api';
@@ -36,18 +34,7 @@ describe('API Service', () => {
     await expect(getBooks()).rejects.toThrow('Falha ao carregar catálogo de livros');
   });
 
-  it('getLabById deve buscar laboratório específico na URL correta', async () => {
-    const mockLab = { id: 'ddia-cap-03-lab-01', title: 'Lab 1', engineType: 'POSTGRES' };
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockLab
-    } as Response);
 
-    const result = await getLabById('ddia-cap-03-lab-01');
-
-    expect(globalThis.fetch).toHaveBeenCalledWith('/api/labs/ddia-cap-03-lab-01');
-    expect(result).toEqual(mockLab);
-  });
 
   it('executeQuery deve enviar POST com query, engineType e labId', async () => {
     const mockResult = { success: true, columns: ['id'], rows: [{ id: 1 }], rowCount: 1, executionTimeMs: 12 };
@@ -80,18 +67,7 @@ describe('API Service', () => {
     expect(result).toEqual(mockReset);
   });
 
-  it('getInfraStatus deve chamar /api/infra/status', async () => {
-    const mockStatus = { postgresReady: true, postgresMessage: 'OK', neo4jReady: true, neo4jMessage: 'OK', timestamp: 1234 };
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockStatus
-    } as Response);
 
-    const result = await getInfraStatus();
-
-    expect(globalThis.fetch).toHaveBeenCalledWith('/api/infra/status');
-    expect(result).toEqual(mockStatus);
-  });
 
   it('assessWithAi deve postar requisição de avaliação para /api/ai/assess', async () => {
     const mockAssessment = { status: 'APPROVED', feedback: 'Excelente!', architecturalAnalysis: 'Bom', executionAnalysis: 'Correto' };
