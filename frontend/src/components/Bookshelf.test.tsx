@@ -98,6 +98,34 @@ describe('Bookshelf Component', () => {
     fireEvent.keyDown(card, { key: ' ' });
     expect(handleSelectBook).toHaveBeenCalledTimes(2);
   });
+
+  it('deve estilizar badges de motores dinamicamente a partir do engineConfig, incluindo novos motores', () => {
+    const customBook: Book = {
+      ...mockBooks[0],
+      chapters: [
+        {
+          ...mockBooks[0].chapters[0],
+          labs: [
+            ...mockBooks[0].chapters[0].labs,
+            {
+              ...mockBooks[0].chapters[0].labs[0],
+              id: 'custom-lab-redis',
+              engineType: 'REDIS' as any,
+            },
+          ],
+        },
+      ],
+    };
+
+    render(<Bookshelf books={[customBook]} onSelectBook={vi.fn()} />);
+
+    const redisBadge = screen.getByText('REDIS');
+    expect(redisBadge).toBeInTheDocument();
+    // No engineConfig, motores desconhecidos usam fallback neutro bg-stone-100 e não a classe fixa do postgres
+    expect(redisBadge).toHaveClass('bg-stone-100');
+    expect(redisBadge).not.toHaveClass('bg-[#e5ebe4]');
+  });
 });
+
 
 
