@@ -103,3 +103,20 @@ export interface ProblemDetail {
   [key: string]: any;
 }
 
+export interface AiModelInfo {
+  id: string;
+  name: string;
+  recommended: boolean;
+}
+
+export interface AiProviderInfo {
+  id: string;
+  name: string;
+  description: string;
+  requiresApiKey: boolean;
+  apiKeyPlaceholder?: string | null;
+  helpUrl?: string | null;
+  defaultModel: string;
+  models: AiModelInfo[];
+}
+

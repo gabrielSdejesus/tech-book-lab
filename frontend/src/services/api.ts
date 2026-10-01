@@ -7,7 +7,8 @@ import type {
   AiTestConnectionRequest,
   AiTestConnectionResponse,
   EngineType,
-  ProblemDetail
+  ProblemDetail,
+  AiProviderInfo
 } from '../types';
 import { getSessionId } from './session';
 
@@ -127,5 +128,11 @@ export async function testAiConnection(req: AiTestConnectionRequest): Promise<Ai
     body: JSON.stringify(req)
   });
   if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao testar conexão com o provedor de IA'));
+  return res.json();
+}
+
+export async function getAiProviders(): Promise<AiProviderInfo[]> {
+  const res = await fetch(`${API_BASE}/ai/providers`);
+  if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao consultar provedores de IA'));
   return res.json();
 }

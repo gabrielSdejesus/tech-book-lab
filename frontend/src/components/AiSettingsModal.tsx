@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Key, Cpu, Check, AlertCircle, Loader2, Zap, Sliders } from 'lucide-react';
-import { testAiConnection } from '../services/api';
-import type { AiTestConnectionResponse } from '../types';
+import { testAiConnection, getAiProviders } from '../services/api';
+import type { AiTestConnectionResponse, AiProviderInfo } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
 
 interface Props {
@@ -15,6 +15,36 @@ interface Props {
   onSaveModel: (model: string) => void;
 }
 
+const DEFAULT_PROVIDERS: AiProviderInfo[] = [
+  {
+    id: 'gemini',
+    name: 'Google Gemini',
+    description: 'Modelos de linguagem do Google AI Studio (requer chave gratuita).',
+    requiresApiKey: true,
+    apiKeyPlaceholder: 'AIzaSy...',
+    helpUrl: 'https://aistudio.google.com/app/apikey',
+    defaultModel: 'gemini-2.5-flash',
+    models: [
+      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', recommended: true },
+      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', recommended: false },
+      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', recommended: false },
+      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', recommended: false },
+      { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash', recommended: false },
+      { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash-Lite', recommended: false },
+    ],
+  },
+  {
+    id: 'ollama',
+    name: 'Ollama Local',
+    description: 'Execução local e privada via Ollama (sem necessidade de API Key).',
+    requiresApiKey: false,
+    apiKeyPlaceholder: '',
+    helpUrl: 'https://ollama.com/',
+    defaultModel: 'qwen2.5-coder:1.5b',
+    models: [],
+  },
+];
+
 export const AiSettingsModal: React.FC<Props> = ({
   isOpen,
   onClose,
@@ -23,27 +53,60 @@ export const AiSettingsModal: React.FC<Props> = ({
   provider,
   onSaveProvider,
   model,
-  onSaveModel
+  onSaveModel,
 }) => {
   const { t } = useLanguage();
+  const [providers, setProviders] = useState<AiProviderInfo[]>(DEFAULT_PROVIDERS);
   const [tempKey, setTempKey] = useState(apiKey);
-  const [tempProvider, setTempProvider] = useState(provider);
+  const [tempProvider, setTempProvider] = useState(provider || 'gemini');
   const [tempModel, setTempModel] = useState(model || 'gemini-2.5-flash');
   const [saved, setSaved] = useState(false);
 
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<AiTestConnectionResponse | null>(null);
 
-  React.useEffect(() => {
+  const [prevProps, setPrevProps] = useState({ isOpen, apiKey, provider, model });
+  if (isOpen && (!prevProps.isOpen || prevProps.apiKey !== apiKey || prevProps.provider !== provider || prevProps.model !== model)) {
+    setPrevProps({ isOpen, apiKey, provider, model });
+    setTempKey(apiKey);
+    setTempProvider(provider || 'gemini');
+    setTempModel(model || (provider === 'ollama' ? 'qwen2.5-coder:1.5b' : 'gemini-2.5-flash'));
+    setTestResult(null);
+  }
+
+  useEffect(() => {
     if (isOpen) {
-      setTempKey(apiKey);
-      setTempProvider(provider);
-      setTempModel(model || (provider === 'ollama' ? 'qwen2.5-coder:1.5b' : 'gemini-2.5-flash'));
-      setTestResult(null);
+      Promise.resolve(getAiProviders())
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            setProviders(data);
+          }
+        })
+        .catch(() => {
+          // Keep default providers
+        });
     }
-  }, [isOpen, apiKey, provider, model]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
+
+  const currentProvider =
+    providers.find((p) => p.id.toLowerCase() === tempProvider.toLowerCase()) ||
+    providers[0] ||
+    DEFAULT_PROVIDERS[0];
+
+  const handleSelectProvider = (p: AiProviderInfo) => {
+    setTempProvider(p.id);
+    if (p.models && p.models.length > 0) {
+      const hasModel = p.models.some((m) => m.id === tempModel);
+      if (!hasModel) {
+        setTempModel(p.defaultModel || p.models[0].id);
+      }
+    } else {
+      setTempModel(p.defaultModel || (p.id === 'ollama' ? 'qwen2.5-coder:1.5b' : ''));
+    }
+    setTestResult(null);
+  };
 
   const handleTest = async () => {
     setTesting(true);
@@ -52,7 +115,7 @@ export const AiSettingsModal: React.FC<Props> = ({
       const res = await testAiConnection({
         provider: tempProvider,
         apiKey: tempKey,
-        modelOverride: tempModel
+        modelOverride: tempModel,
       });
       setTestResult(res);
     } catch (err: any) {
@@ -60,7 +123,7 @@ export const AiSettingsModal: React.FC<Props> = ({
         valid: false,
         message: err.message || t.aiModal.contactError,
         model: null,
-        latencyMs: 0
+        latencyMs: 0,
       });
     } finally {
       setTesting(false);
@@ -77,6 +140,8 @@ export const AiSettingsModal: React.FC<Props> = ({
       onClose();
     }, 700);
   };
+
+  const hasPresetModels = currentProvider.models && currentProvider.models.length > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 select-none">
@@ -104,50 +169,39 @@ export const AiSettingsModal: React.FC<Props> = ({
               {t.aiModal.providerLabel}
             </label>
             <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setTempProvider('gemini');
-                  if (!tempModel || tempModel.includes('qwen') || tempModel.includes('llama')) {
-                    setTempModel('gemini-2.5-flash');
-                  }
-                  setTestResult(null);
-                }}
-                className={`flex items-center justify-center gap-2 p-2.5 border-2 text-xs font-mono font-bold uppercase transition-all ${
-                  tempProvider === 'gemini'
-                    ? 'border-stone-900 dark:border-stone-500 bg-[#f7f4ec] dark:bg-[#272420] text-[#8f1d1d] dark:text-[#df4444] book-shadow-sm font-black'
-                    : 'border-stone-400 dark:border-stone-700 bg-[#efebe1] dark:bg-[#1f1d1a] text-stone-600 dark:text-stone-400 hover:bg-[#e6e0d3] dark:hover:bg-[#292622]'
-                }`}
-              >
-                <span>Google Gemini</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setTempProvider('ollama');
-                  if (!tempModel || tempModel.includes('gemini')) {
-                    setTempModel('qwen2.5-coder:1.5b');
-                  }
-                  setTestResult(null);
-                }}
-                className={`flex items-center justify-center gap-2 p-2.5 border-2 text-xs font-mono font-bold uppercase transition-all ${
-                  tempProvider === 'ollama'
-                    ? 'border-stone-900 dark:border-stone-500 bg-[#f7f4ec] dark:bg-[#272420] text-[#8f1d1d] dark:text-[#df4444] book-shadow-sm font-black'
-                    : 'border-stone-400 dark:border-stone-700 bg-[#efebe1] dark:bg-[#1f1d1a] text-stone-600 dark:text-stone-400 hover:bg-[#e6e0d3] dark:hover:bg-[#292622]'
-                }`}
-              >
-                <Cpu className="w-3.5 h-3.5 text-stone-700 dark:text-stone-400" />
-                <span>Ollama Local</span>
-              </button>
+              {providers.map((p) => {
+                const isSelected = tempProvider.toLowerCase() === p.id.toLowerCase();
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => handleSelectProvider(p)}
+                    className={`flex items-center justify-center gap-2 p-2.5 border-2 text-xs font-mono font-bold uppercase transition-all ${
+                      isSelected
+                        ? 'border-stone-900 dark:border-stone-500 bg-[#f7f4ec] dark:bg-[#272420] text-[#8f1d1d] dark:text-[#df4444] book-shadow-sm font-black'
+                        : 'border-stone-400 dark:border-stone-700 bg-[#efebe1] dark:bg-[#1f1d1a] text-stone-600 dark:text-stone-400 hover:bg-[#e6e0d3] dark:hover:bg-[#292622]'
+                    }`}
+                  >
+                    {p.id === 'ollama' && <Cpu className="w-3.5 h-3.5 text-stone-700 dark:text-stone-400" />}
+                    <span>{p.name}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {tempProvider === 'gemini' ? (
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-stone-700 dark:text-stone-400">
-                  {t.aiModal.modelVersion}
-                </label>
+          {currentProvider.description && (
+            <p className="text-[11px] leading-relaxed text-stone-600 dark:text-stone-400 italic">
+              {currentProvider.description}
+            </p>
+          )}
+
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-stone-700 dark:text-stone-400">
+                {currentProvider.id === 'ollama' ? t.aiModal.ollamaModel : t.aiModal.modelVersion}
+              </label>
+              {hasPresetModels ? (
                 <select
                   value={tempModel}
                   onChange={(e) => {
@@ -156,29 +210,46 @@ export const AiSettingsModal: React.FC<Props> = ({
                   }}
                   className="w-full bg-[#fdfcf9] dark:bg-[#141312] border-2 border-stone-700 dark:border-stone-600 px-3 py-2 text-stone-900 dark:text-stone-100 text-xs font-mono focus:outline-none focus:border-stone-950 dark:focus:border-stone-400"
                 >
-                  <option value="gemini-2.5-flash">Gemini 2.5 Flash {t.aiModal.recommendedLatest}</option>
-                  <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-                  <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-                  <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                  <option value="gemini-3.8-flash">Gemini 3.8 Flash</option>
-                  <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite</option>
+                  {currentProvider.models.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} {m.recommended ? t.aiModal.recommendedLatest : ''}
+                    </option>
+                  ))}
+                  {tempModel && !currentProvider.models.some((m) => m.id === tempModel) && (
+                    <option value={tempModel}>{tempModel}</option>
+                  )}
                 </select>
-              </div>
+              ) : (
+                <input
+                  type="text"
+                  value={tempModel}
+                  onChange={(e) => {
+                    setTempModel(e.target.value);
+                    setTestResult(null);
+                  }}
+                  placeholder="ex: qwen2.5-coder:1.5b, llama3.2"
+                  className="w-full bg-[#fdfcf9] dark:bg-[#141312] border-2 border-stone-700 dark:border-stone-600 px-3 py-2 text-stone-900 dark:text-stone-100 text-xs font-mono focus:outline-none focus:border-stone-950 dark:focus:border-stone-400"
+                />
+              )}
+            </div>
 
+            {currentProvider.requiresApiKey ? (
               <div className="space-y-1">
                 <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-stone-700 dark:text-stone-400 flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <Key className="w-3.5 h-3.5 text-stone-600 dark:text-stone-400" />
-                    <span>Gemini API Key</span>
+                    <span>{currentProvider.name} API Key</span>
                   </span>
-                  <a
-                    href="https://aistudio.google.com/app/apikey"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[10px] font-serif italic text-[#8f1d1d] dark:text-[#df4444] hover:underline"
-                  >
-                    {t.aiModal.getFreeKey}
-                  </a>
+                  {currentProvider.helpUrl && (
+                    <a
+                      href={currentProvider.helpUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[10px] font-serif italic text-[#8f1d1d] dark:text-[#df4444] hover:underline"
+                    >
+                      {t.aiModal.getFreeKey}
+                    </a>
+                  )}
                 </label>
 
                 <div className="flex gap-2">
@@ -189,7 +260,7 @@ export const AiSettingsModal: React.FC<Props> = ({
                       setTempKey(e.target.value);
                       setTestResult(null);
                     }}
-                    placeholder={t.aiModal.apiKeyPlaceholder}
+                    placeholder={currentProvider.apiKeyPlaceholder || t.aiModal.apiKeyPlaceholder}
                     className="flex-1 bg-[#fdfcf9] dark:bg-[#141312] border-2 border-stone-700 dark:border-stone-600 px-3 py-2 text-stone-950 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-600 focus:outline-none focus:border-stone-900 dark:focus:border-stone-400 text-xs font-mono"
                   />
                   <button
@@ -207,42 +278,27 @@ export const AiSettingsModal: React.FC<Props> = ({
                   </button>
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-stone-700 dark:text-stone-400">
-                  {t.aiModal.ollamaModel}
-                </label>
-                <input
-                  type="text"
-                  value={tempModel}
-                  onChange={(e) => {
-                    setTempModel(e.target.value);
-                    setTestResult(null);
-                  }}
-                  placeholder="ex: qwen2.5-coder:1.5b, llama3.2"
-                  className="w-full bg-[#fdfcf9] dark:bg-[#141312] border-2 border-stone-700 dark:border-stone-600 px-3 py-2 text-stone-900 dark:text-stone-100 text-xs font-mono focus:outline-none focus:border-stone-950 dark:focus:border-stone-400"
-                />
+            ) : (
+              <div className="space-y-3">
+                <div className="p-3 bg-[#f5f0e4] dark:bg-[#1f1d1a] border border-stone-400 dark:border-stone-700 text-xs font-serif text-stone-800 dark:text-stone-300">
+                  {currentProvider.id === 'ollama' ? t.aiModal.ollamaNotice : currentProvider.description}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleTest}
+                  disabled={testing}
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-[#eee8db] dark:bg-[#282622] hover:bg-[#ded7c8] dark:hover:bg-[#33302b] border-2 border-stone-800 dark:border-stone-600 text-stone-900 dark:text-stone-100 text-xs font-mono font-bold uppercase book-shadow-sm book-shadow-pressed transition-all disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {testing ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Zap className="w-3.5 h-3.5 text-[#8f1d1d] dark:text-[#df4444]" />
+                  )}
+                  <span>{t.aiModal.testOllama}</span>
+                </button>
               </div>
-              <div className="p-3 bg-[#f5f0e4] dark:bg-[#1f1d1a] border border-stone-400 dark:border-stone-700 text-xs font-serif text-stone-800 dark:text-stone-300">
-                {t.aiModal.ollamaNotice}
-              </div>
-              <button
-                type="button"
-                onClick={handleTest}
-                disabled={testing}
-                className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-[#eee8db] dark:bg-[#282622] hover:bg-[#ded7c8] dark:hover:bg-[#33302b] border-2 border-stone-800 dark:border-stone-600 text-stone-900 dark:text-stone-100 text-xs font-mono font-bold uppercase book-shadow-sm book-shadow-pressed transition-all disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
-              >
-                {testing ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Zap className="w-3.5 h-3.5 text-[#8f1d1d] dark:text-[#df4444]" />
-                )}
-                <span>{t.aiModal.testOllama}</span>
-              </button>
-            </div>
-          )}
+            )}
+          </div>
 
           {testResult && (
             <div

@@ -4,7 +4,8 @@ import {
   executeQuery,
   resetLab,
   assessWithAi,
-  testAiConnection
+  testAiConnection,
+  getAiProviders
 } from './api';
 
 describe('API Service', () => {
@@ -214,6 +215,21 @@ describe('API Service', () => {
 
     await expect(testAiConnection({ provider: 'chatgpt' }))
       .rejects.toThrow('Provedor de IA não suportado: chatgpt. Provedores suportados: gemini, ollama');
+  });
+
+  it('getAiProviders deve realizar GET em /api/ai/providers e retornar lista de provedores', async () => {
+    const mockProviders = [
+      { id: 'gemini', name: 'Google Gemini', requiresApiKey: true, defaultModel: 'gemini-2.5-flash', models: [] }
+    ];
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockProviders
+    } as Response);
+
+    const result = await getAiProviders();
+
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/ai/providers');
+    expect(result).toEqual(mockProviders);
   });
 });
 
