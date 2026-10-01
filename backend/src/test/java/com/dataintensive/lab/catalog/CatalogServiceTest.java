@@ -87,4 +87,40 @@ class CatalogServiceTest {
         assertThat(result).contains(lab);
         verify(catalogRepository).findLabById("relacional-vs-documentos");
     }
+
+    @Test
+    @DisplayName("Deve delegar ao repositório para listar todos os livros no idioma especificado")
+    void shouldListAllBooksWithLocale() {
+        Book book = new Book("ddia", "Designing Data-Intensive Applications", "Martin Kleppmann", "Tag", "#059669", "/covers/ddia.svg", "Desc", List.of());
+        when(catalogRepository.findAllBooks("en")).thenReturn(List.of(book));
+
+        List<Book> books = catalogService.getAllBooks("en");
+
+        assertThat(books).containsExactly(book);
+        verify(catalogRepository).findAllBooks("en");
+    }
+
+    @Test
+    @DisplayName("Deve delegar ao repositório para buscar livro por ID no idioma especificado")
+    void shouldFindBookByIdWithLocale() {
+        Book book = new Book("ddia", "Designing Data-Intensive Applications", "Martin Kleppmann", "Tag", "#059669", "/covers/ddia.svg", "Desc", List.of());
+        when(catalogRepository.findBookById("ddia", "en")).thenReturn(Optional.of(book));
+
+        Optional<Book> result = catalogService.findBookById("ddia", "en");
+
+        assertThat(result).contains(book);
+        verify(catalogRepository).findBookById("ddia", "en");
+    }
+
+    @Test
+    @DisplayName("Deve delegar ao repositório para encontrar Lab por ID no idioma especificado")
+    void shouldFindLabByIdWithLocale() {
+        Lab lab = new Lab("ddia-cap-03-lab-01", 1, "relacional-vs-documentos", "Relational", "Sum", List.of(), EngineType.POSTGRES, "tbl_lab", "DROP TABLE...", List.of());
+        when(catalogRepository.findLabById("ddia-cap-03-lab-01", "en")).thenReturn(Optional.of(lab));
+
+        Optional<Lab> result = catalogService.findLabById("ddia-cap-03-lab-01", "en");
+
+        assertThat(result).contains(lab);
+        verify(catalogRepository).findLabById("ddia-cap-03-lab-01", "en");
+    }
 }

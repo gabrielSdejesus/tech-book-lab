@@ -19,21 +19,52 @@ public class CatalogController {
     }
 
     @GetMapping("/books")
-    public List<Book> getAllBooks() {
-        return catalogService.getAllBooks();
+    public List<Book> getAllBooks(
+            @RequestHeader(value = "Accept-Language", required = false) String acceptLanguage,
+            @RequestParam(value = "lang", required = false) String langParam) {
+        String locale = resolveLocale(langParam, acceptLanguage);
+        return catalogService.getAllBooks(locale);
     }
 
     @GetMapping("/books/{bookId}")
-    public ResponseEntity<Book> getBookById(@PathVariable String bookId) {
-        return catalogService.findBookById(bookId)
+    public ResponseEntity<Book> getBookById(
+            @PathVariable String bookId,
+            @RequestHeader(value = "Accept-Language", required = false) String acceptLanguage,
+            @RequestParam(value = "lang", required = false) String langParam) {
+        String locale = resolveLocale(langParam, acceptLanguage);
+        return catalogService.findBookById(bookId, locale)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/labs/{labId}")
-    public ResponseEntity<Lab> getLabById(@PathVariable String labId) {
-        return catalogService.findLabById(labId)
+    public ResponseEntity<Lab> getLabById(
+            @PathVariable String labId,
+            @RequestHeader(value = "Accept-Language", required = false) String acceptLanguage,
+            @RequestParam(value = "lang", required = false) String langParam) {
+        String locale = resolveLocale(langParam, acceptLanguage);
+        return catalogService.findLabById(labId, locale)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    static String resolveLocale(String langParam, String acceptLanguage) {
+        if (langParam != null && !langParam.isBlank()) {
+            String clean = langParam.trim().toLowerCase();
+            if (clean.startsWith("en")) return "en";
+            if (clean.startsWith("pt")) return "pt";
+        }
+        if (acceptLanguage != null && !acceptLanguage.isBlank()) {
+            String clean = acceptLanguage.trim().toLowerCase();
+            int enIdx = clean.indexOf("en");
+            int ptIdx = clean.indexOf("pt");
+            if (enIdx >= 0 && (ptIdx < 0 || enIdx < ptIdx)) {
+                return "en";
+            }
+            if (ptIdx >= 0) {
+                return "pt";
+            }
+        }
+        return "pt";
     }
 }

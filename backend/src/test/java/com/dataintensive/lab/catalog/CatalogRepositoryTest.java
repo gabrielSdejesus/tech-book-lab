@@ -114,4 +114,54 @@ class CatalogRepositoryTest {
         var ch6 = allChallenges.stream().filter(c -> c.id().equals("lab-04-ch-2")).findFirst().orElseThrow();
         assertThat(ch6.starterTemplate()).contains("CREATE TABLE IF NOT EXISTS pedidos_resumo_leitura");
     }
+
+    @Test
+    @DisplayName("Deve carregar catálogo com traduções em inglês quando locale for 'en'")
+    void shouldFindAllBooksWithEnglishTranslationsWhenLocaleIsEn() {
+        List<Book> books = catalogRepository.findAllBooks("en");
+
+        assertThat(books).isNotEmpty();
+        Book ddia = books.stream().filter(b -> b.id().equals("ddia")).findFirst().orElseThrow();
+        assertThat(ddia.tagLine()).isEqualTo("The definitive guide to architecting distributed, reliable, and scalable systems.");
+        assertThat(ddia.description()).isEqualTo("Learn in practice the fundamental trade-offs behind database engines, indexes, replication, partitioning, and consistency.");
+
+        Chapter ch3 = ddia.chapters().get(0);
+        assertThat(ch3.title()).isEqualTo("Data Models and Query Languages");
+        assertThat(ch3.subtitle()).isEqualTo("Data Models, Graphs, OLAP and CQRS");
+        assertThat(ch3.summary()).contains("Explore the foundational structures");
+
+        Lab lab1 = ch3.labs().get(0);
+        assertThat(lab1.title()).isEqualTo("Relational vs Document and Storage Locality");
+        assertThat(lab1.summary()).contains("Analyze object-relational impedance mismatch");
+        assertThat(lab1.keyConcepts()).contains("3NF Normalization", "Storage Locality");
+
+        var ch1 = lab1.challenges().get(0);
+        assertThat(ch1.title()).isEqualTo("3NF Modeling (Strict Relational)");
+        assertThat(ch1.description()).contains("Create the 3NF model for a professional profile");
+        assertThat(ch1.scenario()).contains("Each user has a name, bio");
+        assertThat(ch1.reflectionPrompt()).contains("If a company changes its legal name");
+        assertThat(ch1.guidelines()).contains("Model coherent primary and foreign keys");
+    }
+
+    @Test
+    @DisplayName("Deve manter textos em português quando locale for 'pt' ou nulo")
+    void shouldKeepPortugueseWhenLocaleIsPtOrNull() {
+        List<Book> books = catalogRepository.findAllBooks("pt");
+        Book ddia = books.stream().filter(b -> b.id().equals("ddia")).findFirst().orElseThrow();
+        assertThat(ddia.tagLine()).isEqualTo("O guia definitivo para arquitetar sistemas distribuídos, confiáveis e escaláveis.");
+
+        Chapter ch3 = ddia.chapters().get(0);
+        assertThat(ch3.title()).isEqualTo("Modelos de Dados e Linguagens de Consulta");
+    }
+
+    @Test
+    @DisplayName("Deve buscar laboratório com textos traduzidos em inglês")
+    void shouldFindLabByIdInEnglish() {
+        Optional<Lab> labOpt = catalogRepository.findLabById("ddia-cap-03-lab-01", "en");
+
+        assertThat(labOpt).isPresent();
+        Lab lab = labOpt.get();
+        assertThat(lab.title()).isEqualTo("Relational vs Document and Storage Locality");
+        assertThat(lab.challenges().get(0).title()).isEqualTo("3NF Modeling (Strict Relational)");
+    }
 }

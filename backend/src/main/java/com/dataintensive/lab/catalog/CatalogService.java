@@ -20,11 +20,34 @@ public class CatalogService {
         return catalogRepository.findAllBooks();
     }
 
+    public List<Book> getAllBooks(String locale) {
+        return catalogRepository.findAllBooks(normalizeLocale(locale));
+    }
+
     public Optional<Book> findBookById(String bookId) {
         return catalogRepository.findBookById(bookId);
     }
 
+    public Optional<Book> findBookById(String bookId, String locale) {
+        return catalogRepository.findBookById(bookId, normalizeLocale(locale));
+    }
+
     public Optional<Lab> findLabById(String labId) {
         return catalogRepository.findLabById(labId);
+    }
+
+    public Optional<Lab> findLabById(String labId, String locale) {
+        return catalogRepository.findLabById(labId, normalizeLocale(locale));
+    }
+
+    private String normalizeLocale(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "pt";
+        }
+        String clean = raw.trim().toLowerCase();
+        if (clean.startsWith("en")) {
+            return "en";
+        }
+        return "pt";
     }
 }

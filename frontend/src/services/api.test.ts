@@ -21,7 +21,11 @@ describe('API Service', () => {
 
     const result = await getBooks();
 
-    expect(globalThis.fetch).toHaveBeenCalledWith('/api/books');
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/books', expect.objectContaining({
+      headers: expect.objectContaining({
+        'Accept-Language': 'pt'
+      })
+    }));
     expect(result).toEqual(mockBooks);
   });
 
@@ -32,6 +36,23 @@ describe('API Service', () => {
     } as Response);
 
     await expect(getBooks()).rejects.toThrow('Falha ao carregar catálogo de livros');
+  });
+
+  it('getBooks deve enviar cabeçalho Accept-Language baseado no parâmetro ou localStorage', async () => {
+    localStorage.setItem('tbl_locale', 'en');
+    const mockBooks = [{ id: 'ddia', title: 'Designing Data-Intensive Applications', chapters: [] }];
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockBooks
+    } as Response);
+
+    await getBooks('en');
+
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/books', expect.objectContaining({
+      headers: expect.objectContaining({
+        'Accept-Language': 'en'
+      })
+    }));
   });
 
 
