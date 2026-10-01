@@ -5,7 +5,8 @@ import {
   resetLab,
   assessWithAi,
   testAiConnection,
-  getAiProviders
+  getAiProviders,
+  getInfraStatus
 } from './api';
 
 describe('API Service', () => {
@@ -230,6 +231,24 @@ describe('API Service', () => {
 
     expect(globalThis.fetch).toHaveBeenCalledWith('/api/ai/providers');
     expect(result).toEqual(mockProviders);
+  });
+
+  it('getInfraStatus deve realizar GET em /api/infra/status e retornar mapa dinamico de motores', async () => {
+    const mockStatus = {
+      postgres: { healthy: true, port: 5432, serviceName: 'postgres', status: 'UP' },
+      neo4j: { healthy: true, port: 7687, serviceName: 'neo4j', status: 'UP' }
+    };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockStatus
+    } as Response);
+
+    const result = await getInfraStatus();
+
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/infra/status', expect.objectContaining({
+      headers: expect.objectContaining({ 'X-Session-Id': expect.any(String) })
+    }));
+    expect(result).toEqual(mockStatus);
   });
 });
 

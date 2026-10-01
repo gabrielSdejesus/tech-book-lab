@@ -11,6 +11,7 @@ vi.mock('../services/api', () => ({
   assessWithAi: vi.fn(),
   getBooks: vi.fn(),
   testAiConnection: vi.fn(),
+  getInfraStatus: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock('../services/labProvisioning', () => ({
@@ -118,6 +119,8 @@ describe('LabWorkspace Component', () => {
 
     const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
     expect(codeTextarea).toHaveValue('CREATE TABLE IF NOT EXISTS usuarios (id INT PRIMARY KEY);');
+
+    await waitFor(() => expect(api.getInfraStatus).toHaveBeenCalled());
   });
 
   it('deve executar a consulta e exibir o resultado tabular na tela quando READY', async () => {
@@ -231,6 +234,8 @@ describe('LabWorkspace Component', () => {
     const badge = screen.getByTestId('active-engine-badge');
     expect(badge).toHaveTextContent('PG:5432');
     expect(badge).toHaveTextContent('BOOTING');
+
+    await waitFor(() => expect(api.getInfraStatus).toHaveBeenCalled());
   });
 
   it('deve exibir o indicador contextual de motor com status ON quando READY', async () => {
@@ -276,7 +281,7 @@ describe('LabWorkspace Component', () => {
     });
   });
 
-  it('deve possuir affordance de cursor-pointer e disabled:cursor-not-allowed nos botões de ação', () => {
+  it('deve possuir affordance de cursor-pointer e disabled:cursor-not-allowed nos botões de ação', async () => {
     render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
 
     const executeBtn = screen.getByRole('button', { name: /Executar/i });
@@ -287,6 +292,22 @@ describe('LabWorkspace Component', () => {
 
     const resetBtn = screen.getByRole('button', { name: /Restaurar/i });
     expect(resetBtn).toHaveClass('disabled:cursor-not-allowed');
+
+    await waitFor(() => expect(api.getInfraStatus).toHaveBeenCalled());
+  });
+
+  it('deve carregar e renderizar porta e status dinâmico a partir de getInfraStatus', async () => {
+    vi.mocked(api.getInfraStatus).mockResolvedValueOnce({
+      postgres: { healthy: true, port: 5433, serviceName: 'postgres', status: 'UP' }
+    });
+
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    await waitFor(() => {
+      expect(api.getInfraStatus).toHaveBeenCalled();
+      const badge = screen.getByTestId('active-engine-badge');
+      expect(badge).toHaveTextContent('PG:5433');
+    });
   });
 
   it('deve exibir rótulo de conexão e estilização dinamicamente a partir do engineConfig para motores customizados', async () => {

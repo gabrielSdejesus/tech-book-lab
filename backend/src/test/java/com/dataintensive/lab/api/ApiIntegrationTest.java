@@ -290,6 +290,19 @@ class ApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("GET /api/infra/status - Deve retornar status dinâmico dos motores de infraestrutura registrados")
+    void shouldReturnInfraStatusMap() throws Exception {
+        mockMvc.perform(get("/api/infra/status"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.postgres").exists())
+                .andExpect(jsonPath("$.postgres.port", is(5432)))
+                .andExpect(jsonPath("$.postgres.status").exists())
+                .andExpect(jsonPath("$.neo4j").exists())
+                .andExpect(jsonPath("$.neo4j.port", is(7687)))
+                .andExpect(jsonPath("$.neo4j.status").exists());
+    }
+
+    @Test
     @DisplayName("POST /api/ai/assess - Deve exigir revisão quando código do aluno contiver apenas comentários")
     void shouldRequireRevisionForEmptyUserSubmission() throws Exception {
         Map<String, Object> payload = Map.of(

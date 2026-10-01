@@ -5,23 +5,9 @@ import com.dataintensive.lab.domain.DomainValidationException;
 import com.dataintensive.lab.domain.EngineType;
 import com.dataintensive.lab.domain.Lab;
 import com.dataintensive.lab.domain.QueryExecutionException;
-import jakarta.annotation.PreDestroy;
-import org.neo4j.driver.AuthTokens;
-import org.neo4j.driver.GraphDatabase;
-import org.neo4j.driver.Record;
-import org.neo4j.driver.Session;
-import org.neo4j.driver.types.Entity;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -29,33 +15,27 @@ import java.util.Optional;
 @Service
 public class QueryExecutionService {
 
-    private final String postgresUrl;
-    private final String postgresUser;
-    private final String postgresPassword;
-
-    private final org.neo4j.driver.Driver neo4jDriver;
+    private final QueryEngineRegistry engineRegistry;
     private final CatalogService catalogService;
 
-    public QueryExecutionService(
-            @Value("${lab.postgres.url}") String postgresUrl,
-            @Value("${lab.postgres.username}") String postgresUser,
-            @Value("${lab.postgres.password}") String postgresPassword,
-            @Value("${lab.neo4j.uri}") String neo4jUri,
-            @Value("${lab.neo4j.username}") String neo4jUser,
-            @Value("${lab.neo4j.password}") String neo4jPassword,
-            CatalogService catalogService) {
-        this.postgresUrl = postgresUrl;
-        this.postgresUser = postgresUser;
-        this.postgresPassword = postgresPassword;
+    @Autowired
+    public QueryExecutionService(QueryEngineRegistry engineRegistry, CatalogService catalogService) {
+        this.engineRegistry = engineRegistry;
         this.catalogService = catalogService;
+    }
 
-        org.neo4j.driver.Driver driver = null;
-        try {
-            driver = GraphDatabase.driver(neo4jUri, AuthTokens.basic(neo4jUser, neo4jPassword));
-        } catch (Exception e) {
-            System.err.println("Aviso: Falha ao inicializar driver do Neo4j: " + e.getMessage());
-        }
-        this.neo4jDriver = driver;
+    public QueryExecutionService(
+            String postgresUrl,
+            String postgresUser,
+            String postgresPassword,
+            String neo4jUri,
+            String neo4jUser,
+            String neo4jPassword,
+            CatalogService catalogService) {
+        this(new QueryEngineRegistry(List.of(
+                new PostgresEngineExecutor(postgresUrl, postgresUser, postgresPassword),
+                new Neo4jEngineExecutor(neo4jUri, neo4jUser, neo4jPassword)
+        )), catalogService);
     }
 
     public QueryResult execute(QueryRequest request) {
@@ -71,13 +51,11 @@ public class QueryExecutionService {
         }
 
         EngineType engine = request.engineType() != null ? request.engineType() : EngineType.POSTGRES;
+        QueryEngineExecutor executor = engineRegistry.getExecutor(engine);
 
         long startTime = System.currentTimeMillis();
         try {
-            return switch (engine) {
-                case POSTGRES -> executePostgres(request.query(), startTime);
-                case NEO4J -> executeNeo4j(request.query(), startTime);
-            };
+            return executor.execute(request.query(), startTime);
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
             throw new QueryExecutionException(e.getMessage(), duration);
@@ -96,105 +74,5 @@ public class QueryExecutionService {
         }
 
         return execute(new QueryRequest(lab.resetSchemaSql(), lab.engineType(), lab.id()));
-    }
-
-    private QueryResult executePostgres(String sql, long startTime) throws SQLException {
-        try (Connection conn = DriverManager.getConnection(postgresUrl, postgresUser, postgresPassword);
-             Statement stmt = conn.createStatement()) {
-
-            boolean hasResultSet = stmt.execute(sql);
-            long duration = System.currentTimeMillis() - startTime;
-
-            if (hasResultSet) {
-                try (ResultSet rs = stmt.getResultSet()) {
-                    ResultSetMetaData meta = rs.getMetaData();
-                    int columnCount = meta.getColumnCount();
-                    List<String> columns = new ArrayList<>();
-                    for (int i = 1; i <= columnCount; i++) {
-                        columns.add(meta.getColumnLabel(i));
-                    }
-
-                    List<Map<String, Object>> rows = new ArrayList<>();
-                    int maxRows = 200;
-                    while (rs.next() && rows.size() < maxRows) {
-                        Map<String, Object> row = new LinkedHashMap<>();
-                        for (int i = 1; i <= columnCount; i++) {
-                            row.put(columns.get(i - 1), rs.getObject(i));
-                        }
-                        rows.add(row);
-                    }
-
-                    return QueryResult.ok(columns, rows, duration);
-                }
-            } else {
-                int updateCount = stmt.getUpdateCount();
-                return QueryResult.update(Math.max(updateCount, 0), duration);
-            }
-        }
-    }
-
-    private QueryResult executeNeo4j(String cypher, long startTime) {
-        if (neo4jDriver == null) {
-            return QueryResult.error("Driver do Neo4j não está disponível.", System.currentTimeMillis() - startTime);
-        }
-
-        try (Session session = neo4jDriver.session()) {
-            return session.executeWrite(tx -> {
-                org.neo4j.driver.Result result = tx.run(cypher);
-                List<String> keys = result.keys();
-                List<Map<String, Object>> rows = new ArrayList<>();
-
-                int maxRows = 200;
-                while (result.hasNext() && rows.size() < maxRows) {
-                    Record record = result.next();
-                    Map<String, Object> row = new LinkedHashMap<>();
-                    for (String key : keys) {
-                        org.neo4j.driver.Value val = record.get(key);
-                        row.put(key, convertNeo4jValue(val));
-                    }
-                    rows.add(row);
-                }
-
-                long duration = System.currentTimeMillis() - startTime;
-                if (keys.isEmpty() && rows.isEmpty()) {
-                    return QueryResult.update(0, duration);
-                }
-                return QueryResult.ok(keys, rows, duration);
-            });
-        }
-    }
-
-    private Object convertNeo4jValue(org.neo4j.driver.Value value) {
-        if (value.isNull()) {
-            return null;
-        }
-        if (value.hasType(neo4jDriver.defaultTypeSystem().NODE())) {
-            Entity node = value.asEntity();
-            return Map.of(
-                "labels", value.asNode().labels(),
-                "properties", node.asMap()
-            );
-        }
-        if (value.hasType(neo4jDriver.defaultTypeSystem().RELATIONSHIP())) {
-            Entity rel = value.asEntity();
-            return Map.of(
-                "type", value.asRelationship().type(),
-                "properties", rel.asMap()
-            );
-        }
-        if (value.hasType(neo4jDriver.defaultTypeSystem().LIST())) {
-            return value.asList(this::convertNeo4jValue);
-        }
-        if (value.hasType(neo4jDriver.defaultTypeSystem().MAP())) {
-            return value.asMap(this::convertNeo4jValue);
-        }
-        return value.asObject();
-    }
-
-    @PreDestroy
-    public void cleanup() {
-        if (neo4jDriver != null) {
-            neo4jDriver.close();
-        }
     }
 }

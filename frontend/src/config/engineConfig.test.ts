@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getEngineConfig } from './engineConfig';
+import { getEngineConfig, getConnectionLabel } from './engineConfig';
 
 describe('engineConfig Module', () => {
   it('deve retornar a configuração correta para POSTGRES', () => {
@@ -8,6 +8,7 @@ describe('engineConfig Module', () => {
     expect(config.type).toBe('POSTGRES');
     expect(config.name).toBe('PostgreSQL 16');
     expect(config.port).toBe(5432);
+    expect(config.shortLabel).toBe('PG');
     expect(config.connectionLabel).toBe('PG:5432');
     expect(config.badgeClass).toContain('bg-[#e5ebe4]');
     expect(config.badgeClass).toContain('border-[#166534]');
@@ -20,6 +21,7 @@ describe('engineConfig Module', () => {
     expect(config.type).toBe('NEO4J');
     expect(config.name).toBe('Neo4j 5');
     expect(config.port).toBe(7687);
+    expect(config.shortLabel).toBe('NEO4J');
     expect(config.connectionLabel).toBe('NEO4J:7687');
     expect(config.badgeClass).toContain('bg-[#efe3d5]');
     expect(config.badgeClass).toContain('border-[#a16207]');
@@ -42,6 +44,7 @@ describe('engineConfig Module', () => {
     expect(config.type).toBe('REDIS');
     expect(config.name).toBe('REDIS');
     expect(config.port).toBe(0);
+    expect(config.shortLabel).toBe('REDIS');
     expect(config.connectionLabel).toBe('REDIS');
     expect(config.badgeClass).toBeDefined();
     expect(config.toolbarClass).toBeDefined();
@@ -52,6 +55,7 @@ describe('engineConfig Module', () => {
     expect(nullConfig.type).toBe('UNKNOWN');
     expect(nullConfig.name).toBe('Unknown Engine');
     expect(nullConfig.port).toBe(0);
+    expect(nullConfig.shortLabel).toBe('UNKNOWN');
     expect(nullConfig.connectionLabel).toBe('UNKNOWN');
 
     const undefinedConfig = getEngineConfig(undefined);
@@ -59,5 +63,16 @@ describe('engineConfig Module', () => {
 
     const emptyConfig = getEngineConfig('');
     expect(emptyConfig.type).toBe('UNKNOWN');
+  });
+
+  it('deve formatar connectionLabel dinamicamente quando activePort for fornecido', () => {
+    const pgConfig = getEngineConfig('POSTGRES');
+    expect(getConnectionLabel(pgConfig, 5433)).toBe('PG:5433');
+    expect(getConnectionLabel(pgConfig, null)).toBe('PG:5432');
+    expect(getConnectionLabel(pgConfig, 0)).toBe('PG:5432');
+
+    const customConfig = getEngineConfig('REDIS');
+    expect(getConnectionLabel(customConfig, 6380)).toBe('REDIS:6380');
+    expect(getConnectionLabel(customConfig)).toBe('REDIS');
   });
 });

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import type { Lab, Challenge, QueryResult, AiAssessmentResponse } from '../types';
-import { executeQuery, resetLab, assessWithAi } from '../services/api';
+import type { Lab, Challenge, QueryResult, AiAssessmentResponse, InfraStatus } from '../types';
+import { executeQuery, resetLab, assessWithAi, getInfraStatus } from '../services/api';
 import {
   provisionLab,
   getLabStatus,
@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { formatSectionNumber } from '../utils/formatters';
-import { getEngineConfig } from '../config/engineConfig';
+import { getEngineConfig, getConnectionLabel } from '../config/engineConfig';
 
 interface Props {
   lab: Lab;
@@ -36,7 +36,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
   const { t, locale } = useLanguage();
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge>(lab.challenges[0]);
 
-  const [queryCode, setQueryCode] = useState<string>('');
+  const [queryCode, setQueryCode] = useState<string>(lab.challenges[0]?.starterTemplate || '');
   const [userReflection, setUserReflection] = useState<string>('');
 
   const [executing, setExecuting] = useState(false);
@@ -51,11 +51,32 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
 
   const [provisionStatus, setProvisionStatus] = useState<LabProvisionStatus>('READY');
   const [provisionMessage, setProvisionMessage] = useState<string>('');
+  const [infraStatus, setInfraStatus] = useState<InfraStatus | null>(null);
 
   const activeEngine = selectedChallenge?.engineType || lab.engineType;
   const activeEngineConfig = getEngineConfig(activeEngine);
+  const activePort =
+    infraStatus?.[activeEngine.toLowerCase()]?.port ?? (activeEngineConfig.port > 0 ? activeEngineConfig.port : null);
 
   useEffect(() => {
+    let isMounted = true;
+    getInfraStatus()
+      .then((status) => {
+        if (isMounted) {
+          setInfraStatus(status);
+        }
+      })
+      .catch(() => {
+        // dynamic infra status optional fallback
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const [prevLabId, setPrevLabId] = useState(lab.id);
+  if (prevLabId !== lab.id) {
+    setPrevLabId(lab.id);
     if (lab.challenges.length > 0) {
       const first = lab.challenges[0];
       setSelectedChallenge(first);
@@ -65,7 +86,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
       setAiResponse(null);
       setActiveTab('result');
     }
-  }, [lab.id]);
+  }
 
   useEffect(() => {
     let isMounted = true;
@@ -563,7 +584,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
                 }`}
               />
               <span className="font-bold text-stone-700 dark:text-stone-300">
-                {activeEngineConfig.connectionLabel}
+                {getConnectionLabel(activeEngineConfig, activePort)}
               </span>
               <span className="text-stone-500 dark:text-stone-400 uppercase text-[9px]">
                 {provisionStatus === 'READY'

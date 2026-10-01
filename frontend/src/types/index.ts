@@ -1,5 +1,14 @@
 export type EngineType = 'POSTGRES' | 'NEO4J';
 
+export interface EngineHealthStatus {
+  healthy: boolean;
+  port: number;
+  serviceName: string;
+  status: string;
+}
+
+export type InfraStatus = Record<string, EngineHealthStatus>;
+
 export interface Challenge {
   id: string;
   order: number;
