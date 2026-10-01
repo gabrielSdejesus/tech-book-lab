@@ -18,6 +18,11 @@ public class AiAssessmentController {
         this.aiAssessmentService = aiAssessmentService;
     }
 
+    @GetMapping("/providers")
+    public ResponseEntity<java.util.List<AiProviderInfo>> getProviders() {
+        return ResponseEntity.ok(aiAssessmentService.getAvailableProviders());
+    }
+
     @PostMapping("/test-connection")
     public ResponseEntity<AiTestConnectionResponse> testConnection(@Valid @RequestBody AiTestConnectionRequest request) {
         AiTestConnectionResponse response = aiAssessmentService.testConnection(request);
