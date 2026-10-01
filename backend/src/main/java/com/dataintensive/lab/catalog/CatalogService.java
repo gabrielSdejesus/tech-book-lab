@@ -21,7 +21,7 @@ public class CatalogService {
     }
 
     public List<Book> getAllBooks(String locale) {
-        return catalogRepository.findAllBooks(locale);
+        return catalogRepository.findAllBooks(normalizeLocale(locale));
     }
 
     public Optional<Book> findBookById(String bookId) {
@@ -29,7 +29,7 @@ public class CatalogService {
     }
 
     public Optional<Book> findBookById(String bookId, String locale) {
-        return catalogRepository.findBookById(bookId, locale);
+        return catalogRepository.findBookById(bookId, normalizeLocale(locale));
     }
 
     public Optional<Lab> findLabById(String labId) {
@@ -37,6 +37,17 @@ public class CatalogService {
     }
 
     public Optional<Lab> findLabById(String labId, String locale) {
-        return catalogRepository.findLabById(labId, locale);
+        return catalogRepository.findLabById(labId, normalizeLocale(locale));
+    }
+
+    private String normalizeLocale(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "pt";
+        }
+        String clean = raw.trim().toLowerCase();
+        if (clean.startsWith("en")) {
+            return "en";
+        }
+        return "pt";
     }
 }

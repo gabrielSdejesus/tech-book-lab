@@ -21,7 +21,11 @@ describe('API Service', () => {
 
     const result = await getBooks();
 
-    expect(globalThis.fetch).toHaveBeenCalledWith('/api/books');
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/books', expect.objectContaining({
+      headers: expect.objectContaining({
+        'Accept-Language': 'pt'
+      })
+    }));
     expect(result).toEqual(mockBooks);
   });
 
