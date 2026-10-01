@@ -105,15 +105,6 @@ export const Sidebar: React.FC<Props> = ({
                         />
                       </div>
                       <div className="flex items-center gap-1.5 mt-1.5">
-                        <span
-                          className={`px-1.5 py-0.2 text-[9px] font-mono uppercase font-bold border ${
-                            lab.engineType === 'NEO4J'
-                              ? 'bg-[#efe3d5] dark:bg-[#2d2419] text-[#713f12] dark:text-[#fde047] border-[#a16207] dark:border-[#854d0e]'
-                              : 'bg-[#e5ebe4] dark:bg-[#1a2e1d] text-[#14532d] dark:text-[#86efac] border-[#166534] dark:border-[#15803d]'
-                          }`}
-                        >
-                          {lab.engineType}
-                        </span>
                         <span className="text-[10px] font-mono text-stone-500 dark:text-stone-400">
                           [{lab.challenges.length}{' '}
                           {locale === 'pt'
