@@ -81,17 +81,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.GONE).body(problemDetail);
     }
 
-    @ExceptionHandler(com.dataintensive.lab.provisioning.LabEnvironmentNotReadyException.class)
-    public ResponseEntity<ProblemDetail> handleLabNotReady(com.dataintensive.lab.provisioning.LabEnvironmentNotReadyException ex) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-                HttpStatus.CONFLICT,
-                ex.getMessage()
-        );
-        problemDetail.setTitle("Ambiente Não Pronto");
-        problemDetail.setType(URI.create("https://api.dataintensive.lab/errors/environment-not-ready"));
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(problemDetail);
-    }
-
     @ExceptionHandler(QueryExecutionException.class)
     public ResponseEntity<ProblemDetail> handleQueryExecution(QueryExecutionException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(

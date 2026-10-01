@@ -47,16 +47,4 @@ public record LabSession(
     public LabSession withHeartbeat(Instant newHeartbeat) {
         return new LabSession(sessionId, labId, challengeId, containerName, engineType, status, newHeartbeat, allocatedPort, errorMessage);
     }
-
-    public LabSession withPort(int port) {
-        return new LabSession(sessionId, labId, challengeId, containerName, engineType, status, lastHeartbeatAt, port, errorMessage);
-    }
-
-    public LabSession withContainerName(String name) {
-        return new LabSession(sessionId, labId, challengeId, name, engineType, status, lastHeartbeatAt, allocatedPort, errorMessage);
-    }
-
-    public LabSession withError(String error) {
-        return new LabSession(sessionId, labId, challengeId, containerName, engineType, LabEnvironmentStatus.ERROR, lastHeartbeatAt, allocatedPort, error);
-    }
 }

@@ -55,14 +55,6 @@ export interface QueryResult {
   errorMessage: string | null;
 }
 
-export interface InfraStatus {
-  postgresReady: boolean;
-  postgresMessage: string;
-  neo4jReady: boolean;
-  neo4jMessage: string;
-  timestamp: number;
-}
-
 export interface AiAssessmentResponse {
   status: 'APPROVED' | 'NEEDS_REVISION' | 'DISCUSSION';
   feedback: string;
