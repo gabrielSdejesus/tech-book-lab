@@ -79,10 +79,25 @@ function AppContent() {
   };
 
   useEffect(() => {
-    async function init() {
+    async function loadCatalog() {
       try {
-        const loadedBooks = await getBooks();
+        const loadedBooks = await getBooks(locale);
         setBooks(loadedBooks);
+        setSelectedBook((prevBook) => {
+          if (!prevBook) return null;
+          const updatedBook = loadedBooks.find((b) => b.id === prevBook.id);
+          return updatedBook || prevBook;
+        });
+        setSelectedLab((prevLab) => {
+          if (!prevLab) return null;
+          for (const b of loadedBooks) {
+            for (const ch of b.chapters || []) {
+              const matchingLab = ch.labs?.find((l) => l.id === prevLab.id);
+              if (matchingLab) return matchingLab;
+            }
+          }
+          return prevLab;
+        });
       } catch (err: any) {
         setError(err.message || 'Erro ao carregar dados do catálogo');
       } finally {
@@ -90,8 +105,8 @@ function AppContent() {
       }
     }
 
-    void init();
-  }, []);
+    void loadCatalog();
+  }, [locale]);
 
   if (loading) {
     return (

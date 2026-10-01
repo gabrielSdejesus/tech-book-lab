@@ -1,5 +1,6 @@
 import type {
   Book,
+  Lab,
   QueryResult,
   AiAssessmentRequest,
   AiAssessmentResponse,
@@ -11,6 +12,18 @@ import type {
 import { getSessionId } from './session';
 
 const API_BASE = '/api';
+
+export function getActiveLocale(): string {
+  try {
+    const saved = localStorage.getItem('tbl_locale');
+    if (saved === 'en' || saved === 'pt') {
+      return saved;
+    }
+  } catch {
+    // fallback
+  }
+  return 'pt';
+}
 
 async function extractErrorMessage(res: Response, fallback: string): Promise<string> {
   try {
@@ -30,9 +43,36 @@ async function extractErrorMessage(res: Response, fallback: string): Promise<str
   return fallback;
 }
 
-export async function getBooks(): Promise<Book[]> {
-  const res = await fetch(`${API_BASE}/books`);
+export async function getBooks(locale?: string): Promise<Book[]> {
+  const activeLocale = locale || getActiveLocale();
+  const res = await fetch(`${API_BASE}/books`, {
+    headers: {
+      'Accept-Language': activeLocale,
+    },
+  });
   if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao carregar catálogo de livros'));
+  return res.json();
+}
+
+export async function getBookById(bookId: string, locale?: string): Promise<Book> {
+  const activeLocale = locale || getActiveLocale();
+  const res = await fetch(`${API_BASE}/books/${encodeURIComponent(bookId)}`, {
+    headers: {
+      'Accept-Language': activeLocale,
+    },
+  });
+  if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao carregar livro'));
+  return res.json();
+}
+
+export async function getLabById(labId: string, locale?: string): Promise<Lab> {
+  const activeLocale = locale || getActiveLocale();
+  const res = await fetch(`${API_BASE}/labs/${encodeURIComponent(labId)}`, {
+    headers: {
+      'Accept-Language': activeLocale,
+    },
+  });
+  if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao carregar laboratório'));
   return res.json();
 }
 
