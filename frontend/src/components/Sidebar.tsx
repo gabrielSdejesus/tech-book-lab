@@ -3,7 +3,6 @@ import type { Book, Lab, Chapter } from '../types';
 import { Bookmark, ChevronRight, PanelLeftClose } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { formatSectionNumber } from '../utils/formatters';
-import { getEngineMeta } from '../config/engines';
 
 interface Props {
   books: Book[];
@@ -106,11 +105,6 @@ export const Sidebar: React.FC<Props> = ({
                         />
                       </div>
                       <div className="flex items-center gap-1.5 mt-1.5">
-                        <span
-                          className={`px-1.5 py-0.2 text-[9px] font-mono uppercase font-bold border ${getEngineMeta(lab.engineType).badgeClass}`}
-                        >
-                          {lab.engineType}
-                        </span>
                         <span className="text-[10px] font-mono text-stone-500 dark:text-stone-400">
                           [{lab.challenges.length}{' '}
                           {locale === 'pt'

@@ -309,4 +309,38 @@ describe('LabWorkspace Component', () => {
       expect(badge).toHaveTextContent('PG:5433');
     });
   });
+
+  it('deve exibir rótulo de conexão e estilização dinamicamente a partir do engineConfig para motores customizados', async () => {
+    const customLab: Lab = {
+      ...mockLab,
+      id: 'custom-lab-redis',
+      engineType: 'REDIS' as any,
+      challenges: [
+        {
+          ...mockLab.challenges[0],
+          id: 'redis-ch-1',
+          engineType: 'REDIS' as any,
+        },
+      ],
+    };
+
+    vi.mocked(provisioningApi.provisionLab).mockResolvedValue({
+      labId: 'custom-lab-redis',
+      challengeId: 'redis-ch-1',
+      engineType: 'REDIS',
+      status: 'READY',
+      message: 'Redis pronto',
+      allocatedPort: 6379,
+      estimatedWaitSeconds: 0,
+    });
+
+    render(<LabWorkspace lab={customLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    await waitFor(() => {
+      const badge = screen.getByTestId('active-engine-badge');
+      expect(badge).toHaveTextContent('REDIS');
+      expect(badge).not.toHaveTextContent('PG:5432');
+    });
+  });
 });
+

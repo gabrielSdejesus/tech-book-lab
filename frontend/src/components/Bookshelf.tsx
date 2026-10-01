@@ -3,7 +3,7 @@ import type { Book } from '../types';
 import { BookCover } from './BookCover';
 import { BookOpen, Layers, Terminal, Sparkles, ArrowRight } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
-import { getEngineMeta } from '../config/engines';
+import { getEngineConfig } from '../config/engineConfig';
 
 interface Props {
   books: Book[];
@@ -115,14 +115,17 @@ export const Bookshelf: React.FC<Props> = ({ books, onSelectBook }) => {
                           {locale === 'pt' ? 'OBRA CLÁSSICA' : 'CLASSIC WORK'}
                         </span>
                         <div className="flex items-center gap-1.5">
-                          {engineTypes.map((engine) => (
-                            <span
-                              key={engine}
-                              className={`px-1.5 py-0.2 text-[9px] font-mono uppercase font-bold border ${getEngineMeta(engine).badgeClass}`}
-                            >
-                              {engine}
-                            </span>
-                          ))}
+                          {engineTypes.map((engine) => {
+                            const config = getEngineConfig(engine);
+                            return (
+                              <span
+                                key={engine}
+                                className={`px-1.5 py-0.2 text-[9px] font-mono uppercase font-bold border ${config.badgeClass}`}
+                              >
+                                {engine}
+                              </span>
+                            );
+                          })}
                         </div>
                       </div>
 

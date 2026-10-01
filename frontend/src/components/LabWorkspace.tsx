@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Lab, Challenge, QueryResult, AiAssessmentResponse, InfraStatus } from '../types';
 import { executeQuery, resetLab, assessWithAi, getInfraStatus } from '../services/api';
-import { getEngineMeta, formatEngineLabel } from '../config/engines';
 import {
   provisionLab,
   getLabStatus,
@@ -23,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { formatSectionNumber } from '../utils/formatters';
+import { getEngineConfig, getConnectionLabel } from '../config/engineConfig';
 
 interface Props {
   lab: Lab;
@@ -54,9 +54,9 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
   const [infraStatus, setInfraStatus] = useState<InfraStatus | null>(null);
 
   const activeEngine = selectedChallenge?.engineType || lab.engineType;
-  const engineMeta = getEngineMeta(activeEngine);
+  const activeEngineConfig = getEngineConfig(activeEngine);
   const activePort =
-    infraStatus?.[activeEngine.toLowerCase()]?.port ?? engineMeta.defaultPort;
+    infraStatus?.[activeEngine.toLowerCase()]?.port ?? (activeEngineConfig.port > 0 ? activeEngineConfig.port : null);
 
   useEffect(() => {
     let isMounted = true;
@@ -435,9 +435,9 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
         <div className="h-12 border-b-2 border-stone-800 dark:border-stone-700 bg-[#f7f4ec] dark:bg-[#1a1917] px-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <span
-              className={`px-2 py-0.5 text-[10px] font-mono font-bold uppercase border-2 ${engineMeta.badgeClass}`}
+              className={`px-2 py-0.5 text-[10px] font-mono font-bold uppercase border-2 ${activeEngineConfig.toolbarClass}`}
             >
-              {formatEngineLabel(engineMeta, locale)}
+              {activeEngine === 'NEO4J' ? t.lab.engineNeo4j : activeEngine === 'POSTGRES' ? t.lab.enginePostgres : activeEngineConfig.name}
             </span>
             <span className="text-[10px] font-mono text-stone-500 dark:text-stone-400 hidden sm:inline">
               {t.lab.ctrlEnterHint}
@@ -479,8 +479,8 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
             <Loader2 className="w-4 h-4 animate-spin text-amber-700 dark:text-amber-400" />
             <span>
               {provisionMessage || (locale === 'pt'
-                ? `Provisionando ambiente isolado de laboratório (${engineMeta.name})... Aguarde para executar consultas.`
-                : `Provisioning isolated lab environment (${engineMeta.name})... Please wait before running queries.`)}
+                ? `Provisionando ambiente isolado de laboratório (${activeEngineConfig.name})... Aguarde para executar consultas.`
+                : `Provisioning isolated lab environment (${activeEngineConfig.name})... Please wait before running queries.`)}
             </span>
           </div>
         )}
@@ -584,7 +584,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
                 }`}
               />
               <span className="font-bold text-stone-700 dark:text-stone-300">
-                {engineMeta.shortLabel}:{activePort}
+                {getConnectionLabel(activeEngineConfig, activePort)}
               </span>
               <span className="text-stone-500 dark:text-stone-400 uppercase text-[9px]">
                 {provisionStatus === 'READY'
