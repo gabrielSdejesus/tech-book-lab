@@ -40,3 +40,24 @@ lab:
     ollama:
       base-url: ${OLLAMA_URL:http://localhost:11434}
       model: ${OLLAMA_MODEL:qwen2.5-coder:1.5b}
+  engines:
+    configs:
+      postgres:
+        service-name: postgres
+        default-port: 5432
+        image: postgres:16-alpine
+        ports:
+          - "0:5432"
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgrespassword
+          POSTGRES_DB: tbl_lab
+      neo4j:
+        service-name: neo4j
+        default-port: 7687
+        image: neo4j:5-community
+        ports:
+          - "0:7687"
+          - "0:7474"
+        env:
+          NEO4J_AUTH: neo4j/tblpassword

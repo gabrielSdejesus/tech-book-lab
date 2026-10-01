@@ -3,6 +3,7 @@ package com.dataintensive.lab.provisioning;
 import com.dataintensive.lab.domain.EngineType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -19,15 +20,18 @@ import java.util.concurrent.TimeUnit;
 public class DockerComposeLabManager implements LabContainerManager {
 
     private static final Logger log = LoggerFactory.getLogger(DockerComposeLabManager.class);
+    private static final LabEngineProperties DEFAULT_PROPERTIES = new LabEngineProperties();
 
-    private static final Map<EngineType, String> SERVICE_MAPPING = Map.of(
-            EngineType.POSTGRES, "postgres",
-            EngineType.NEO4J, "neo4j"
-    );
-
+    private final LabEngineProperties engineProperties;
     private final String composeFilePath;
 
     public DockerComposeLabManager() {
+        this(DEFAULT_PROPERTIES);
+    }
+
+    @Autowired
+    public DockerComposeLabManager(LabEngineProperties engineProperties) {
+        this.engineProperties = engineProperties != null ? engineProperties : DEFAULT_PROPERTIES;
         Path directPath = Path.of("infra", "docker-compose.yml");
         Path parentPath = Path.of("..", "infra", "docker-compose.yml");
         if (Files.exists(directPath)) {
@@ -51,6 +55,11 @@ public class DockerComposeLabManager implements LabContainerManager {
     }
 
     public static List<String> buildRunCommand(String containerName, EngineType engine) {
+        return buildRunCommand(containerName, engine, DEFAULT_PROPERTIES);
+    }
+
+    public static List<String> buildRunCommand(String containerName, EngineType engine, LabEngineProperties properties) {
+        LabEngineProperties.EngineConfig config = properties.getConfig(engine.name());
         List<String> command = new ArrayList<>();
         command.add("docker");
         command.add("run");
@@ -66,28 +75,17 @@ public class DockerComposeLabManager implements LabContainerManager {
         command.add("--pids-limit=100");
         command.add("--memory=512m");
 
-        if (engine == EngineType.POSTGRES) {
+        for (String p : config.getPorts()) {
             command.add("-p");
-            command.add("0:5432");
-            command.add("-e");
-            command.add("POSTGRES_USER=postgres");
-            command.add("-e");
-            command.add("POSTGRES_PASSWORD=postgrespassword");
-            command.add("-e");
-            command.add("POSTGRES_DB=tbl_lab");
-            command.add("postgres:16-alpine");
-        } else if (engine == EngineType.NEO4J) {
-            command.add("-p");
-            command.add("0:7687");
-            command.add("-p");
-            command.add("0:7474");
-            command.add("-e");
-            command.add("NEO4J_AUTH=neo4j/tblpassword");
-            command.add("neo4j:5-community");
-        } else {
-            throw new IllegalArgumentException("Motor não suportado: " + engine);
+            command.add(p);
         }
 
+        for (Map.Entry<String, String> e : config.getEnv().entrySet()) {
+            command.add("-e");
+            command.add(e.getKey() + "=" + e.getValue());
+        }
+
+        command.add(config.getImage());
         return command;
     }
 
@@ -107,22 +105,23 @@ public class DockerComposeLabManager implements LabContainerManager {
 
     @Override
     public int startIsolatedContainer(String containerName, EngineType engine) {
-        int defaultPort = (engine == EngineType.POSTGRES) ? 5432 : 7687;
+        LabEngineProperties.EngineConfig config = engineProperties.getConfig(engine.name());
+        int defaultPort = config.getDefaultPort();
         try {
             String inspectState = executeCommandAndCapture(List.of("docker", "inspect", "-f", "{{.State.Running}}", containerName)).trim();
             if ("true".equalsIgnoreCase(inspectState)) {
                 log.info("Contêiner {} já está em execução. Obtendo porta alocada...", containerName);
-                return resolveContainerPort(containerName, (engine == EngineType.POSTGRES) ? 5432 : 7687, defaultPort);
+                return resolveContainerPort(containerName, defaultPort, defaultPort);
             } else if ("false".equalsIgnoreCase(inspectState)) {
                 log.info("Contêiner {} existe mas está parado. Iniciando...", containerName);
                 executeCommand(List.of("docker", "start", containerName));
-                return resolveContainerPort(containerName, (engine == EngineType.POSTGRES) ? 5432 : 7687, defaultPort);
+                return resolveContainerPort(containerName, defaultPort, defaultPort);
             }
 
             log.info("Provisionando novo contêiner isolado seguro {}", containerName);
-            List<String> runCmd = buildRunCommand(containerName, engine);
+            List<String> runCmd = buildRunCommand(containerName, engine, engineProperties);
             executeCommand(runCmd);
-            return resolveContainerPort(containerName, (engine == EngineType.POSTGRES) ? 5432 : 7687, defaultPort);
+            return resolveContainerPort(containerName, defaultPort, defaultPort);
         } catch (Exception e) {
             log.warn("Falha ao gerenciar contêiner isolado via docker cli (utilizando porta padrão {}): {}", defaultPort, e.getMessage());
             return defaultPort;
@@ -169,11 +168,8 @@ public class DockerComposeLabManager implements LabContainerManager {
     }
 
     private String resolveServiceName(EngineType engine) {
-        String service = SERVICE_MAPPING.get(engine);
-        if (service == null) {
-            throw new IllegalArgumentException("Motor não suportado para provisionamento: " + engine);
-        }
-        return service;
+        LabEngineProperties.EngineConfig config = engineProperties.getConfig(engine.name());
+        return config.getServiceName();
     }
 
     private void executeComposeCommand(List<String> subArgs) {

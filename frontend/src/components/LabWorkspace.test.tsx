@@ -119,6 +119,8 @@ describe('LabWorkspace Component', () => {
 
     const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
     expect(codeTextarea).toHaveValue('CREATE TABLE IF NOT EXISTS usuarios (id INT PRIMARY KEY);');
+
+    await waitFor(() => expect(api.getInfraStatus).toHaveBeenCalled());
   });
 
   it('deve executar a consulta e exibir o resultado tabular na tela quando READY', async () => {
@@ -232,6 +234,8 @@ describe('LabWorkspace Component', () => {
     const badge = screen.getByTestId('active-engine-badge');
     expect(badge).toHaveTextContent('PG:5432');
     expect(badge).toHaveTextContent('BOOTING');
+
+    await waitFor(() => expect(api.getInfraStatus).toHaveBeenCalled());
   });
 
   it('deve exibir o indicador contextual de motor com status ON quando READY', async () => {
@@ -277,7 +281,7 @@ describe('LabWorkspace Component', () => {
     });
   });
 
-  it('deve possuir affordance de cursor-pointer e disabled:cursor-not-allowed nos botões de ação', () => {
+  it('deve possuir affordance de cursor-pointer e disabled:cursor-not-allowed nos botões de ação', async () => {
     render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
 
     const executeBtn = screen.getByRole('button', { name: /Executar/i });
@@ -288,6 +292,8 @@ describe('LabWorkspace Component', () => {
 
     const resetBtn = screen.getByRole('button', { name: /Restaurar/i });
     expect(resetBtn).toHaveClass('disabled:cursor-not-allowed');
+
+    await waitFor(() => expect(api.getInfraStatus).toHaveBeenCalled());
   });
 
   it('deve carregar e renderizar porta e status dinâmico a partir de getInfraStatus', async () => {

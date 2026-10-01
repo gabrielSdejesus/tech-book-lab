@@ -3,6 +3,7 @@ import type { Book } from '../types';
 import { BookCover } from './BookCover';
 import { BookOpen, Layers, Terminal, Sparkles, ArrowRight } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
+import { getEngineMeta } from '../config/engines';
 
 interface Props {
   books: Book[];
@@ -117,11 +118,7 @@ export const Bookshelf: React.FC<Props> = ({ books, onSelectBook }) => {
                           {engineTypes.map((engine) => (
                             <span
                               key={engine}
-                              className={`px-1.5 py-0.2 text-[9px] font-mono uppercase font-bold border ${
-                                engine === 'NEO4J'
-                                  ? 'bg-[#efe3d5] dark:bg-[#2d2419] text-[#713f12] dark:text-[#fde047] border-[#a16207]'
-                                  : 'bg-[#e5ebe4] dark:bg-[#1a2e1d] text-[#14532d] dark:text-[#86efac] border-[#166534]'
-                              }`}
+                              className={`px-1.5 py-0.2 text-[9px] font-mono uppercase font-bold border ${getEngineMeta(engine).badgeClass}`}
                             >
                               {engine}
                             </span>

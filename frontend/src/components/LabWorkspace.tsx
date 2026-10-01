@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import type { Lab, Challenge, QueryResult, AiAssessmentResponse } from '../types';
-import { executeQuery, resetLab, assessWithAi } from '../services/api';
+import type { Lab, Challenge, QueryResult, AiAssessmentResponse, InfraStatus } from '../types';
+import { executeQuery, resetLab, assessWithAi, getInfraStatus } from '../services/api';
+import { getEngineMeta, formatEngineLabel } from '../config/engines';
 import {
   provisionLab,
   getLabStatus,
@@ -35,7 +36,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
   const { t, locale } = useLanguage();
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge>(lab.challenges[0]);
 
-  const [queryCode, setQueryCode] = useState<string>('');
+  const [queryCode, setQueryCode] = useState<string>(lab.challenges[0]?.starterTemplate || '');
   const [userReflection, setUserReflection] = useState<string>('');
 
   const [executing, setExecuting] = useState(false);
@@ -50,10 +51,32 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
 
   const [provisionStatus, setProvisionStatus] = useState<LabProvisionStatus>('READY');
   const [provisionMessage, setProvisionMessage] = useState<string>('');
+  const [infraStatus, setInfraStatus] = useState<InfraStatus | null>(null);
 
   const activeEngine = selectedChallenge?.engineType || lab.engineType;
+  const engineMeta = getEngineMeta(activeEngine);
+  const activePort =
+    infraStatus?.[activeEngine.toLowerCase()]?.port ?? engineMeta.defaultPort;
 
   useEffect(() => {
+    let isMounted = true;
+    getInfraStatus()
+      .then((status) => {
+        if (isMounted) {
+          setInfraStatus(status);
+        }
+      })
+      .catch(() => {
+        // dynamic infra status optional fallback
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const [prevLabId, setPrevLabId] = useState(lab.id);
+  if (prevLabId !== lab.id) {
+    setPrevLabId(lab.id);
     if (lab.challenges.length > 0) {
       const first = lab.challenges[0];
       setSelectedChallenge(first);
@@ -63,7 +86,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
       setAiResponse(null);
       setActiveTab('result');
     }
-  }, [lab.id]);
+  }
 
   useEffect(() => {
     let isMounted = true;
@@ -412,13 +435,9 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
         <div className="h-12 border-b-2 border-stone-800 dark:border-stone-700 bg-[#f7f4ec] dark:bg-[#1a1917] px-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <span
-              className={`px-2 py-0.5 text-[10px] font-mono font-bold uppercase border-2 ${
-                activeEngine === 'NEO4J'
-                  ? 'bg-[#efe3d5] dark:bg-[#2d2419] text-[#713f12] dark:text-[#fde047] border-stone-800 dark:border-stone-600'
-                  : 'bg-[#e5ebe4] dark:bg-[#1a2e1d] text-[#14532d] dark:text-[#86efac] border-stone-800 dark:border-stone-600'
-              }`}
+              className={`px-2 py-0.5 text-[10px] font-mono font-bold uppercase border-2 ${engineMeta.badgeClass}`}
             >
-              {activeEngine === 'NEO4J' ? t.lab.engineNeo4j : t.lab.enginePostgres}
+              {formatEngineLabel(engineMeta, locale)}
             </span>
             <span className="text-[10px] font-mono text-stone-500 dark:text-stone-400 hidden sm:inline">
               {t.lab.ctrlEnterHint}
@@ -460,8 +479,8 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
             <Loader2 className="w-4 h-4 animate-spin text-amber-700 dark:text-amber-400" />
             <span>
               {provisionMessage || (locale === 'pt'
-                ? `Provisionando ambiente isolado de laboratório (${activeEngine === 'NEO4J' ? 'Neo4j 5' : 'PostgreSQL 16'})... Aguarde para executar consultas.`
-                : `Provisioning isolated lab environment (${activeEngine === 'NEO4J' ? 'Neo4j 5' : 'PostgreSQL 16'})... Please wait before running queries.`)}
+                ? `Provisionando ambiente isolado de laboratório (${engineMeta.name})... Aguarde para executar consultas.`
+                : `Provisioning isolated lab environment (${engineMeta.name})... Please wait before running queries.`)}
             </span>
           </div>
         )}
@@ -565,7 +584,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
                 }`}
               />
               <span className="font-bold text-stone-700 dark:text-stone-300">
-                {activeEngine === 'NEO4J' ? 'NEO4J:7687' : 'PG:5432'}
+                {engineMeta.shortLabel}:{activePort}
               </span>
               <span className="text-stone-500 dark:text-stone-400 uppercase text-[9px]">
                 {provisionStatus === 'READY'
