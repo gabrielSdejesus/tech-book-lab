@@ -20,11 +20,23 @@ public class CatalogService {
         return catalogRepository.findAllBooks();
     }
 
+    public List<Book> getAllBooks(String locale) {
+        return catalogRepository.findAllBooks(locale);
+    }
+
     public Optional<Book> findBookById(String bookId) {
         return catalogRepository.findBookById(bookId);
     }
 
+    public Optional<Book> findBookById(String bookId, String locale) {
+        return catalogRepository.findBookById(bookId, locale);
+    }
+
     public Optional<Lab> findLabById(String labId) {
         return catalogRepository.findLabById(labId);
+    }
+
+    public Optional<Lab> findLabById(String labId, String locale) {
+        return catalogRepository.findLabById(labId, locale);
     }
 }

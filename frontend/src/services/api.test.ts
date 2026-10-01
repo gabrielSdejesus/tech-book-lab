@@ -34,6 +34,23 @@ describe('API Service', () => {
     await expect(getBooks()).rejects.toThrow('Falha ao carregar catálogo de livros');
   });
 
+  it('getBooks deve enviar cabeçalho Accept-Language baseado no parâmetro ou localStorage', async () => {
+    localStorage.setItem('tbl_locale', 'en');
+    const mockBooks = [{ id: 'ddia', title: 'Designing Data-Intensive Applications', chapters: [] }];
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockBooks
+    } as Response);
+
+    await getBooks('en');
+
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/books', expect.objectContaining({
+      headers: expect.objectContaining({
+        'Accept-Language': 'en'
+      })
+    }));
+  });
+
 
 
   it('executeQuery deve enviar POST com query, engineType e labId', async () => {

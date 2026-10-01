@@ -129,4 +129,35 @@ describe('App Component Flow', () => {
     const sidebar = screen.getByTestId('sidebar');
     expect(sidebar).toHaveClass('w-0');
   });
+
+  it('deve recarregar o catálogo e atualizar textos ao alternar o idioma na barra de navegação', async () => {
+    const englishMockBook: Book = {
+      ...mockBook,
+      tagLine: 'The definitive guide.',
+      chapters: [
+        {
+          ...mockBook.chapters[0],
+          title: 'Data Models and Query Languages'
+        }
+      ]
+    };
+
+    vi.spyOn(api, 'getBooks').mockImplementation(async (locale?: string) => {
+      if (locale === 'en') return [englishMockBook];
+      return [mockBook];
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText('O guia definitivo.')).toBeInTheDocument();
+    });
+
+    const langBtn = screen.getByRole('button', { name: 'EN' });
+    fireEvent.click(langBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('The definitive guide.')).toBeInTheDocument();
+    });
+  });
 });

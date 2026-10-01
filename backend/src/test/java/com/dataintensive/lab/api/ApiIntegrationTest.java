@@ -80,6 +80,48 @@ class ApiIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    @DisplayName("GET /api/books com Accept-Language: en - Deve retornar catálogo traduzido em inglês")
+    void shouldReturnBooksInEnglishWhenAcceptLanguageHeaderIsEn() throws Exception {
+        mockMvc.perform(get("/api/books")
+                        .header("Accept-Language", "en"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].tagLine", is("The definitive guide to architecting distributed, reliable, and scalable systems.")))
+                .andExpect(jsonPath("$[0].chapters[0].title", is("Data Models and Query Languages")));
+    }
+
+    @Test
+    @DisplayName("GET /api/books?lang=en - Query param deve sobrescrever Accept-Language")
+    void shouldSupportLangQueryParamOverride() throws Exception {
+        mockMvc.perform(get("/api/books")
+                        .header("Accept-Language", "pt")
+                        .param("lang", "en"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].tagLine", is("The definitive guide to architecting distributed, reliable, and scalable systems.")));
+    }
+
+    @Test
+    @DisplayName("GET /api/books/{id} com Accept-Language: en - Deve retornar livro e capítulos traduzidos")
+    void shouldReturnBookWithEnglishChaptersWhenRequestedWithAcceptLanguage() throws Exception {
+        mockMvc.perform(get("/api/books/ddia")
+                        .header("Accept-Language", "en"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tagLine", is("The definitive guide to architecting distributed, reliable, and scalable systems.")))
+                .andExpect(jsonPath("$.chapters[0].title", is("Data Models and Query Languages")))
+                .andExpect(jsonPath("$.chapters[0].subtitle", is("Data Models, Graphs, OLAP and CQRS")));
+    }
+
+    @Test
+    @DisplayName("GET /api/labs/{id} com Accept-Language: en - Deve retornar laboratório e desafios em inglês")
+    void shouldReturnLabInEnglishWhenAcceptLanguageHeaderIsEn() throws Exception {
+        mockMvc.perform(get("/api/labs/ddia-cap-03-lab-01")
+                        .header("Accept-Language", "en"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title", is("Relational vs Document and Storage Locality")))
+                .andExpect(jsonPath("$.challenges[0].title", is("3NF Modeling (Strict Relational)")))
+                .andExpect(jsonPath("$.challenges[0].guidelines[0]", is("Model coherent primary and foreign keys")));
+    }
+
 
 
     @Test
