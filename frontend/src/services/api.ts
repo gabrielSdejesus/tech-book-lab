@@ -8,7 +8,8 @@ import type {
   AiTestConnectionResponse,
   EngineType,
   ProblemDetail,
-  AiProviderInfo
+  AiProviderInfo,
+  InfraStatus
 } from '../types';
 import { getSessionId } from './session';
 
@@ -136,3 +137,14 @@ export async function getAiProviders(): Promise<AiProviderInfo[]> {
   if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao consultar provedores de IA'));
   return res.json();
 }
+
+export async function getInfraStatus(): Promise<InfraStatus> {
+  const res = await fetch(`${API_BASE}/infra/status`, {
+    headers: {
+      'X-Session-Id': getSessionId(),
+    },
+  });
+  if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao consultar status da infraestrutura'));
+  return res.json();
+}
+
