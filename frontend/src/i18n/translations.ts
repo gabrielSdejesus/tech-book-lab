@@ -93,6 +93,9 @@ export const translations: Record<'pt' | 'en', TranslationSchema> = {
       cancel: 'Cancelar',
       saved: 'Salvo!',
     },
+    bookCover: {
+      defaultBanner: 'Sistemas • Edição Técnica',
+    },
   },
   en: {
     common: {
@@ -185,6 +188,9 @@ export const translations: Record<'pt' | 'en', TranslationSchema> = {
       contactError: 'Error contacting backend for testing.',
       cancel: 'Cancel',
       saved: 'Saved!',
+    },
+    bookCover: {
+      defaultBanner: 'Systems • Technical Edition',
     },
   },
 };

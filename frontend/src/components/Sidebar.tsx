@@ -2,6 +2,7 @@ import React from 'react';
 import type { Book, Lab, Chapter } from '../types';
 import { Bookmark, ChevronRight, PanelLeftClose } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
+import { formatSectionNumber } from '../utils/formatters';
 
 interface Props {
   books: Book[];
@@ -90,7 +91,7 @@ export const Sidebar: React.FC<Props> = ({
                     }`}
                   >
                     <span className="mt-0.5 text-stone-500 dark:text-stone-400 font-mono text-[11px] font-bold">
-                      &sect;&nbsp;3.{lab.number}
+                      &sect;&nbsp;{formatSectionNumber(chapter.number, lab.number)}
                     </span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1">
