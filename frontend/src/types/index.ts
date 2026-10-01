@@ -43,6 +43,9 @@ export interface Book {
   coverImageUrl?: string;
   description: string;
   chapters: Chapter[];
+  bannerText?: string;
+  category?: string;
+  edition?: string;
 }
 
 export interface QueryResult {
