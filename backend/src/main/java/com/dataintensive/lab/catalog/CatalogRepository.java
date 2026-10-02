@@ -22,7 +22,7 @@ public interface CatalogRepository {
         return findLabById(labIdOrSlug);
     }
 
-    default void saveChallengeSolution(String challengeId, String code) {}
+    void saveChallengeSolution(String challengeId, String code);
 
-    default void deleteChallengeSolution(String challengeId) {}
+    void deleteChallengeSolution(String challengeId);
 }

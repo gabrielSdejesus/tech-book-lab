@@ -52,12 +52,14 @@ public class CatalogController {
     public ResponseEntity<Void> saveChallengeSolution(
             @PathVariable String challengeId,
             @RequestBody SaveSolutionRequest request) {
-        return ResponseEntity.status(501).build();
+        catalogService.saveChallengeSolution(challengeId, request != null ? request.code() : "");
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping({"/catalog/challenges/{challengeId}/solution", "/challenges/{challengeId}/solution"})
     public ResponseEntity<Void> deleteChallengeSolution(@PathVariable String challengeId) {
-        return ResponseEntity.status(501).build();
+        catalogService.deleteChallengeSolution(challengeId);
+        return ResponseEntity.ok().build();
     }
 
     public record SaveSolutionRequest(String code) {}
