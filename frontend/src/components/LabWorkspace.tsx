@@ -5,6 +5,7 @@ import {
   provisionLab,
   getLabStatus,
   sendHeartbeat,
+  teardownLab,
   type LabProvisionStatus
 } from '../services/labProvisioning';
 import {
@@ -89,6 +90,12 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
   }
 
   useEffect(() => {
+    return () => {
+      teardownLab(lab.id).catch(() => {});
+    };
+  }, [lab.id]);
+
+  useEffect(() => {
     let isMounted = true;
     let pollTimer: any = null;
     let heartbeatTimer: any = null;
@@ -102,10 +109,12 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
         setProvisionStatus(init.status);
         setProvisionMessage(init.message || '');
 
+        const heartbeatIntervalMs = (init.heartbeatIntervalSeconds || 30) * 1000;
+
         if (init.status === 'READY') {
           heartbeatTimer = setInterval(() => {
             sendHeartbeat(lab.id).catch(() => {});
-          }, 25000);
+          }, heartbeatIntervalMs);
         } else if (init.status === 'PROVISIONING') {
           pollTimer = setInterval(async () => {
             try {
@@ -116,7 +125,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
                 setProvisionStatus('READY');
                 heartbeatTimer = setInterval(() => {
                   sendHeartbeat(lab.id).catch(() => {});
-                }, 25000);
+                }, heartbeatIntervalMs);
               } else if (statusRes.status === 'ERROR') {
                 clearInterval(pollTimer);
                 setProvisionStatus('ERROR');
