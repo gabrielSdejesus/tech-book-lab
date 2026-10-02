@@ -89,6 +89,11 @@ export const translations: Record<'pt' | 'en', TranslationSchema> = {
       ollamaModel: 'Modelo Ollama',
       ollamaNotice: 'Ollama deve estar ativo localmente em http://localhost:11434 com o modelo selecionado.',
       testOllama: 'Testar Conexão com Ollama',
+      heuristicDescription:
+        'Validação determinística offline com base nos princípios de engenharia de dados (sem necessidade de IA externa, tokens ou internet).',
+      testHeuristic: 'Testar Motor Heurístico',
+      heuristicNotice:
+        'Avaliação local e imediata executada diretamente no servidor da aplicação sem consumir tokens ou recursos externos.',
       keyValidatedSuccess: 'CHAVE VALIDADA COM SUCESSO',
       validationFailed: 'FALHA NA VALIDAÇÃO',
       activeVersion: (model: string, latencyMs: number) =>
@@ -193,6 +198,11 @@ export const translations: Record<'pt' | 'en', TranslationSchema> = {
       ollamaModel: 'Ollama Model',
       ollamaNotice: 'Ollama must be active locally at http://localhost:11434 with the selected model.',
       testOllama: 'Test Ollama Connection',
+      heuristicDescription:
+        'Deterministic offline evaluation based on data engineering principles (no external AI, tokens, or internet required).',
+      testHeuristic: 'Test Heuristic Engine',
+      heuristicNotice:
+        'Instant local evaluation executed directly on the application server without consuming tokens or external resources.',
       keyValidatedSuccess: 'KEY VALIDATED SUCCESSFULLY',
       validationFailed: 'VALIDATION FAILED',
       activeVersion: (model: string, latencyMs: number) =>

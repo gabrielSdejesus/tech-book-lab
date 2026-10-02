@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Key, Cpu, Check, AlertCircle, Loader2, Zap, Sliders } from 'lucide-react';
+import { X, Key, Cpu, Check, AlertCircle, Loader2, Zap, Sliders, ShieldCheck } from 'lucide-react';
 import { testAiConnection, getAiProviders } from '../services/api';
 import type { AiTestConnectionResponse, AiProviderInfo } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -43,6 +43,18 @@ const getDefaultProviders = (t: TranslationSchema): AiProviderInfo[] => [
     helpUrl: 'https://ollama.com/',
     defaultModel: 'qwen2.5-coder:1.5b',
     models: [],
+  },
+  {
+    id: 'heuristic',
+    name: 'Heurístico Offline',
+    description: t.aiModal.heuristicDescription,
+    requiresApiKey: false,
+    apiKeyPlaceholder: '',
+    helpUrl: '',
+    defaultModel: 'rules-v1',
+    models: [
+      { id: 'rules-v1', name: 'Motor Heurístico DDIA (Offline)', recommended: true },
+    ],
   },
 ];
 
@@ -108,6 +120,11 @@ export const AiSettingsModal: React.FC<Props> = ({
       return (p.description && !p.description.includes('Ollama'))
         ? p.description
         : t.aiModal.ollamaDescription;
+    }
+    if (p.id === 'heuristic') {
+      return (p.description && !p.description.includes('Heurístico'))
+        ? p.description
+        : t.aiModal.heuristicDescription;
     }
     return p.description;
   };
@@ -185,7 +202,7 @@ export const AiSettingsModal: React.FC<Props> = ({
             <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-stone-700 dark:text-stone-400">
               {t.aiModal.providerLabel}
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {providers.map((p) => {
                 const isSelected = tempProvider.toLowerCase() === p.id.toLowerCase();
                 return (
@@ -200,6 +217,7 @@ export const AiSettingsModal: React.FC<Props> = ({
                     }`}
                   >
                     {p.id === 'ollama' && <Cpu className="w-3.5 h-3.5 text-stone-700 dark:text-stone-400" />}
+                    {p.id === 'heuristic' && <ShieldCheck className="w-3.5 h-3.5 text-stone-700 dark:text-stone-400" />}
                     <span>{p.name}</span>
                   </button>
                 );
@@ -298,7 +316,11 @@ export const AiSettingsModal: React.FC<Props> = ({
             ) : (
               <div className="space-y-3">
                 <div className="p-3 bg-[#f5f0e4] dark:bg-[#1f1d1a] border border-stone-400 dark:border-stone-700 text-xs font-serif text-stone-800 dark:text-stone-300">
-                  {currentProvider.id === 'ollama' ? t.aiModal.ollamaNotice : getProviderDescription(currentProvider)}
+                  {currentProvider.id === 'ollama'
+                    ? t.aiModal.ollamaNotice
+                    : currentProvider.id === 'heuristic'
+                    ? t.aiModal.heuristicNotice
+                    : getProviderDescription(currentProvider)}
                 </div>
                 <button
                   type="button"
@@ -311,7 +333,11 @@ export const AiSettingsModal: React.FC<Props> = ({
                   ) : (
                     <Zap className="w-3.5 h-3.5 text-[#8f1d1d] dark:text-[#df4444]" />
                   )}
-                  <span>{t.aiModal.testOllama}</span>
+                  <span>
+                    {currentProvider.id === 'heuristic'
+                      ? t.aiModal.testHeuristic
+                      : t.aiModal.testOllama}
+                  </span>
                 </button>
               </div>
             )}

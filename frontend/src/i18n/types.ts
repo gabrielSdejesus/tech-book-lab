@@ -79,6 +79,9 @@ export interface TranslationSchema {
     ollamaModel: string;
     ollamaNotice: string;
     testOllama: string;
+    heuristicDescription: string;
+    testHeuristic: string;
+    heuristicNotice: string;
     keyValidatedSuccess: string;
     validationFailed: string;
     activeVersion: (model: string, latencyMs: number) => string;
