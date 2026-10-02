@@ -49,6 +49,7 @@ class LabProvisioningServiceTest {
 
     private LabProvisioningProperties properties;
     private MutableClock clock;
+    private EngineLifecycleCoordinator lifecycleCoordinator;
 
     static class MutableClock extends java.time.Clock {
         private Instant currentInstant;
@@ -82,8 +83,15 @@ class LabProvisioningServiceTest {
     void setUp() {
         properties = new LabProvisioningProperties();
         clock = new MutableClock(Instant.parse("2026-10-02T12:00:00Z"));
-        provisioningService = new LabProvisioningService(catalogRepository, containerManager, properties, clock);
+        lifecycleCoordinator = new EngineLifecycleCoordinator();
+        provisioningService = new LabProvisioningService(catalogRepository, containerManager, properties, clock, lifecycleCoordinator);
     }
+
+    @org.junit.jupiter.api.AfterEach
+    void tearDown() {
+        lifecycleCoordinator.shutdown();
+    }
+
 
     @Test
     @DisplayName("Deve provisionar contêiner sob demanda com sucesso quando o lab existir no catálogo")
@@ -190,6 +198,7 @@ class LabProvisioningServiceTest {
     @Test
     @DisplayName("Deve executar teardown explícito do contêiner e marcar como STOPPED")
     void shouldTeardownExplicitly() {
+        properties.setTeardownGracePeriodSeconds(0);
         when(catalogRepository.findLabById(validLabId)).thenReturn(Optional.of(mockLab));
         when(containerManager.isEngineHealthy(EngineType.POSTGRES, 5432)).thenReturn(true);
 
@@ -199,6 +208,7 @@ class LabProvisioningServiceTest {
         assertThat(stopped.status()).isEqualTo(LabEnvironmentStatus.STOPPED);
         verify(containerManager).stopEngine(EngineType.POSTGRES);
     }
+
 
     @Test
     @DisplayName("Deve desprovisionar automaticamente sessões inativas há mais de 15 minutos")
@@ -283,4 +293,47 @@ class LabProvisioningServiceTest {
         assertThat(session2.engineType()).isEqualTo(EngineType.POSTGRES);
         assertThat(session2.challengeId()).isEqualTo("lab-02-ch-2");
     }
+
+    @Test
+    @DisplayName("Deve agendar teardown e não parar contêiner imediatamente ao solicitar teardown")
+    void shouldScheduleTeardownInsteadOfImmediateStop() {
+        when(catalogRepository.findLabById(validLabId)).thenReturn(Optional.of(mockLab));
+        when(containerManager.isEngineHealthy(EngineType.POSTGRES, 5432)).thenReturn(true);
+
+        provisioningService.provisionLab(sessionId, validLabId);
+
+        LabSession stoppedSession = provisioningService.teardown(sessionId, validLabId);
+
+        assertThat(stoppedSession.status()).isEqualTo(LabEnvironmentStatus.STOPPED);
+        assertThat(lifecycleCoordinator.isTeardownPending(EngineType.POSTGRES)).isTrue();
+        // Não deve ter parado o motor de imediato (aguarda grace period)
+        verify(containerManager, never()).stopEngine(EngineType.POSTGRES);
+    }
+
+    @Test
+    @DisplayName("Deve cancelar teardown agendado e manter contêiner READY ao retornar rapidamente para o laboratório")
+    void shouldCancelScheduledTeardownAndMaintainContainerReadyWhenSwitchingQuickly() {
+        when(catalogRepository.findLabById(validLabId)).thenReturn(Optional.of(mockLab));
+        when(containerManager.isEngineHealthy(EngineType.POSTGRES, 5432)).thenReturn(true);
+
+        // 1. Provisiona lab
+        provisioningService.provisionLab(sessionId, validLabId);
+        verify(containerManager, times(1)).startEngine(EngineType.POSTGRES);
+
+        // 2. Usuário clica na estante -> teardown agendado
+        provisioningService.teardown(sessionId, validLabId);
+        assertThat(lifecycleCoordinator.isTeardownPending(EngineType.POSTGRES)).isTrue();
+
+        // 3. Usuário clica rapidamente de volta no lab antes do grace period expirar
+        LabSession restored = provisioningService.provisionLab(sessionId, validLabId);
+
+        // Teardown pendente foi cancelado
+        assertThat(lifecycleCoordinator.isTeardownPending(EngineType.POSTGRES)).isFalse();
+        assertThat(restored.status()).isEqualTo(LabEnvironmentStatus.READY);
+
+        // Contêiner não precisou sofrer stop nem novo start desnecessário
+        verify(containerManager, never()).stopEngine(EngineType.POSTGRES);
+        verify(containerManager, times(1)).startEngine(EngineType.POSTGRES);
+    }
 }
+

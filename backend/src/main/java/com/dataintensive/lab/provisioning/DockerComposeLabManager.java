@@ -66,6 +66,33 @@ public class DockerComposeLabManager implements LabContainerManager {
 
     @Override
     public boolean isEngineHealthy(EngineType engine, int port) {
+        if (!isContainerRunning(engine)) {
+            return false;
+        }
+        return isPortOpen(port);
+    }
+
+    public boolean isContainerRunning(EngineType engine) {
+        String containerName = resolveContainerName(engine);
+        List<String> command = List.of("docker", "inspect", "-f", "{{.State.Running}}", containerName);
+        try {
+            Process process = new ProcessBuilder(command).start();
+            boolean finished = process.waitFor(5, TimeUnit.SECONDS);
+            if (!finished) {
+                process.destroyForcibly();
+                return false;
+            }
+            if (process.exitValue() != 0) {
+                return false;
+            }
+            String output = new String(process.getInputStream().readAllBytes()).trim();
+            return "true".equalsIgnoreCase(output);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    protected boolean isPortOpen(int port) {
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress("localhost", port), 1000);
             return true;
@@ -99,9 +126,16 @@ public class DockerComposeLabManager implements LabContainerManager {
             if (!finished) {
                 process.destroyForcibly();
                 log.warn("Comando docker atingiu timeout de 30s: {}", command);
+            } else {
+                int exitCode = process.exitValue();
+                if (exitCode != 0) {
+                    String output = new String(process.getInputStream().readAllBytes());
+                    log.warn("Comando docker retornou código {}: {}. Saída: {}", exitCode, command, output);
+                }
             }
         } catch (Exception e) {
             log.warn("Aviso ao executar comando docker: {}. Erro: {}", command, e.getMessage());
         }
     }
 }
+

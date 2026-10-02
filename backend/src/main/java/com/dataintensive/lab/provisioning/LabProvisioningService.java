@@ -24,26 +24,47 @@ public class LabProvisioningService {
     private final LabContainerManager containerManager;
     private final LabProvisioningProperties properties;
     private final java.time.Clock clock;
+    private final EngineLifecycleCoordinator lifecycleCoordinator;
     private final Map<String, LabSession> activeSessions = new ConcurrentHashMap<>();
 
     @Autowired
-    public LabProvisioningService(CatalogRepository catalogRepository, LabContainerManager containerManager, LabProvisioningProperties properties, Optional<java.time.Clock> clock) {
+    public LabProvisioningService(CatalogRepository catalogRepository,
+                                  LabContainerManager containerManager,
+                                  LabProvisioningProperties properties,
+                                  Optional<java.time.Clock> clock,
+                                  Optional<EngineLifecycleCoordinator> lifecycleCoordinator) {
         this.catalogRepository = catalogRepository;
         this.containerManager = containerManager;
         this.properties = properties != null ? properties : new LabProvisioningProperties();
         this.clock = clock.orElse(java.time.Clock.systemUTC());
+        this.lifecycleCoordinator = lifecycleCoordinator.orElseGet(EngineLifecycleCoordinator::new);
     }
 
-    public LabProvisioningService(CatalogRepository catalogRepository, LabContainerManager containerManager, LabProvisioningProperties properties, java.time.Clock clock) {
+    public LabProvisioningService(CatalogRepository catalogRepository,
+                                  LabContainerManager containerManager,
+                                  LabProvisioningProperties properties,
+                                  java.time.Clock clock,
+                                  EngineLifecycleCoordinator lifecycleCoordinator) {
         this.catalogRepository = catalogRepository;
         this.containerManager = containerManager;
         this.properties = properties != null ? properties : new LabProvisioningProperties();
         this.clock = clock != null ? clock : java.time.Clock.systemUTC();
+        this.lifecycleCoordinator = lifecycleCoordinator != null ? lifecycleCoordinator : new EngineLifecycleCoordinator();
     }
 
-    public LabProvisioningService(CatalogRepository catalogRepository, LabContainerManager containerManager, LabProvisioningProperties properties) {
-        this(catalogRepository, containerManager, properties, java.time.Clock.systemUTC());
+    public LabProvisioningService(CatalogRepository catalogRepository,
+                                  LabContainerManager containerManager,
+                                  LabProvisioningProperties properties,
+                                  java.time.Clock clock) {
+        this(catalogRepository, containerManager, properties, clock, new EngineLifecycleCoordinator());
     }
+
+    public LabProvisioningService(CatalogRepository catalogRepository,
+                                  LabContainerManager containerManager,
+                                  LabProvisioningProperties properties) {
+        this(catalogRepository, containerManager, properties, java.time.Clock.systemUTC(), new EngineLifecycleCoordinator());
+    }
+
 
     private String toKey(SessionId sessionId, String labId) {
         return sessionId.value() + ":" + labId;
@@ -62,6 +83,9 @@ public class LabProvisioningService {
         String sessionKey = toKey(sessionId, labId);
         String containerName = DockerComposeLabManager.resolveContainerName(requiredEngine);
 
+        // Cancela qualquer teardown agendado para o motor requisitado (Debounce inteligente)
+        boolean teardownCancelled = lifecycleCoordinator.cancelScheduledTeardown(requiredEngine);
+
         LabSession currentSession = activeSessions.get(sessionKey);
         if (currentSession != null && currentSession.status() == LabEnvironmentStatus.READY) {
             boolean differentEngine = currentSession.engineType() != requiredEngine;
@@ -69,7 +93,7 @@ public class LabProvisioningService {
             if (differentEngine) {
                 log.info("Sessão {} alternou motor no laboratório {} ({} -> {}). Desprovisionando motor anterior...",
                         sessionId, labId, currentSession.engineType(), requiredEngine);
-                containerManager.stopEngine(currentSession.engineType());
+                lifecycleCoordinator.executeExclusive(currentSession.engineType(), () -> containerManager.stopEngine(currentSession.engineType()));
                 activeSessions.put(sessionKey, currentSession.withStatus(LabEnvironmentStatus.STOPPED));
             } else {
                 // Mesmo motor já em execução e saudável
@@ -91,10 +115,28 @@ public class LabProvisioningService {
             }
         }
 
-        containerManager.startEngine(requiredEngine);
+        // Se o teardown foi cancelado a tempo e o contêiner já está saudável, mantém READY diretamente
+        if (teardownCancelled && containerManager.isEngineHealthy(requiredEngine, port)) {
+            LabSession session = new LabSession(
+                    sessionId,
+                    lab.id(),
+                    challengeId,
+                    containerName,
+                    requiredEngine,
+                    LabEnvironmentStatus.READY,
+                    clock.instant(),
+                    port,
+                    null
+            );
+            activeSessions.put(sessionKey, session);
+            return session;
+        }
+
+        lifecycleCoordinator.executeExclusive(requiredEngine, () -> containerManager.startEngine(requiredEngine));
 
         boolean healthy = containerManager.isEngineHealthy(requiredEngine, port);
         LabEnvironmentStatus status = healthy ? LabEnvironmentStatus.READY : LabEnvironmentStatus.PROVISIONING;
+
 
         LabSession session = new LabSession(
                 sessionId,
@@ -177,7 +219,10 @@ public class LabProvisioningService {
         String sessionKey = toKey(sessionId, labId);
         LabSession session = activeSessions.get(sessionKey);
         if (session != null) {
-            containerManager.stopEngine(session.engineType());
+            Duration gracePeriod = Duration.ofSeconds(properties.getTeardownGracePeriodSeconds());
+            lifecycleCoordinator.scheduleTeardown(session.engineType(), gracePeriod, () -> {
+                containerManager.stopEngine(session.engineType());
+            });
             LabSession stopped = session.withStatus(LabEnvironmentStatus.STOPPED);
             activeSessions.put(sessionKey, stopped);
             return stopped;
@@ -199,7 +244,7 @@ public class LabProvisioningService {
                 if (Duration.between(session.lastHeartbeatAt(), now).compareTo(ttl) >= 0) {
                     log.info("Sessão {} (lab {}) inativa há mais de {} segundos. Encerrando contêiner de laboratório {}...",
                             session.sessionId(), session.labId(), ttl.toSeconds(), session.engineType());
-                    containerManager.stopEngine(session.engineType());
+                    lifecycleCoordinator.executeExclusive(session.engineType(), () -> containerManager.stopEngine(session.engineType()));
                     activeSessions.put(entry.getKey(), session.withStatus(LabEnvironmentStatus.STOPPED));
                     stoppedCount++;
                 }
@@ -208,6 +253,7 @@ public class LabProvisioningService {
 
         return stoppedCount;
     }
+
 
     private EngineType resolveRequiredEngine(Lab lab, String challengeId) {
         if (challengeId != null && lab.challenges() != null) {
