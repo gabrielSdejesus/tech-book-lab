@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -291,24 +293,112 @@ class AiAssessmentServiceTest {
     }
 
     @Test
-    @DisplayName("Deve lançar IllegalArgumentException quando idioma não for suportado no serviço")
-    void shouldThrowExceptionWhenLanguageIsNotSupported() {
+    @DisplayName("Deve delegar ao cliente de IA com sucesso e retornar AiAssessmentResponse aprovada")
+    void shouldDelegateToAiClientSuccessfully() throws Exception {
+        AiProviderClient mockClient = mock(AiProviderClient.class);
+        AiProviderRegistry mockRegistry = mock(AiProviderRegistry.class);
+
+        when(mockRegistry.getClient("gemini")).thenReturn(mockClient);
+        when(mockClient.isConfigured(any())).thenReturn(true);
+        when(mockClient.assess(any(), any(), any(), anyBoolean())).thenReturn(new AiAssessmentResponse(
+                "APPROVED",
+                "Solução exemplar!",
+                "Excelente entendimento de trade-offs.",
+                "Execução eficiente.",
+                List.of("Considere particionamento"),
+                "Mock AI"
+        ));
+
+        AiAssessmentService service = new AiAssessmentService(catalogService, objectMapper, mockRegistry, "gemini");
+
         AiAssessmentRequest request = new AiAssessmentRequest(
                 "ddia-cap-03-lab-01",
                 "lab-01-ch-1",
-                "SELECT 1;",
+                "SELECT id, nome, bio FROM usuarios WHERE id = 10;",
                 null,
-                null,
-                null,
+                "Reflexão sobre localidade",
+                "valid-key",
                 "gemini",
-                null,
-                "es"
+                "gemini-3.8-flash",
+                "pt"
         );
 
-        org.assertj.core.api.Assertions.assertThatThrownBy(() -> aiAssessmentService.assess(request))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("es");
+        AiAssessmentResponse response = service.assess(request);
+
+        assertThat(response.status()).isEqualTo("APPROVED");
+        assertThat(response.feedback()).isEqualTo("Solução exemplar!");
+        assertThat(response.tradeOffAnalysis()).isEqualTo("Excelente entendimento de trade-offs.");
+        assertThat(response.modelUsed()).isEqualTo("Mock AI");
+    }
+
+    @Test
+    @DisplayName("Deve capturar exceção do cliente de IA e retornar fallback pedagógico em português")
+    void shouldReturnPedagogicalFallbackInPortugueseWhenClientThrowsException() throws Exception {
+        AiProviderClient mockClient = mock(AiProviderClient.class);
+        AiProviderRegistry mockRegistry = mock(AiProviderRegistry.class);
+
+        when(mockRegistry.getClient("gemini")).thenReturn(mockClient);
+        when(mockClient.isConfigured(any())).thenReturn(true);
+        when(mockClient.assess(any(), any(), any(), anyBoolean()))
+                .thenThrow(new java.io.IOException("Conexão interrompida"));
+
+        AiAssessmentService service = new AiAssessmentService(catalogService, objectMapper, mockRegistry, "gemini");
+
+        AiAssessmentRequest request = new AiAssessmentRequest(
+                "ddia-cap-03-lab-01",
+                "lab-01-ch-1",
+                "SELECT id, nome, bio FROM usuarios WHERE id = 10;",
+                null,
+                "Reflexão sobre localidade",
+                "valid-key",
+                "gemini",
+                "gemini-3.8-flash",
+                "pt"
+        );
+
+        AiAssessmentResponse response = service.assess(request);
+
+        assertThat(response.status()).isEqualTo("NEEDS_REVISION");
+        assertThat(response.feedback()).contains("Falha na comunicação com o Tutor de IA (gemini)");
+        assertThat(response.feedback()).contains("Conexão interrompida");
+        assertThat(response.tradeOffAnalysis()).contains("Não foi possível obter a análise de trade-offs");
+        assertThat(response.modelUsed()).contains("Erro de API");
+    }
+
+    @Test
+    @DisplayName("Deve capturar exceção do cliente de IA e retornar fallback pedagógico em inglês")
+    void shouldReturnPedagogicalFallbackInEnglishWhenClientThrowsException() throws Exception {
+        AiProviderClient mockClient = mock(AiProviderClient.class);
+        AiProviderRegistry mockRegistry = mock(AiProviderRegistry.class);
+
+        when(mockRegistry.getClient("gemini")).thenReturn(mockClient);
+        when(mockClient.isConfigured(any())).thenReturn(true);
+        when(mockClient.assess(any(), any(), any(), anyBoolean()))
+                .thenThrow(new java.io.IOException("Connection timeout"));
+
+        AiAssessmentService service = new AiAssessmentService(catalogService, objectMapper, mockRegistry, "gemini");
+
+        AiAssessmentRequest request = new AiAssessmentRequest(
+                "ddia-cap-03-lab-01",
+                "lab-01-ch-1",
+                "SELECT id, nome, bio FROM usuarios WHERE id = 10;",
+                null,
+                "Reflection about storage locality",
+                "valid-key",
+                "gemini",
+                "gemini-3.8-flash",
+                "en"
+        );
+
+        AiAssessmentResponse response = service.assess(request);
+
+        assertThat(response.status()).isEqualTo("NEEDS_REVISION");
+        assertThat(response.feedback()).contains("Communication failure with AI Tutor (gemini)");
+        assertThat(response.feedback()).contains("Connection timeout");
+        assertThat(response.tradeOffAnalysis()).contains("Could not obtain trade-off analysis");
+        assertThat(response.modelUsed()).isEqualTo("AI Error");
     }
 }
+
 
 

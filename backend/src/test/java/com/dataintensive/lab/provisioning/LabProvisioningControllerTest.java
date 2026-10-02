@@ -163,4 +163,33 @@ class LabProvisioningControllerTest {
                 .andExpect(jsonPath("$.engineType").value("POSTGRES"))
                 .andExpect(jsonPath("$.status").value("READY"));
     }
+
+    @Test
+    @DisplayName("POST /api/lab/{labId}/provision deve retornar 202 ACCEPTED quando contêiner estiver no estado PROVISIONING")
+    void shouldReturn202AcceptedWhenEnvironmentIsProvisioning() throws Exception {
+        String newSessionId = UUID.randomUUID().toString();
+        when(catalogRepository.findLabById(validLabId)).thenReturn(Optional.of(mockLab));
+        when(containerManager.isEngineHealthy(EngineType.POSTGRES, 5432)).thenReturn(false);
+
+        mockMvc.perform(post("/api/lab/{labId}/provision", validLabId)
+                        .header("X-Session-Id", newSessionId))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.labId").value(validLabId))
+                .andExpect(jsonPath("$.status").value("PROVISIONING"))
+                .andExpect(jsonPath("$.estimatedWaitSeconds").value(5));
+    }
+
+    @Test
+    @DisplayName("POST /api/lab/{labId}/heartbeat deve retornar 410 GONE quando a sessão for desconhecida ou expirada")
+    void shouldReturn410GoneWhenSessionExpired() throws Exception {
+        String unprovisionedSessionId = UUID.randomUUID().toString();
+
+        mockMvc.perform(post("/api/lab/{labId}/heartbeat", validLabId)
+                        .header("X-Session-Id", unprovisionedSessionId))
+                .andExpect(status().isGone())
+                .andExpect(jsonPath("$.title").value("Sessão Expirada"))
+                .andExpect(jsonPath("$.type").value("https://api.dataintensive.lab/errors/session-expired"))
+                .andExpect(jsonPath("$.status").value(410));
+    }
 }
+
