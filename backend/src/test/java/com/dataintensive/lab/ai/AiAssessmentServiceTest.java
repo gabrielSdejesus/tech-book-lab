@@ -398,6 +398,67 @@ class AiAssessmentServiceTest {
         assertThat(response.tradeOffAnalysis()).contains("Could not obtain trade-off analysis");
         assertThat(response.modelUsed()).isEqualTo("AI Error");
     }
+
+    @Test
+    @DisplayName("Deve fazer fallback seguro para o provedor heurístico quando nenhuma chave ou provedor for fornecido")
+    void shouldFallbackToHeuristicProviderWhenNoApiKeyAndNoProviderOverride() {
+        AiAssessmentRequest request = new AiAssessmentRequest(
+                "ddia-cap-03-lab-01",
+                "lab-01-ch-1",
+                """
+                CREATE TABLE IF NOT EXISTS usuarios (id INT PRIMARY KEY, nome VARCHAR(100));
+                CREATE TABLE IF NOT EXISTS experiencias_profissionais (id INT PRIMARY KEY, usuario_id INT REFERENCES usuarios(id));
+                SELECT u.nome FROM usuarios u JOIN experiencias_profissionais e ON e.usuario_id = u.id;
+                """,
+                "1 linha",
+                "Normalização 3NF",
+                null, // sem API key
+                null, // sem override de provedor
+                null,
+                "pt"
+        );
+
+        AiAssessmentResponse response = aiAssessmentService.assess(request);
+
+        assertThat(response.status()).isEqualTo("APPROVED");
+        assertThat(response.modelUsed()).containsIgnoringCase("Heurístico");
+        assertThat(response.feedback()).containsIgnoringCase("normaliz");
+    }
+
+    @Test
+    @DisplayName("Deve utilizar o provedor heurístico diretamente quando explicitamente requisitado com zero autenticação")
+    void shouldUseHeuristicProviderDirectlyWhenRequested() {
+        AiAssessmentRequest request = new AiAssessmentRequest(
+                "ddia-cap-03-lab-01",
+                "lab-01-ch-1",
+                """
+                CREATE TABLE IF NOT EXISTS usuarios (id INT PRIMARY KEY, nome VARCHAR(100));
+                CREATE TABLE IF NOT EXISTS experiencias_profissionais (id INT PRIMARY KEY, usuario_id INT REFERENCES usuarios(id));
+                SELECT u.nome FROM usuarios u JOIN experiencias_profissionais e ON e.usuario_id = u.id;
+                """,
+                "1 linha",
+                "Normalização 3NF",
+                null,
+                "heuristic", // explicitamente requisitado
+                null,
+                "pt"
+        );
+
+        AiAssessmentResponse response = aiAssessmentService.assess(request);
+
+        assertThat(response.status()).isEqualTo("APPROVED");
+        assertThat(response.modelUsed()).containsIgnoringCase("Heurístico");
+    }
+
+    @Test
+    @DisplayName("Deve listar provedor heurístico entre os provedores disponíveis")
+    void shouldListHeuristicInAvailableProviders() {
+        List<AiProviderInfo> providers = aiAssessmentService.getAvailableProviders();
+
+        assertThat(providers).extracting(AiProviderInfo::id).contains("heuristic");
+        var heuristicInfo = providers.stream().filter(p -> p.id().equals("heuristic")).findFirst().orElseThrow();
+        assertThat(heuristicInfo.requiresApiKey()).isFalse();
+    }
 }
 
 
