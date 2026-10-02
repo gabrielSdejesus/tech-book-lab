@@ -573,5 +573,13 @@ describe('LabWorkspace Component', () => {
       expect(badge).toHaveTextContent('ON');
     });
   });
+
+  it('deve carregar o starter template no editor contendo apenas código executável sem comentários', async () => {
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i) as HTMLTextAreaElement;
+    expect(codeTextarea.value).not.toMatch(/--|\/\/|\/\*|\*\//);
+    expect(codeTextarea.value).toContain('CREATE TABLE IF NOT EXISTS usuarios');
+  });
 });
 

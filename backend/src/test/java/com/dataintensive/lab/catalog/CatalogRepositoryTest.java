@@ -164,4 +164,27 @@ class CatalogRepositoryTest {
         assertThat(lab.title()).isEqualTo("Relational vs Document and Storage Locality");
         assertThat(lab.challenges().get(0).title()).isEqualTo("3NF Modeling (Strict Relational)");
     }
+
+    @Test
+    @DisplayName("Deve garantir que todos os starter templates contenham apenas código executável e nenhum comentário")
+    void shouldNotContainCommentsInStarterTemplates() {
+        List<Book> books = catalogRepository.findAllBooks();
+        assertThat(books).isNotEmpty();
+
+        List<com.dataintensive.lab.domain.Challenge> allChallenges = books.stream()
+                .flatMap(b -> b.chapters().stream())
+                .flatMap(c -> c.labs().stream())
+                .flatMap(l -> l.challenges().stream())
+                .toList();
+
+        for (var challenge : allChallenges) {
+            String template = challenge.starterTemplate();
+            assertThat(template)
+                    .as("Desafio %s não deve conter comentários SQL ou Cypher", challenge.id())
+                    .doesNotContain("--")
+                    .doesNotContain("//")
+                    .doesNotContain("/*")
+                    .doesNotContain("*/");
+        }
+    }
 }
