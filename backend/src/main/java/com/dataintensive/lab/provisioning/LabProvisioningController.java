@@ -20,9 +20,11 @@ public class LabProvisioningController {
     private static final Pattern LAB_ID_PATTERN = Pattern.compile("^[a-z0-9-]+$");
 
     private final LabProvisioningService provisioningService;
+    private final LabProvisioningProperties provisioningProperties;
 
-    public LabProvisioningController(LabProvisioningService provisioningService) {
+    public LabProvisioningController(LabProvisioningService provisioningService, LabProvisioningProperties provisioningProperties) {
         this.provisioningService = provisioningService;
+        this.provisioningProperties = provisioningProperties;
     }
 
     @PostMapping("/{labId}/provision")
@@ -46,7 +48,8 @@ public class LabProvisioningController {
                         ? "Ambiente de laboratório já está ativo e pronto para uso."
                         : "Inicializando contêiner sob demanda...",
                 session.allocatedPort(),
-                session.status() == LabEnvironmentStatus.READY ? 0 : 5
+                session.status() == LabEnvironmentStatus.READY ? 0 : 5,
+                provisioningProperties != null ? provisioningProperties.getHeartbeatIntervalSeconds() : 30
         );
 
         HttpStatus httpStatus = session.status() == LabEnvironmentStatus.READY ? HttpStatus.OK : HttpStatus.ACCEPTED;

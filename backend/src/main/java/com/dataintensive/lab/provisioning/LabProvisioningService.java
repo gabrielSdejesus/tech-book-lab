@@ -6,6 +6,7 @@ import com.dataintensive.lab.domain.EngineType;
 import com.dataintensive.lab.domain.Lab;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -21,11 +22,18 @@ public class LabProvisioningService {
 
     private final CatalogRepository catalogRepository;
     private final LabContainerManager containerManager;
+    private final LabProvisioningProperties properties;
     private final Map<String, LabSession> activeSessions = new ConcurrentHashMap<>();
 
-    public LabProvisioningService(CatalogRepository catalogRepository, LabContainerManager containerManager) {
+    @Autowired
+    public LabProvisioningService(CatalogRepository catalogRepository, LabContainerManager containerManager, LabProvisioningProperties properties) {
         this.catalogRepository = catalogRepository;
         this.containerManager = containerManager;
+        this.properties = properties != null ? properties : new LabProvisioningProperties();
+    }
+
+    public LabProvisioningService(CatalogRepository catalogRepository, LabContainerManager containerManager) {
+        this(catalogRepository, containerManager, new LabProvisioningProperties());
     }
 
     private String toKey(SessionId sessionId, String labId) {
@@ -148,7 +156,12 @@ public class LabProvisioningService {
         LabSession updated = session.withHeartbeat(now);
         activeSessions.put(sessionKey, updated);
 
-        return new LabHeartbeatResult("ACK", labId, 60, now);
+        long ttlRemaining = (long) properties.getInactivityTimeoutMinutes() * 60L;
+        return new LabHeartbeatResult("ACK", labId, ttlRemaining, now);
+    }
+
+    public int cleanupInactiveSessions() {
+        return cleanupInactiveSessions(Duration.ofMinutes(properties.getInactivityTimeoutMinutes()));
     }
 
     public LabSession teardown(SessionId sessionId, String labId) {
