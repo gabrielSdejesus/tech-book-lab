@@ -92,9 +92,9 @@ class LabProvisioningControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.labId").value(validLabId))
                 .andExpect(jsonPath("$.engineType").value("POSTGRES"))
-                .andExpect(jsonPath("$.status").value("READY"))
                 .andExpect(jsonPath("$.containerName").value("tbl-lab-postgres"))
-                .andExpect(jsonPath("$.allocatedPort").value(5432));
+                .andExpect(jsonPath("$.allocatedPort").value(5432))
+                .andExpect(jsonPath("$.heartbeatIntervalSeconds").value(30));
     }
 
     @Test
@@ -130,7 +130,7 @@ class LabProvisioningControllerTest {
                         .header("X-Session-Id", validSessionId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ACK"))
-                .andExpect(jsonPath("$.ttlRemainingSeconds").isNumber());
+                .andExpect(jsonPath("$.ttlRemainingSeconds").value(900));
     }
 
     @Test

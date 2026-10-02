@@ -47,9 +47,12 @@ class LabProvisioningServiceTest {
             List.of()
     );
 
+    private LabProvisioningProperties properties;
+
     @BeforeEach
     void setUp() {
-        provisioningService = new LabProvisioningService(catalogRepository, containerManager);
+        properties = new LabProvisioningProperties();
+        provisioningService = new LabProvisioningService(catalogRepository, containerManager, properties);
     }
 
     @Test
@@ -142,7 +145,7 @@ class LabProvisioningServiceTest {
         LabHeartbeatResult result = provisioningService.heartbeat(sessionId, validLabId);
 
         assertThat(result.status()).isEqualTo("ACK");
-        assertThat(result.ttlRemainingSeconds()).isEqualTo(60);
+        assertThat(result.ttlRemainingSeconds()).isEqualTo(900);
     }
 
     @Test
@@ -168,19 +171,19 @@ class LabProvisioningServiceTest {
     }
 
     @Test
-    @DisplayName("Deve desprovisionar automaticamente sessões inativas há mais de 1 minuto")
-    void shouldAutoStopInactiveSessionsAfterOneMinuteTtl() {
+    @DisplayName("Deve desprovisionar automaticamente sessões inativas há mais de 15 minutos")
+    void shouldAutoStopInactiveSessionsAfterFifteenMinutesTtl() {
         when(catalogRepository.findLabById(validLabId)).thenReturn(Optional.of(mockLab));
         when(containerManager.isEngineHealthy(EngineType.POSTGRES, 5432)).thenReturn(true);
 
         LabSession session = provisioningService.provisionLab(sessionId, validLabId);
 
-        // Simula passagem de 65 segundos sem heartbeat
-        Instant pastTime = Instant.now().minus(Duration.ofSeconds(65));
+        // Simula passagem de 16 minutos sem heartbeat
+        Instant pastTime = Instant.now().minus(Duration.ofMinutes(16));
         provisioningService.overrideSessionLastHeartbeatForTest(sessionId, pastTime);
 
-        // Dispara limpeza de inatividade com janela de 1 minuto
-        int cleaned = provisioningService.cleanupInactiveSessions(Duration.ofMinutes(1));
+        // Dispara limpeza de inatividade com janela de 15 minutos
+        int cleaned = provisioningService.cleanupInactiveSessions(Duration.ofMinutes(15));
 
         assertThat(cleaned).isEqualTo(1);
         verify(containerManager).stopEngine(EngineType.POSTGRES);
