@@ -44,6 +44,7 @@ lab:
     configs:
       postgres:
         service-name: postgres
+        container-name: tbl-lab-postgres
         default-port: 5432
         image: postgres:16-alpine
         ports:
@@ -54,6 +55,7 @@ lab:
           POSTGRES_DB: tbl_lab
       neo4j:
         service-name: neo4j
+        container-name: tbl-lab-neo4j
         default-port: 7687
         image: neo4j:5-community
         ports:

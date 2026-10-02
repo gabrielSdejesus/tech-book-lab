@@ -120,7 +120,7 @@ class LabProvisioningServiceTest {
     }
 
     @Test
-    @DisplayName("Deve registrar nome único do contêiner e porta dinâmica no LabSession")
+    @DisplayName("Deve registrar nome padronizado do contêiner e porta dinâmica no LabSession")
     void shouldTrackUniqueContainerNameAndPortInLabSession() {
         when(catalogRepository.findLabById(validLabId)).thenReturn(Optional.of(mockLab));
         when(containerManager.isEngineHealthy(eq(EngineType.POSTGRES), anyInt())).thenReturn(true);
@@ -128,9 +128,7 @@ class LabProvisioningServiceTest {
         LabSession session = provisioningService.provisionLab(sessionId, validLabId);
 
         assertThat(session.containerName())
-                .isNotNull()
-                .startsWith("user-")
-                .contains(validLabId);
+                .isEqualTo("tbl-lab-postgres");
     }
 
     @Test
