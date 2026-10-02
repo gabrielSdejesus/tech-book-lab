@@ -22,6 +22,13 @@ public interface AiProviderClient {
     AiTestConnectionResponse testConnection(AiTestConnectionRequest request);
     AiAssessmentResponse assess(String prompt, String apiKey, String modelOverride, boolean isModelOverridden) throws Exception;
 
+    default AiAssessmentResponse assess(com.dataintensive.lab.domain.Lab lab,
+                                        com.dataintensive.lab.domain.Challenge challenge,
+                                        AiAssessmentRequest request,
+                                        AssessmentLanguage language) throws Exception {
+        return assess(null, request != null ? request.apiKeyOverride() : null, request != null ? request.modelOverride() : null, false);
+    }
+
     default boolean isConfigured(String apiKeyOverride) {
         return true;
     }
