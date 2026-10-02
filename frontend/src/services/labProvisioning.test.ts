@@ -13,6 +13,7 @@ describe('labProvisioning API client', () => {
       ok: true,
       json: async () => ({
         labId: 'ddia-cap-03-lab-01',
+        containerName: 'tbl-lab-postgres',
         engineType: 'POSTGRES',
         status: 'READY',
         allocatedPort: 5432,
@@ -29,6 +30,7 @@ describe('labProvisioning API client', () => {
       },
     });
     expect(result.status).toBe('READY');
+    expect(result.containerName).toBe('tbl-lab-postgres');
   });
 
   it('deve chamar GET /api/lab/:labId/status com header X-Session-Id', async () => {
@@ -36,6 +38,7 @@ describe('labProvisioning API client', () => {
       ok: true,
       json: async () => ({
         labId: 'ddia-cap-03-lab-01',
+        containerName: 'tbl-lab-postgres',
         engineType: 'POSTGRES',
         status: 'READY',
         allocatedPort: 5432,
@@ -52,6 +55,7 @@ describe('labProvisioning API client', () => {
       },
     });
     expect(result.status).toBe('READY');
+    expect(result.containerName).toBe('tbl-lab-postgres');
   });
 
   it('deve chamar POST /api/lab/:labId/heartbeat com header X-Session-Id e retornar TTL de 60s (1 minuto)', async () => {

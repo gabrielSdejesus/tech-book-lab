@@ -93,6 +93,7 @@ class LabProvisioningControllerTest {
                 .andExpect(jsonPath("$.labId").value(validLabId))
                 .andExpect(jsonPath("$.engineType").value("POSTGRES"))
                 .andExpect(jsonPath("$.status").value("READY"))
+                .andExpect(jsonPath("$.containerName").value("tbl-lab-postgres"))
                 .andExpect(jsonPath("$.allocatedPort").value(5432));
     }
 
@@ -112,6 +113,7 @@ class LabProvisioningControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.labId").value(validLabId))
                 .andExpect(jsonPath("$.status").value("READY"))
+                .andExpect(jsonPath("$.containerName").value("tbl-lab-postgres"))
                 .andExpect(jsonPath("$.allocatedPort").value(5432));
     }
 

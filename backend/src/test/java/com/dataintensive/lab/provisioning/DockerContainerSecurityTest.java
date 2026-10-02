@@ -11,23 +11,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 class DockerContainerSecurityTest {
 
     @Test
-    @DisplayName("Deve gerar identificador único no padrão user-<hash>-<labId>-<engine> para isolamento")
-    void shouldResolveContainerNameWithUserHashAndLabId() {
+    @DisplayName("Deve gerar identificador padronizado tbl-lab-<engine> para execução local")
+    void shouldResolveContainerNameWithStandardPrefix() {
         SessionId sessionId = SessionId.of("e5a8383c-6c25-4a6f-8e11-601b59836f68");
         String labId = "ddia-cap-03-lab-01";
 
         String containerName = DockerComposeLabManager.resolveContainerName(sessionId, labId, EngineType.POSTGRES);
 
-        assertThat(containerName)
-                .startsWith("user-e5a8383c-")
-                .contains("ddia-cap-03-lab-01")
-                .endsWith("-postgres");
+        assertThat(containerName).isEqualTo("tbl-lab-postgres");
     }
 
     @Test
     @DisplayName("Deve construir argumentos Docker contendo flags de segurança obrigatórias e sem acesso ao host")
     void shouldBuildRunCommandWithMandatorySecurityFlags() {
-        String containerName = "user-e5a8383c-ddia-cap-03-lab-01-postgres";
+        String containerName = "tbl-lab-postgres";
         List<String> command = DockerComposeLabManager.buildRunCommand(containerName, EngineType.POSTGRES);
 
         // Flags de seguranca mandatorias
