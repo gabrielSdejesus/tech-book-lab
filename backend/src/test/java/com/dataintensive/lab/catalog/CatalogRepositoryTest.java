@@ -187,4 +187,74 @@ class CatalogRepositoryTest {
                     .doesNotContain("*/");
         }
     }
+
+    @Test
+    @DisplayName("Deve salvar, atualizar e recuperar a solução do usuário em um desafio preservando starterTemplate")
+    void shouldSaveAndUpdateAndRetrieveChallengeSolution() {
+        String challengeId = "lab-01-ch-1";
+        String mySql1 = "SELECT id, nome FROM usuarios WHERE id = 1;";
+        catalogRepository.saveChallengeSolution(challengeId, mySql1);
+
+        Optional<Lab> labOpt = catalogRepository.findLabById("ddia-cap-03-lab-01");
+        assertThat(labOpt).isPresent();
+        var ch1 = labOpt.get().challenges().stream()
+                .filter(c -> c.id().equals(challengeId))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(ch1.savedCode()).isEqualTo(mySql1);
+        assertThat(ch1.starterTemplate()).contains("CREATE TABLE IF NOT EXISTS usuarios");
+
+        // Atualizar solução
+        String mySql2 = "SELECT * FROM usuarios WHERE ativo = true;";
+        catalogRepository.saveChallengeSolution(challengeId, mySql2);
+
+        Optional<Lab> labOpt2 = catalogRepository.findLabById("ddia-cap-03-lab-01");
+        var ch1Updated = labOpt2.orElseThrow().challenges().stream()
+                .filter(c -> c.id().equals(challengeId))
+                .findFirst()
+                .orElseThrow();
+        assertThat(ch1Updated.savedCode()).isEqualTo(mySql2);
+    }
+
+    @Test
+    @DisplayName("Deve remover a solução salva do desafio mantendo o starterTemplate intacto")
+    void shouldDeleteChallengeSolutionAndRestoreNullSavedCode() {
+        String challengeId = "lab-01-ch-2";
+        catalogRepository.saveChallengeSolution(challengeId, "SELECT * FROM usuarios_documento;");
+
+        catalogRepository.deleteChallengeSolution(challengeId);
+
+        Optional<Lab> labOpt = catalogRepository.findLabById("ddia-cap-03-lab-01");
+        var ch2 = labOpt.orElseThrow().challenges().stream()
+                .filter(c -> c.id().equals(challengeId))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(ch2.savedCode()).isNull();
+        assertThat(ch2.starterTemplate()).contains("CREATE TABLE IF NOT EXISTS usuarios_documento");
+    }
+
+    @Test
+    @DisplayName("Deve carregar savedCode através de findAllBooks quando existir solução salva")
+    void shouldLoadSavedCodeInFindAllBooks() {
+        String challengeId = "lab-02-ch-2";
+        String mySql = "SELECT * FROM locais;";
+        catalogRepository.saveChallengeSolution(challengeId, mySql);
+
+        List<Book> books = catalogRepository.findAllBooks();
+        var ch = books.stream()
+                .flatMap(b -> b.chapters().stream())
+                .flatMap(c -> c.labs().stream())
+                .flatMap(l -> l.challenges().stream())
+                .filter(c -> c.id().equals(challengeId))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(ch.savedCode()).isEqualTo(mySql);
+
+        // cleanup
+        catalogRepository.deleteChallengeSolution(challengeId);
+    }
 }
+

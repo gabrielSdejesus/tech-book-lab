@@ -48,6 +48,20 @@ public class CatalogController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PutMapping({"/catalog/challenges/{challengeId}/solution", "/challenges/{challengeId}/solution"})
+    public ResponseEntity<Void> saveChallengeSolution(
+            @PathVariable String challengeId,
+            @RequestBody SaveSolutionRequest request) {
+        return ResponseEntity.status(501).build();
+    }
+
+    @DeleteMapping({"/catalog/challenges/{challengeId}/solution", "/challenges/{challengeId}/solution"})
+    public ResponseEntity<Void> deleteChallengeSolution(@PathVariable String challengeId) {
+        return ResponseEntity.status(501).build();
+    }
+
+    public record SaveSolutionRequest(String code) {}
+
     static String resolveLocale(String langParam, String acceptLanguage) {
         if (langParam != null && !langParam.isBlank()) {
             String clean = langParam.trim().toLowerCase();
