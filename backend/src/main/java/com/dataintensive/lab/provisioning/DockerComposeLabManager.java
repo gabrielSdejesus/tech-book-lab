@@ -50,45 +50,6 @@ public class DockerComposeLabManager implements LabContainerManager {
         return "tbl-lab-" + engine.name().toLowerCase();
     }
 
-    public static String resolveContainerName(SessionId sessionId, String labId, EngineType engine) {
-        return resolveContainerName(engine);
-    }
-
-    public static List<String> buildRunCommand(String containerName, EngineType engine) {
-        return buildRunCommand(containerName, engine, DEFAULT_PROPERTIES);
-    }
-
-    public static List<String> buildRunCommand(String containerName, EngineType engine, LabEngineProperties properties) {
-        LabEngineProperties.EngineConfig config = properties.getConfig(engine.name());
-        List<String> command = new ArrayList<>();
-        command.add("docker");
-        command.add("run");
-        command.add("-d");
-        command.add("--name");
-        command.add(containerName);
-        command.add("--security-opt=no-new-privileges:true");
-        command.add("--cap-drop=ALL");
-        command.add("--cap-add=CHOWN");
-        command.add("--cap-add=SETUID");
-        command.add("--cap-add=SETGID");
-        command.add("--cap-add=DAC_OVERRIDE");
-        command.add("--pids-limit=100");
-        command.add("--memory=512m");
-
-        for (String p : config.getPorts()) {
-            command.add("-p");
-            command.add(p);
-        }
-
-        for (Map.Entry<String, String> e : config.getEnv().entrySet()) {
-            command.add("-e");
-            command.add(e.getKey() + "=" + e.getValue());
-        }
-
-        command.add(config.getImage());
-        return command;
-    }
-
     @Override
     public void startEngine(EngineType engine) {
         String service = resolveServiceName(engine);
@@ -104,41 +65,6 @@ public class DockerComposeLabManager implements LabContainerManager {
     }
 
     @Override
-    public int startIsolatedContainer(String containerName, EngineType engine) {
-        LabEngineProperties.EngineConfig config = engineProperties.getConfig(engine.name());
-        int defaultPort = config.getDefaultPort();
-        try {
-            String inspectState = executeCommandAndCapture(List.of("docker", "inspect", "-f", "{{.State.Running}}", containerName)).trim();
-            if ("true".equalsIgnoreCase(inspectState)) {
-                log.info("Contêiner {} já está em execução. Obtendo porta alocada...", containerName);
-                return resolveContainerPort(containerName, defaultPort, defaultPort);
-            } else if ("false".equalsIgnoreCase(inspectState)) {
-                log.info("Contêiner {} existe mas está parado. Iniciando...", containerName);
-                executeCommand(List.of("docker", "start", containerName));
-                return resolveContainerPort(containerName, defaultPort, defaultPort);
-            }
-
-            log.info("Provisionando novo contêiner isolado seguro {}", containerName);
-            List<String> runCmd = buildRunCommand(containerName, engine, engineProperties);
-            executeCommand(runCmd);
-            return resolveContainerPort(containerName, defaultPort, defaultPort);
-        } catch (Exception e) {
-            log.warn("Falha ao gerenciar contêiner isolado via docker cli (utilizando porta padrão {}): {}", defaultPort, e.getMessage());
-            return defaultPort;
-        }
-    }
-
-    @Override
-    public void stopIsolatedContainer(String containerName) {
-        try {
-            log.info("Encerrando contêiner isolado {}...", containerName);
-            executeCommand(List.of("docker", "stop", containerName));
-        } catch (Exception e) {
-            log.warn("Aviso ao parar contêiner isolado {}: {}", containerName, e.getMessage());
-        }
-    }
-
-    @Override
     public boolean isEngineHealthy(EngineType engine, int port) {
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress("localhost", port), 1000);
@@ -146,25 +72,6 @@ public class DockerComposeLabManager implements LabContainerManager {
         } catch (IOException e) {
             return false;
         }
-    }
-
-    private int resolveContainerPort(String containerName, int internalPort, int defaultPort) {
-        try {
-            String output = executeCommandAndCapture(List.of("docker", "port", containerName, String.valueOf(internalPort)));
-            if (output != null && !output.isBlank()) {
-                String[] lines = output.split("\\r?\\n");
-                for (String line : lines) {
-                    int lastColon = line.lastIndexOf(':');
-                    if (lastColon >= 0 && lastColon < line.length() - 1) {
-                        String portStr = line.substring(lastColon + 1).trim();
-                        return Integer.parseInt(portStr);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Não foi possível mapear porta dinâmica para {} (usando {}): {}", containerName, defaultPort, e.getMessage());
-        }
-        return defaultPort;
     }
 
     private String resolveServiceName(EngineType engine) {
@@ -195,21 +102,6 @@ public class DockerComposeLabManager implements LabContainerManager {
             }
         } catch (Exception e) {
             log.warn("Aviso ao executar comando docker: {}. Erro: {}", command, e.getMessage());
-        }
-    }
-
-    private String executeCommandAndCapture(List<String> command) {
-        ProcessBuilder pb = new ProcessBuilder(command);
-        try {
-            Process process = pb.start();
-            String output = new String(process.getInputStream().readAllBytes());
-            boolean finished = process.waitFor(15, TimeUnit.SECONDS);
-            if (!finished) {
-                process.destroyForcibly();
-            }
-            return output;
-        } catch (Exception e) {
-            return "";
         }
     }
 }

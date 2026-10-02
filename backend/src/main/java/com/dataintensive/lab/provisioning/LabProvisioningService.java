@@ -23,17 +23,26 @@ public class LabProvisioningService {
     private final CatalogRepository catalogRepository;
     private final LabContainerManager containerManager;
     private final LabProvisioningProperties properties;
+    private final java.time.Clock clock;
     private final Map<String, LabSession> activeSessions = new ConcurrentHashMap<>();
 
     @Autowired
-    public LabProvisioningService(CatalogRepository catalogRepository, LabContainerManager containerManager, LabProvisioningProperties properties) {
+    public LabProvisioningService(CatalogRepository catalogRepository, LabContainerManager containerManager, LabProvisioningProperties properties, Optional<java.time.Clock> clock) {
         this.catalogRepository = catalogRepository;
         this.containerManager = containerManager;
         this.properties = properties != null ? properties : new LabProvisioningProperties();
+        this.clock = clock.orElse(java.time.Clock.systemUTC());
     }
 
-    public LabProvisioningService(CatalogRepository catalogRepository, LabContainerManager containerManager) {
-        this(catalogRepository, containerManager, new LabProvisioningProperties());
+    public LabProvisioningService(CatalogRepository catalogRepository, LabContainerManager containerManager, LabProvisioningProperties properties, java.time.Clock clock) {
+        this.catalogRepository = catalogRepository;
+        this.containerManager = containerManager;
+        this.properties = properties != null ? properties : new LabProvisioningProperties();
+        this.clock = clock != null ? clock : java.time.Clock.systemUTC();
+    }
+
+    public LabProvisioningService(CatalogRepository catalogRepository, LabContainerManager containerManager, LabProvisioningProperties properties) {
+        this(catalogRepository, containerManager, properties, java.time.Clock.systemUTC());
     }
 
     private String toKey(SessionId sessionId, String labId) {
@@ -72,7 +81,7 @@ public class LabProvisioningService {
                             containerName,
                             requiredEngine,
                             LabEnvironmentStatus.READY,
-                            Instant.now(),
+                            clock.instant(),
                             currentSession.allocatedPort(),
                             null
                     );
@@ -94,7 +103,7 @@ public class LabProvisioningService {
                 containerName,
                 requiredEngine,
                 status,
-                Instant.now(),
+                clock.instant(),
                 port,
                 null
         );
@@ -125,7 +134,7 @@ public class LabProvisioningService {
                     containerName,
                     requiredEngine,
                     LabEnvironmentStatus.NOT_PROVISIONED,
-                    Instant.now(),
+                    clock.instant(),
                     port,
                     null
             );
@@ -152,7 +161,7 @@ public class LabProvisioningService {
             throw new SessionExpiredException(sessionId.value());
         }
 
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         LabSession updated = session.withHeartbeat(now);
         activeSessions.put(sessionKey, updated);
 
@@ -177,11 +186,11 @@ public class LabProvisioningService {
         Lab lab = catalogRepository.findLabById(labId)
                 .orElseThrow(() -> new LabNotFoundException(labId));
         String containerName = DockerComposeLabManager.resolveContainerName(lab.engineType());
-        return new LabSession(sessionId, lab.id(), null, containerName, lab.engineType(), LabEnvironmentStatus.STOPPED, Instant.now(), resolveDefaultPort(lab.engineType()), null);
+        return new LabSession(sessionId, lab.id(), null, containerName, lab.engineType(), LabEnvironmentStatus.STOPPED, clock.instant(), resolveDefaultPort(lab.engineType()), null);
     }
 
     public int cleanupInactiveSessions(Duration ttl) {
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         int stoppedCount = 0;
 
         for (Map.Entry<String, LabSession> entry : activeSessions.entrySet()) {
@@ -198,22 +207,6 @@ public class LabProvisioningService {
         }
 
         return stoppedCount;
-    }
-
-    public void overrideSessionLastHeartbeatForTest(SessionId sessionId, Instant time) {
-        for (Map.Entry<String, LabSession> entry : activeSessions.entrySet()) {
-            if (entry.getValue().sessionId().equals(sessionId)) {
-                activeSessions.put(entry.getKey(), entry.getValue().withHeartbeat(time));
-            }
-        }
-    }
-
-    public void overrideSessionLastHeartbeatForTest(SessionId sessionId, String labId, Instant time) {
-        String sessionKey = toKey(sessionId, labId);
-        LabSession session = activeSessions.get(sessionKey);
-        if (session != null) {
-            activeSessions.put(sessionKey, session.withHeartbeat(time));
-        }
     }
 
     private EngineType resolveRequiredEngine(Lab lab, String challengeId) {

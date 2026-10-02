@@ -48,11 +48,41 @@ class LabProvisioningServiceTest {
     );
 
     private LabProvisioningProperties properties;
+    private MutableClock clock;
+
+    static class MutableClock extends java.time.Clock {
+        private Instant currentInstant;
+        private final java.time.ZoneId zone = java.time.ZoneId.of("UTC");
+
+        public MutableClock(Instant initialInstant) {
+            this.currentInstant = initialInstant;
+        }
+
+        public void advance(Duration duration) {
+            this.currentInstant = this.currentInstant.plus(duration);
+        }
+
+        @Override
+        public java.time.ZoneId getZone() {
+            return zone;
+        }
+
+        @Override
+        public java.time.Clock withZone(java.time.ZoneId zone) {
+            return this;
+        }
+
+        @Override
+        public Instant instant() {
+            return currentInstant;
+        }
+    }
 
     @BeforeEach
     void setUp() {
         properties = new LabProvisioningProperties();
-        provisioningService = new LabProvisioningService(catalogRepository, containerManager, properties);
+        clock = new MutableClock(Instant.parse("2026-10-02T12:00:00Z"));
+        provisioningService = new LabProvisioningService(catalogRepository, containerManager, properties, clock);
     }
 
     @Test
@@ -178,9 +208,8 @@ class LabProvisioningServiceTest {
 
         LabSession session = provisioningService.provisionLab(sessionId, validLabId);
 
-        // Simula passagem de 16 minutos sem heartbeat
-        Instant pastTime = Instant.now().minus(Duration.ofMinutes(16));
-        provisioningService.overrideSessionLastHeartbeatForTest(sessionId, pastTime);
+        // Simula passagem de 16 minutos no relógio sem heartbeat
+        clock.advance(Duration.ofMinutes(16));
 
         // Dispara limpeza de inatividade com janela de 15 minutos
         int cleaned = provisioningService.cleanupInactiveSessions(Duration.ofMinutes(15));
