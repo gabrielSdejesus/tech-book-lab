@@ -123,4 +123,23 @@ class PostgresEngineExecutorTest {
         assertThat(result.rowCount()).isEqualTo(1);
         assertThat(result.message()).contains("Linhas afetadas: 1");
     }
+
+    @Test
+    @DisplayName("Deve dividir statements SQL ignorando ponto e vírgula dentro de strings e comentários")
+    void shouldSplitStatementsRespectingQuotesAndComments() {
+        String script = """
+                -- Comentário inicial; com ponto e vírgula
+                CREATE TABLE t (id INT, txt VARCHAR(100));
+                /* Bloco com ; ponto e vírgula */
+                INSERT INTO t VALUES (1, 'Texto com ; ponto e vírgula dentro de aspas');
+                SELECT id, txt FROM t WHERE txt = 'outro;ponto';
+                """;
+
+        var stmts = PostgresEngineExecutor.splitStatements(script);
+
+        assertThat(stmts).hasSize(3);
+        assertThat(stmts.get(0)).contains("CREATE TABLE t");
+        assertThat(stmts.get(1)).contains("'Texto com ; ponto e vírgula dentro de aspas'");
+        assertThat(stmts.get(2)).contains("SELECT id, txt");
+    }
 }

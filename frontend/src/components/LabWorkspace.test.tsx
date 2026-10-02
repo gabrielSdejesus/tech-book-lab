@@ -665,6 +665,44 @@ describe('LabWorkspace Component', () => {
       expect(codeTextarea).toHaveValue(mockLab.challenges[0].starterTemplate);
     });
   });
+
+  it('deve renderizar colunas e linhas do último SELECT após executar script SQL com múltiplos comandos', async () => {
+    vi.mocked(api.executeQuery).mockResolvedValueOnce({
+      success: true,
+      message: 'Consulta executada com sucesso.',
+      columns: ['id', 'titulo', 'ano'],
+      rows: [
+        { id: 1, titulo: 'DDIA', ano: 2017 },
+        { id: 2, titulo: 'Designing Data-Intensive Apps', ano: 2026 }
+      ],
+      rowCount: 2,
+      executionTimeMs: 25,
+      errorMessage: null
+    });
+
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
+    fireEvent.change(codeTextarea, {
+      target: {
+        value: `
+          CREATE TABLE livros (id INT, titulo VARCHAR(100), ano INT);
+          INSERT INTO livros VALUES (1, 'DDIA', 2017), (2, 'Designing Data-Intensive Apps', 2026);
+          SELECT id, titulo, ano FROM livros ORDER BY id ASC;
+        `
+      }
+    });
+
+    const executeBtn = screen.getByRole('button', { name: /Executar/i });
+    await waitFor(() => expect(executeBtn).not.toBeDisabled());
+    fireEvent.click(executeBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('DDIA')).toBeInTheDocument();
+      expect(screen.getByText('Designing Data-Intensive Apps')).toBeInTheDocument();
+      expect(screen.getByText('25ms')).toBeInTheDocument();
+    });
+  });
 });
 
 
