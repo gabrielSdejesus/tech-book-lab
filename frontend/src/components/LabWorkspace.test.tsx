@@ -18,6 +18,7 @@ vi.mock('../services/labProvisioning', () => ({
   provisionLab: vi.fn(),
   getLabStatus: vi.fn(),
   sendHeartbeat: vi.fn(),
+  teardownLab: vi.fn().mockResolvedValue({ labId: 'ddia-cap-03-lab-01', status: 'STOPPED', message: 'Ok' }),
 }));
 
 describe('LabWorkspace Component', () => {
@@ -341,6 +342,45 @@ describe('LabWorkspace Component', () => {
       expect(badge).toHaveTextContent('REDIS');
       expect(badge).not.toHaveTextContent('PG:5432');
     });
+  });
+
+  it('deve chamar teardownLab ao desmontar o componente LabWorkspace', async () => {
+    const { unmount } = render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    await waitFor(() => {
+      expect(provisioningApi.provisionLab).toHaveBeenCalledWith(mockLab.id, mockLab.challenges[0].id);
+    });
+
+    unmount();
+
+    expect(provisioningApi.teardownLab).toHaveBeenCalledWith(mockLab.id);
+  });
+
+  it('deve agendar heartbeat respeitando o heartbeatIntervalSeconds retornado pelo provisionamento', async () => {
+    vi.useFakeTimers();
+
+    vi.mocked(provisioningApi.provisionLab).mockResolvedValueOnce({
+      labId: 'ddia-cap-03-lab-01',
+      engineType: 'POSTGRES',
+      status: 'READY',
+      message: 'Ambiente pronto',
+      allocatedPort: 5432,
+      estimatedWaitSeconds: 0,
+      heartbeatIntervalSeconds: 10,
+    });
+
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    await vi.waitFor(() => {
+      expect(provisioningApi.provisionLab).toHaveBeenCalled();
+    });
+
+    expect(provisioningApi.sendHeartbeat).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(10000);
+    expect(provisioningApi.sendHeartbeat).toHaveBeenCalledWith('ddia-cap-03-lab-01');
+
+    vi.useRealTimers();
   });
 });
 
