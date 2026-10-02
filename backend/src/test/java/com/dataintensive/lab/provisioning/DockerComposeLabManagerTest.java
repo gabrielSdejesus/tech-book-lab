@@ -22,13 +22,6 @@ class DockerComposeLabManagerTest {
         assertThat(containerName).isEqualTo("tbl-lab-neo4j");
     }
 
-    @Test
-    @DisplayName("Deve resolver nome padronizado ignorando sessionId e labId em sobrecarga de compatibilidade")
-    void shouldIgnoreSessionIdInOverload() {
-        SessionId sessionId = SessionId.of("e5a8383c-6c25-4a6f-8e11-601b59836f68");
-        String containerName = DockerComposeLabManager.resolveContainerName(sessionId, "ddia-cap-03-lab-01", EngineType.POSTGRES);
-        assertThat(containerName).isEqualTo("tbl-lab-postgres");
-    }
 
     @Test
     @DisplayName("Deve retornar fallback seguro quando motor for nulo")

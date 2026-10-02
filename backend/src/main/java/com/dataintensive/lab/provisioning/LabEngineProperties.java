@@ -15,24 +15,18 @@ public class LabEngineProperties {
     public static class EngineConfig {
         private String serviceName;
         private int defaultPort;
-        private String image;
         private String containerName;
-        private List<String> ports = new ArrayList<>();
-        private Map<String, String> env = new LinkedHashMap<>();
 
         public EngineConfig() {}
 
-        public EngineConfig(String serviceName, int defaultPort, String image, List<String> ports, Map<String, String> env) {
-            this(serviceName, defaultPort, image, "tbl-lab-" + serviceName, ports, env);
+        public EngineConfig(String serviceName, int defaultPort) {
+            this(serviceName, defaultPort, "tbl-lab-" + serviceName);
         }
 
-        public EngineConfig(String serviceName, int defaultPort, String image, String containerName, List<String> ports, Map<String, String> env) {
+        public EngineConfig(String serviceName, int defaultPort, String containerName) {
             this.serviceName = serviceName;
             this.defaultPort = defaultPort;
-            this.image = image;
             this.containerName = containerName;
-            this.ports = ports;
-            this.env = env;
         }
 
         public String getServiceName() {
@@ -51,14 +45,6 @@ public class LabEngineProperties {
             this.defaultPort = defaultPort;
         }
 
-        public String getImage() {
-            return image;
-        }
-
-        public void setImage(String image) {
-            this.image = image;
-        }
-
         public String getContainerName() {
             return containerName != null ? containerName : (serviceName != null ? "tbl-lab-" + serviceName : "tbl-lab-unknown");
         }
@@ -66,47 +52,13 @@ public class LabEngineProperties {
         public void setContainerName(String containerName) {
             this.containerName = containerName;
         }
-
-        public List<String> getPorts() {
-            return ports;
-        }
-
-        public void setPorts(List<String> ports) {
-            this.ports = ports;
-        }
-
-        public Map<String, String> getEnv() {
-            return env;
-        }
-
-        public void setEnv(Map<String, String> env) {
-            this.env = env;
-        }
     }
 
     private Map<String, EngineConfig> configs = new LinkedHashMap<>();
 
     public LabEngineProperties() {
-        configs.put("postgres", new EngineConfig(
-                "postgres",
-                5432,
-                "postgres:16-alpine",
-                "tbl-lab-postgres",
-                List.of("0:5432"),
-                Map.of(
-                        "POSTGRES_USER", "postgres",
-                        "POSTGRES_PASSWORD", "postgrespassword",
-                        "POSTGRES_DB", "tbl_lab"
-                )
-        ));
-        configs.put("neo4j", new EngineConfig(
-                "neo4j",
-                7687,
-                "neo4j:5-community",
-                "tbl-lab-neo4j",
-                List.of("0:7687", "0:7474"),
-                Map.of("NEO4J_AUTH", "neo4j/tblpassword")
-        ));
+        configs.put("postgres", new EngineConfig("postgres", 5432, "tbl-lab-postgres"));
+        configs.put("neo4j", new EngineConfig("neo4j", 7687, "tbl-lab-neo4j"));
     }
 
     public Map<String, EngineConfig> getConfigs() {
