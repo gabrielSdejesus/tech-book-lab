@@ -403,5 +403,44 @@ describe('AiSettingsModal Component', () => {
       expect(handleClose).toHaveBeenCalledTimes(2);
     }
   });
+
+  it('deve permitir selecionar e testar o provedor Heurístico Offline sem requerer chave de API', async () => {
+    vi.mocked(api.testAiConnection).mockResolvedValueOnce({
+      valid: true,
+      message: 'Motor Heurístico offline operacional.',
+      model: 'rules-v1',
+      latencyMs: 5,
+    });
+
+    render(
+      <AiSettingsModal
+        isOpen={true}
+        onClose={vi.fn()}
+        apiKey=""
+        onSaveApiKey={vi.fn()}
+        provider="gemini"
+        onSaveProvider={vi.fn()}
+        model="gemini-2.5-flash"
+        onSaveModel={vi.fn()}
+      />
+    );
+
+    const heuristicBtn = screen.getByRole('button', { name: /Heurístico Offline/i });
+    expect(heuristicBtn).toBeInTheDocument();
+    fireEvent.click(heuristicBtn);
+
+    const testHeuristicBtn = screen.getByRole('button', { name: /Testar Motor Heurístico/i });
+    expect(testHeuristicBtn).toBeInTheDocument();
+    fireEvent.click(testHeuristicBtn);
+
+    await waitFor(() => {
+      expect(api.testAiConnection).toHaveBeenCalledWith({
+        provider: 'heuristic',
+        apiKey: '',
+        modelOverride: 'rules-v1',
+      });
+      expect(screen.getByText(/Motor Heurístico offline operacional/i)).toBeInTheDocument();
+    });
+  });
 });
 
