@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import type { Lab, Challenge, QueryResult, AiAssessmentResponse, InfraStatus } from '../types';
-import { executeQuery, resetLab, assessWithAi, getInfraStatus } from '../services/api';
+import {
+  executeQuery,
+  resetLab,
+  assessWithAi,
+  getInfraStatus,
+  saveChallengeSolution,
+  resetChallengeSolution
+} from '../services/api';
 import {
   provisionLab,
   getLabStatus,
@@ -35,9 +42,22 @@ interface Props {
 
 export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, provider, model }) => {
   const { t, locale } = useLanguage();
+
+  const [solutionsByChallenge, setSolutionsByChallenge] = useState<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    if (lab.challenges) {
+      for (const ch of lab.challenges) {
+        map[ch.id] = ch.savedCode || ch.starterTemplate || '';
+      }
+    }
+    return map;
+  });
+
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge>(lab.challenges[0]);
 
-  const [queryCode, setQueryCode] = useState<string>(lab.challenges[0]?.starterTemplate || '');
+  const [queryCode, setQueryCode] = useState<string>(
+    lab.challenges[0]?.savedCode || lab.challenges[0]?.starterTemplate || ''
+  );
   const [userReflection, setUserReflection] = useState<string>('');
 
   const [executing, setExecuting] = useState(false);
@@ -81,13 +101,34 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
     if (lab.challenges.length > 0) {
       const first = lab.challenges[0];
       setSelectedChallenge(first);
-      setQueryCode(first.starterTemplate || '');
+      const map: Record<string, string> = {};
+      for (const ch of lab.challenges) {
+        map[ch.id] = ch.savedCode || ch.starterTemplate || '';
+      }
+      setSolutionsByChallenge(map);
+      setQueryCode(first.savedCode || first.starterTemplate || '');
       setUserReflection('');
       setQueryResult(null);
       setAiResponse(null);
       setActiveTab('result');
     }
   }
+
+  const isUserEditingRef = React.useRef(false);
+
+  useEffect(() => {
+    if (!isUserEditingRef.current) return;
+    const challengeId = selectedChallenge?.id;
+    if (!challengeId) return;
+
+    const timer = setTimeout(() => {
+      saveChallengeSolution(challengeId, queryCode).catch(() => {});
+      isUserEditingRef.current = false;
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [queryCode, selectedChallenge?.id]);
+
 
   useEffect(() => {
     return () => {
@@ -151,12 +192,32 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
   }, [lab.id, selectedChallenge?.id]);
 
   const handleSelectChallenge = (ch: Challenge) => {
+    if (isUserEditingRef.current && selectedChallenge?.id) {
+      saveChallengeSolution(selectedChallenge.id, queryCode).catch(() => {});
+      isUserEditingRef.current = false;
+    }
     setSelectedChallenge(ch);
-    setQueryCode(ch.starterTemplate || '');
+    const code = solutionsByChallenge[ch.id] ?? (ch.savedCode || ch.starterTemplate || '');
+    setQueryCode(code);
     setUserReflection('');
     setQueryResult(null);
     setAiResponse(null);
     setActiveTab('result');
+  };
+
+  const handleReloadTemplate = async () => {
+    isUserEditingRef.current = false;
+    const template = selectedChallenge.starterTemplate || '';
+    setQueryCode(template);
+    setSolutionsByChallenge((prev) => ({
+      ...prev,
+      [selectedChallenge.id]: template
+    }));
+    try {
+      await resetChallengeSolution(selectedChallenge.id);
+    } catch {
+      // fallback
+    }
   };
 
   const handleExecute = async () => {
@@ -189,6 +250,16 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
     try {
       const res = await resetLab(lab.id);
       if (res.success) {
+        try {
+          await resetChallengeSolution(selectedChallenge.id);
+        } catch {}
+        isUserEditingRef.current = false;
+        const template = selectedChallenge.starterTemplate || '';
+        setQueryCode(template);
+        setSolutionsByChallenge((prev) => ({
+          ...prev,
+          [selectedChallenge.id]: template
+        }));
         setFeedbackToast(
           locale === 'pt'
             ? 'Esquema restaurado para o estado original com sucesso!'
@@ -455,7 +526,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setQueryCode(selectedChallenge.starterTemplate || '')}
+              onClick={handleReloadTemplate}
               className="text-[11px] font-mono font-semibold text-stone-600 dark:text-stone-400 hover:text-stone-950 dark:hover:text-stone-100 px-2 py-1 border border-stone-400 dark:border-stone-700 bg-[#efebe1] dark:bg-[#1f1d1a] hover:bg-[#ded7c8] dark:hover:bg-[#2a2723] transition-colors cursor-pointer"
             >
               {t.lab.reloadTemplate}
@@ -516,7 +587,15 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
         <div className="h-1/2 border-b-2 border-stone-800 dark:border-stone-700 relative flex flex-col bg-[#fdfcf9] dark:bg-[#161513]">
           <textarea
             value={queryCode}
-            onChange={(e) => setQueryCode(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              isUserEditingRef.current = true;
+              setQueryCode(val);
+              setSolutionsByChallenge((prev) => ({
+                ...prev,
+                [selectedChallenge.id]: val
+              }));
+            }}
             onKeyDown={(e) => {
               if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();

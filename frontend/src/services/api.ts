@@ -130,11 +130,22 @@ export async function getInfraStatus(): Promise<InfraStatus> {
   return res.json();
 }
 
-export async function saveChallengeSolution(_challengeId: string, _code: string): Promise<void> {
-  throw new Error('Not implemented');
+export async function saveChallengeSolution(challengeId: string, code: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/catalog/challenges/${challengeId}/solution`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ code }),
+  });
+  if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao salvar solução do desafio'));
 }
 
-export async function resetChallengeSolution(_challengeId: string): Promise<void> {
-  throw new Error('Not implemented');
+export async function resetChallengeSolution(challengeId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/catalog/challenges/${challengeId}/solution`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao resetar solução do desafio'));
 }
+
 
