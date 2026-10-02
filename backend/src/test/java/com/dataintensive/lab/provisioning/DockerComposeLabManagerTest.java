@@ -29,4 +29,62 @@ class DockerComposeLabManagerTest {
         String containerName = DockerComposeLabManager.resolveContainerName(null);
         assertThat(containerName).isEqualTo("tbl-lab-unknown");
     }
+
+    @Test
+    @DisplayName("Deve retornar false em isEngineHealthy se o contêiner não estiver rodando mesmo com porta respondendo")
+    void shouldReturnFalseWhenContainerIsNotRunningEvenIfPortIsOpen() {
+        DockerComposeLabManager manager = new DockerComposeLabManager() {
+            @Override
+            public boolean isContainerRunning(EngineType engine) {
+                return false; // contêiner parado ou em processo de desligamento
+            }
+
+            @Override
+            protected boolean isPortOpen(int port) {
+                return true; // socket proxy ainda em TIME_WAIT
+            }
+        };
+
+        boolean healthy = manager.isEngineHealthy(EngineType.POSTGRES, 5432);
+        assertThat(healthy).isFalse();
+    }
+
+    @Test
+    @DisplayName("Deve retornar true em isEngineHealthy apenas se o contêiner estiver rodando e a porta aberta")
+    void shouldReturnTrueWhenContainerIsRunningAndPortIsOpen() {
+        DockerComposeLabManager manager = new DockerComposeLabManager() {
+            @Override
+            public boolean isContainerRunning(EngineType engine) {
+                return true;
+            }
+
+            @Override
+            protected boolean isPortOpen(int port) {
+                return true;
+            }
+        };
+
+        boolean healthy = manager.isEngineHealthy(EngineType.POSTGRES, 5432);
+        assertThat(healthy).isTrue();
+    }
+
+    @Test
+    @DisplayName("Deve retornar false em isEngineHealthy se o contêiner estiver rodando mas a porta ainda fechada")
+    void shouldReturnFalseWhenContainerIsRunningButPortClosed() {
+        DockerComposeLabManager manager = new DockerComposeLabManager() {
+            @Override
+            public boolean isContainerRunning(EngineType engine) {
+                return true;
+            }
+
+            @Override
+            protected boolean isPortOpen(int port) {
+                return false;
+            }
+        };
+
+        boolean healthy = manager.isEngineHealthy(EngineType.POSTGRES, 5432);
+        assertThat(healthy).isFalse();
+    }
 }
+
