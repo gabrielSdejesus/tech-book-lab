@@ -11,6 +11,7 @@ export interface LabProvisionResponse {
   message: string;
   allocatedPort: number;
   estimatedWaitSeconds: number;
+  heartbeatIntervalSeconds?: number;
 }
 
 export interface LabStatusResponse {
