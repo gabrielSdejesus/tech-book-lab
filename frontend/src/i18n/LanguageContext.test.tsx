@@ -42,4 +42,22 @@ describe('LanguageContext', () => {
     expect(result.current.locale).toBe('en');
     expect(result.current.t.common.bookshelf).toBe('Bookshelf');
   });
+
+  it('deve conter as chaves de tradução da navbar e descrições de IA em pt e en', () => {
+    const { result } = renderHook(() => useLanguage(), { wrapper });
+
+    expect(result.current.t.navbar.practicalNotebook).toBe('Caderno de Estudos Práticos');
+    expect(result.current.t.navbar.generalCatalog).toBe('Catálogo Geral');
+    expect(result.current.t.aiModal.geminiDescription).toContain('Google AI Studio');
+    expect(result.current.t.aiModal.ollamaDescription).toContain('Ollama');
+
+    act(() => {
+      result.current.setLocale('en');
+    });
+
+    expect(result.current.t.navbar.practicalNotebook).toBe('Practical Study Notebook');
+    expect(result.current.t.navbar.generalCatalog).toBe('General Catalog');
+    expect(result.current.t.aiModal.geminiDescription).toContain('Google AI Studio');
+    expect(result.current.t.aiModal.ollamaDescription).toContain('Ollama');
+  });
 });
