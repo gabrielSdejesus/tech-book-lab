@@ -48,7 +48,8 @@ public class AiAssessmentService {
                 objectMapper,
                 new AiProviderRegistry(List.of(
                         new GeminiProviderClient(objectMapper, httpClient, geminiApiKey, geminiModel),
-                        new OllamaProviderClient(objectMapper, httpClient, ollamaBaseUrl, ollamaModel)
+                        new OllamaProviderClient(objectMapper, httpClient, ollamaBaseUrl, ollamaModel),
+                        new HeuristicProviderClient()
                 )),
                 defaultProvider
         );
@@ -133,24 +134,34 @@ public class AiAssessmentService {
         AiProviderClient client = aiProviderRegistry.getClient(provider);
 
         if (!client.isConfigured(request.apiKeyOverride())) {
-            if (lang == AssessmentLanguage.EN) {
+            boolean isProviderOverridden = request.providerOverride() != null && !request.providerOverride().isBlank();
+            if (!isProviderOverridden && aiProviderRegistry.findClient("heuristic").isPresent()) {
+                client = aiProviderRegistry.getClient("heuristic");
+                provider = "heuristic";
+            } else {
+                if (lang == AssessmentLanguage.EN) {
+                    return new AiAssessmentResponse(
+                        "NEEDS_REVISION",
+                        "API Key not provided for " + client.getInfo().name() + ". Click 'AI Tutor Settings' in the top right to insert your free Google AI Studio API Key, or switch to local Ollama.",
+                        "Real-time evaluation requires a valid API key to analyze your solution.",
+                        "Could not contact " + client.getInfo().name() + " model.",
+                        List.of("Get your free API key at " + client.getInfo().helpUrl() + " and save it in the settings modal."),
+                        "Pending Authentication"
+                    );
+                }
                 return new AiAssessmentResponse(
                     "NEEDS_REVISION",
-                    "API Key not provided for " + client.getInfo().name() + ". Click 'AI Tutor Settings' in the top right to insert your free Google AI Studio API Key, or switch to local Ollama.",
-                    "Real-time evaluation requires a valid API key to analyze your solution.",
-                    "Could not contact " + client.getInfo().name() + " model.",
-                    List.of("Get your free API key at " + client.getInfo().helpUrl() + " and save it in the settings modal."),
-                    "Pending Authentication"
+                    "Chave de API não informada para o " + client.getInfo().name() + ". Clique no botão 'Tutor IA Config' no canto superior direito para inserir sua API Key gratuita do Google AI Studio, ou alterne para o Ollama local.",
+                    "A avaliação com IA real em tempo real necessita de uma chave de API válida para analisar sua solução.",
+                    "Não foi possível contactar o modelo " + client.getInfo().name() + ".",
+                    List.of("Obtenha sua chave gratuita em " + client.getInfo().helpUrl() + " e salve no modal de configurações."),
+                    "Autenticação Pendente"
                 );
             }
-            return new AiAssessmentResponse(
-                "NEEDS_REVISION",
-                "Chave de API não informada para o " + client.getInfo().name() + ". Clique no botão 'Tutor IA Config' no canto superior direito para inserir sua API Key gratuita do Google AI Studio, ou alterne para o Ollama local.",
-                "A avaliação com IA real em tempo real necessita de uma chave de API válida para analisar sua solução.",
-                "Não foi possível contactar o modelo " + client.getInfo().name() + ".",
-                List.of("Obtenha sua chave gratuita em " + client.getInfo().helpUrl() + " e salve no modal de configurações."),
-                "Autenticação Pendente"
-            );
+        }
+
+        if (client instanceof HeuristicProviderClient heuristicClient) {
+            return heuristicClient.assess(lab, challenge, request, lang);
         }
 
         String prompt = buildPrompt(lab, challenge, request, lang);
