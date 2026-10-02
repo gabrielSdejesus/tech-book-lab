@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { getSessionId } from './session';
 
 describe('session service', () => {
@@ -30,5 +30,37 @@ describe('session service', () => {
     expect(id).toMatch(uuidV4Regex);
     expect(id).not.toBe('../../etc/passwd');
     expect(localStorage.getItem('tbl_session_id')).toBe(id);
+  });
+
+  it('deve utilizar o gerador fallback quando crypto.randomUUID não estiver disponível', () => {
+    const originalRandomUUID = crypto.randomUUID;
+    try {
+      delete (crypto as any).randomUUID;
+      const id = getSessionId();
+      expect(id).toMatch(uuidV4Regex);
+      expect(localStorage.getItem('tbl_session_id')).toBe(id);
+    } finally {
+      (crypto as any).randomUUID = originalRandomUUID;
+    }
+  });
+
+  it('deve ser resiliente quando localStorage.getItem lançar exceção', () => {
+    const getItemSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementationOnce(() => {
+      throw new Error('SecurityError: Access is denied');
+    });
+
+    const id = getSessionId();
+    expect(id).toMatch(uuidV4Regex);
+    getItemSpy.mockRestore();
+  });
+
+  it('deve ser resiliente quando localStorage.setItem lançar exceção', () => {
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => {
+      throw new Error('QuotaExceededError');
+    });
+
+    const id = getSessionId();
+    expect(id).toMatch(uuidV4Regex);
+    setItemSpy.mockRestore();
   });
 });

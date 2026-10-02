@@ -283,5 +283,125 @@ describe('AiSettingsModal Component', () => {
     expect(screen.getByText(/Local and private execution via Ollama/i)).toBeInTheDocument();
     localStorage.removeItem('tbl_locale');
   });
+
+  it('deve exibir alerta vermelho de falha quando testAiConnection retornar valid false', async () => {
+    vi.mocked(api.testAiConnection).mockResolvedValueOnce({
+      valid: false,
+      message: 'Chave API inválida ou sem permissão',
+      model: null,
+      latencyMs: 50,
+    });
+
+    render(
+      <AiSettingsModal
+        isOpen={true}
+        onClose={vi.fn()}
+        apiKey="chave-invalida"
+        onSaveApiKey={vi.fn()}
+        provider="gemini"
+        onSaveProvider={vi.fn()}
+        model="gemini-2.5-flash"
+        onSaveModel={vi.fn()}
+      />
+    );
+
+    const testBtn = screen.getByRole('button', { name: /Testar/i });
+    fireEvent.click(testBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/FALHA NA VALIDAÇÃO/i)).toBeInTheDocument();
+      expect(screen.getByText(/Chave API inválida ou sem permissão/i)).toBeInTheDocument();
+    });
+  });
+
+  it('deve exibir mensagem de erro amigável quando testAiConnection lançar exceção', async () => {
+    vi.mocked(api.testAiConnection).mockRejectedValueOnce(new Error('Network error 503'));
+
+    render(
+      <AiSettingsModal
+        isOpen={true}
+        onClose={vi.fn()}
+        apiKey="test-key"
+        onSaveApiKey={vi.fn()}
+        provider="gemini"
+        onSaveProvider={vi.fn()}
+        model="gemini-2.5-flash"
+        onSaveModel={vi.fn()}
+      />
+    );
+
+    const testBtn = screen.getByRole('button', { name: /Testar/i });
+    fireEvent.click(testBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/FALHA NA VALIDAÇÃO/i)).toBeInTheDocument();
+      expect(screen.getByText(/Network error 503/i)).toBeInTheDocument();
+    });
+  });
+
+  it('deve disparar teste de conexão para Ollama Local sem requerer chave de API', async () => {
+    vi.mocked(api.testAiConnection).mockResolvedValueOnce({
+      valid: true,
+      message: 'Ollama conectado',
+      model: 'qwen2.5-coder:1.5b',
+      latencyMs: 30,
+    });
+
+    render(
+      <AiSettingsModal
+        isOpen={true}
+        onClose={vi.fn()}
+        apiKey=""
+        onSaveApiKey={vi.fn()}
+        provider="gemini"
+        onSaveProvider={vi.fn()}
+        model="gemini-2.5-flash"
+        onSaveModel={vi.fn()}
+      />
+    );
+
+    const ollamaBtn = screen.getByRole('button', { name: /Ollama Local/i });
+    fireEvent.click(ollamaBtn);
+
+    const testOllamaBtn = screen.getByRole('button', { name: /Testar Conexão com Ollama/i });
+    fireEvent.click(testOllamaBtn);
+
+    await waitFor(() => {
+      expect(api.testAiConnection).toHaveBeenCalledWith({
+        provider: 'ollama',
+        apiKey: '',
+        modelOverride: 'qwen2.5-coder:1.5b',
+      });
+      expect(screen.getByText(/Ollama conectado/i)).toBeInTheDocument();
+    });
+  });
+
+  it('deve invocar onClose ao clicar no botão Cancelar e no botão X', () => {
+    const handleClose = vi.fn();
+    const { container } = render(
+      <AiSettingsModal
+        isOpen={true}
+        onClose={handleClose}
+        apiKey="test-key"
+        onSaveApiKey={vi.fn()}
+        provider="gemini"
+        onSaveProvider={vi.fn()}
+        model="gemini-2.5-flash"
+        onSaveModel={vi.fn()}
+      />
+    );
+
+    const cancelBtn = screen.getByRole('button', { name: /Cancelar/i });
+    fireEvent.click(cancelBtn);
+    expect(handleClose).toHaveBeenCalledTimes(1);
+
+    // O botão X fica no topo do modal dentro do cabeçalho
+    const closeXBtn = container.querySelector('.lucide-x')?.closest('button');
+    expect(closeXBtn).not.toBeNull();
+    if (closeXBtn) {
+      fireEvent.click(closeXBtn);
+      expect(handleClose).toHaveBeenCalledTimes(2);
+    }
+  });
 });
 

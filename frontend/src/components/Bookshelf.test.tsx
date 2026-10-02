@@ -125,6 +125,13 @@ describe('Bookshelf Component', () => {
     expect(redisBadge).toHaveClass('bg-stone-100');
     expect(redisBadge).not.toHaveClass('bg-[#e5ebe4]');
   });
+
+  it('deve exibir mensagem de catálogo vazio quando a lista de livros for vazia', () => {
+    render(<Bookshelf books={[]} onSelectBook={vi.fn()} />);
+
+    expect(screen.getByText(/Nenhum livro técnico encontrado no catálogo/i)).toBeInTheDocument();
+    expect(screen.getByText(/0 Livros Disponíveis/i)).toBeInTheDocument();
+  });
 });
 
 

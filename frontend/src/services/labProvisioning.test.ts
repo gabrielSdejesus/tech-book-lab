@@ -153,4 +153,40 @@ describe('labProvisioning API client', () => {
     });
     expect(result.challengeId).toBe('lab-02-ch-2');
   });
+
+  it('deve lançar erro quando provisionLab retornar resposta HTTP com status de erro', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+    } as any);
+
+    await expect(provisionLab('ddia-cap-03-lab-01')).rejects.toThrow('Falha ao provisionar laboratório: HTTP 500');
+  });
+
+  it('deve lançar erro quando getLabStatus retornar resposta HTTP com status de erro', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+    } as any);
+
+    await expect(getLabStatus('ddia-cap-03-lab-01')).rejects.toThrow('Falha ao consultar status do laboratório: HTTP 404');
+  });
+
+  it('deve lançar erro quando sendHeartbeat retornar resposta HTTP com status de erro', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 410,
+    } as any);
+
+    await expect(sendHeartbeat('ddia-cap-03-lab-01')).rejects.toThrow('Falha ao enviar heartbeat do laboratório: HTTP 410');
+  });
+
+  it('deve lançar erro quando teardownLab retornar resposta HTTP com status de erro', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+    } as any);
+
+    await expect(teardownLab('ddia-cap-03-lab-01')).rejects.toThrow('Falha ao desprovisionar laboratório: HTTP 500');
+  });
 });
