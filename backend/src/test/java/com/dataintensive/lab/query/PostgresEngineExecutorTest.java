@@ -79,4 +79,48 @@ class PostgresEngineExecutorTest {
                 .isInstanceOf(RuntimeException.class)
                 .hasCauseInstanceOf(SQLException.class);
     }
+
+    @Test
+    @DisplayName("Deve retornar o resultado do último SELECT ao executar script com múltiplos comandos")
+    void shouldReturnLastSelectResultWhenExecutingMultiStatementScript() {
+        PostgresEngineExecutor executor = new PostgresEngineExecutor(H2_URL, H2_USER, H2_PASS);
+        long start = System.currentTimeMillis();
+
+        String multiSql = """
+                CREATE TABLE IF NOT EXISTS multi_items (id INT PRIMARY KEY, name VARCHAR(50));
+                DELETE FROM multi_items;
+                INSERT INTO multi_items VALUES (1, 'First Item'), (2, 'Second Item');
+                SELECT id, name FROM multi_items ORDER BY id ASC;
+                """;
+
+        QueryResult result = executor.execute(multiSql, start);
+
+        assertThat(result.success()).isTrue();
+        assertThat(result.columns()).containsExactly("ID", "NAME");
+        assertThat(result.rows()).hasSize(2);
+        assertThat(result.rows().get(0)).containsValues(1, "First Item");
+        assertThat(result.rows().get(1)).containsValues(2, "Second Item");
+        assertThat(result.rowCount()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Deve retornar o updateCount do último DML ao executar script de múltiplos comandos terminado em DML")
+    void shouldReturnLastUpdateCountWhenExecutingMultiStatementScriptEndingInDml() {
+        PostgresEngineExecutor executor = new PostgresEngineExecutor(H2_URL, H2_USER, H2_PASS);
+        long start = System.currentTimeMillis();
+
+        String multiSql = """
+                CREATE TABLE IF NOT EXISTS multi_dml (id INT PRIMARY KEY, val VARCHAR(50));
+                DELETE FROM multi_dml;
+                INSERT INTO multi_dml VALUES (1, 'V1'), (2, 'V2');
+                UPDATE multi_dml SET val = 'Updated' WHERE id = 1;
+                """;
+
+        QueryResult result = executor.execute(multiSql, start);
+
+        assertThat(result.success()).isTrue();
+        assertThat(result.columns()).isEmpty();
+        assertThat(result.rowCount()).isEqualTo(1);
+        assertThat(result.message()).contains("Linhas afetadas: 1");
+    }
 }
