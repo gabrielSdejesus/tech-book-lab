@@ -153,7 +153,47 @@ describe('LabWorkspace Component', () => {
     });
   });
 
-  it('deve solicitar avaliação da IA e exibir parecer do tutor quando READY', async () => {
+  it('deve renderizar a aba "Validação Offline" e os botões "Validar Solução (Offline)" e "Consultar Tutor IA"', async () => {
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    expect(screen.getByRole('button', { name: /Validar Solução \(Offline\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Consultar Tutor IA/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Validação Offline/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Tutor IA/i })).toBeInTheDocument();
+  });
+
+  it('deve executar a validação offline ao clicar em "Validar Solução (Offline)" e exibir o parecer determinístico', async () => {
+    vi.mocked(api.assessWithAi).mockResolvedValueOnce({
+      status: 'APPROVED',
+      feedback: 'Modelagem 3NF validada com sucesso pelo motor heurístico!',
+      tradeOffAnalysis: 'Excelente separação de entidades relacionais.',
+      efficiencyNotes: 'Execução local determinística.',
+      alternativeApproaches: ['Adicione índices em chaves estrangeiras'],
+      modelUsed: 'Tutor Heurístico (Regras Locais)'
+    });
+
+    render(<LabWorkspace lab={mockLab} apiKey="" provider="heuristic" model="rules-engine-v1" />);
+
+    const validateBtn = screen.getByRole('button', { name: /Validar Solução \(Offline\)/i });
+    await waitFor(() => expect(validateBtn).not.toBeDisabled());
+
+    const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
+    fireEvent.change(codeTextarea, { target: { value: 'CREATE TABLE IF NOT EXISTS usuarios (id INT PRIMARY KEY);' } });
+
+    fireEvent.click(validateBtn);
+
+    await waitFor(() => {
+      expect(api.assessWithAi).toHaveBeenCalledWith(
+        expect.objectContaining({
+          providerOverride: 'heuristic'
+        })
+      );
+      expect(screen.getByText(/Modelagem 3NF validada com sucesso pelo motor heurístico!/i)).toBeInTheDocument();
+      expect(screen.getByText(/Motor Heurístico DDIA \(Regras Locais\) • Modo Offline/i)).toBeInTheDocument();
+    });
+  });
+
+  it('deve solicitar avaliação da IA e exibir parecer com os 4 subtópicos ao clicar em "Consultar Tutor IA" com sucesso', async () => {
     vi.mocked(api.assessWithAi).mockResolvedValueOnce({
       status: 'APPROVED',
       feedback: 'Sua modelagem relacional segue rigorosamente a 3NF!',
@@ -165,23 +205,83 @@ describe('LabWorkspace Component', () => {
 
     render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
 
-    const assessBtn = screen.getByRole('button', { name: /Submeter ao Tutor IA/i });
-    await waitFor(() => expect(assessBtn).not.toBeDisabled());
+    const aiBtn = screen.getByRole('button', { name: /Consultar Tutor IA/i });
+    await waitFor(() => expect(aiBtn).not.toBeDisabled());
 
-    // Digita uma alteração no código para não cair na regra de template inalterado
     const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
     fireEvent.change(codeTextarea, { target: { value: 'CREATE TABLE IF NOT EXISTS usuarios (id INT PRIMARY KEY, nome VARCHAR(100));' } });
 
-    // Digita reflexão
     const reflectionInput = screen.getByPlaceholderText(/Digite aqui sua análise sobre os trade-offs/i);
     fireEvent.change(reflectionInput, { target: { value: 'Os múltiplos joins aumentam latência de leitura.' } });
 
-    fireEvent.click(assessBtn);
+    fireEvent.click(aiBtn);
 
     await waitFor(() => {
       expect(screen.getByText(/PARECER: SOLUÇÃO APROVADA/i)).toBeInTheDocument();
-      expect(screen.getByText(/Sua modelagem relacional segue rigorosamente a 3NF!/i)).toBeInTheDocument();
-      expect(screen.getByText(/Boa separação de entidades versus custo de joins./i)).toBeInTheDocument();
+      expect(screen.getByText(/Análise Crítica do Tutor/i)).toBeInTheDocument();
+      expect(screen.getByText(/Trade-offs Teóricos \(Martin Kleppmann - DDIA\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/Observações de Desempenho & Custo Computacional/i)).toBeInTheDocument();
+      expect(screen.getByText(/Abordagens Alternativas Válidas/i)).toBeInTheDocument();
+    });
+  });
+
+  it('deve exibir banner simplificado de autenticação pendente sem os 4 subtópicos pedagógicos ao consultar Tutor IA sem chave', async () => {
+    vi.mocked(api.assessWithAi).mockResolvedValueOnce({
+      status: 'NEEDS_REVISION',
+      feedback: 'Chave de API não informada para o Google Gemini. Insira sua chave no modal de configurações.',
+      tradeOffAnalysis: '',
+      efficiencyNotes: '',
+      alternativeApproaches: [],
+      modelUsed: 'Pending Authentication'
+    });
+
+    render(<LabWorkspace lab={mockLab} apiKey="" provider="gemini" model="gemini-3.8-flash" />);
+
+    const aiBtn = screen.getByRole('button', { name: /Consultar Tutor IA/i });
+    await waitFor(() => expect(aiBtn).not.toBeDisabled());
+
+    const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
+    fireEvent.change(codeTextarea, { target: { value: 'CREATE TABLE IF NOT EXISTS usuarios (id INT PRIMARY KEY);' } });
+
+    fireEvent.click(aiBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Chave de API Não Configurada/i)).toBeInTheDocument();
+      expect(screen.getByText(/Chave de API não informada para o Google Gemini/i)).toBeInTheDocument();
+      // Não deve renderizar os 4 subtópicos
+      expect(screen.queryByText(/Análise Crítica do Tutor/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Trade-offs Teóricos \(Martin Kleppmann - DDIA\)/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Observações de Desempenho & Custo Computacional/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Abordagens Alternativas Válidas/i)).not.toBeInTheDocument();
+    });
+  });
+
+  it('deve exibir banner simplificado de erro sem os 4 subtópicos pedagógicos ao ocorrer falha de comunicação com a IA', async () => {
+    vi.mocked(api.assessWithAi).mockResolvedValueOnce({
+      status: 'NEEDS_REVISION',
+      feedback: 'Falha na comunicação com o Tutor de IA (gemini): Connection timeout.',
+      tradeOffAnalysis: '',
+      efficiencyNotes: '',
+      alternativeApproaches: [],
+      modelUsed: 'AI Error'
+    });
+
+    render(<LabWorkspace lab={mockLab} apiKey="valid-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    const aiBtn = screen.getByRole('button', { name: /Consultar Tutor IA/i });
+    await waitFor(() => expect(aiBtn).not.toBeDisabled());
+
+    const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
+    fireEvent.change(codeTextarea, { target: { value: 'CREATE TABLE IF NOT EXISTS usuarios (id INT PRIMARY KEY);' } });
+
+    fireEvent.click(aiBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Falha na Comunicação com o Tutor IA/i)).toBeInTheDocument();
+      expect(screen.getByText(/Connection timeout/i)).toBeInTheDocument();
+      // Não deve renderizar os 4 subtópicos
+      expect(screen.queryByText(/Análise Crítica do Tutor/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Trade-offs Teóricos \(Martin Kleppmann - DDIA\)/i)).not.toBeInTheDocument();
     });
   });
 
