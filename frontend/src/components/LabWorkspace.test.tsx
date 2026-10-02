@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { LabWorkspace } from './LabWorkspace';
 import * as api from '../services/api';
@@ -109,6 +109,10 @@ describe('LabWorkspace Component', () => {
       ttlRemainingSeconds: 600,
       lastHeartbeatAt: Date.now(),
     });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('deve renderizar os detalhes do laboratório e o template inicial', async () => {
@@ -381,6 +385,193 @@ describe('LabWorkspace Component', () => {
     expect(provisioningApi.sendHeartbeat).toHaveBeenCalledWith('ddia-cap-03-lab-01');
 
     vi.useRealTimers();
+  });
+
+  it('deve bloquear envio ao Tutor IA via validação local se a query for apenas comentários ou template inalterado', async () => {
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    const assessBtn = screen.getByRole('button', { name: /Submeter ao Tutor IA/i });
+    await waitFor(() => expect(assessBtn).not.toBeDisabled());
+
+    // Clica sem alterar o template
+    fireEvent.click(assessBtn);
+
+    await waitFor(() => {
+      expect(api.assessWithAi).not.toHaveBeenCalled();
+      expect(screen.getByText(/Nenhuma implementação submetida/i)).toBeInTheDocument();
+      expect(screen.getByText(/Validador Local de Submissão/i)).toBeInTheDocument();
+    });
+
+    // Agora digita apenas comentários
+    const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
+    fireEvent.change(codeTextarea, { target: { value: '-- Apenas um comentário\n/* outro comentário */' } });
+
+    fireEvent.click(assessBtn);
+
+    await waitFor(() => {
+      expect(api.assessWithAi).not.toHaveBeenCalled();
+      expect(screen.getByText(/Nenhuma implementação submetida/i)).toBeInTheDocument();
+    });
+  });
+
+  it('não deve chamar resetLab quando o usuário cancelar a confirmação de restauração', async () => {
+    vi.mocked(window.confirm).mockReturnValueOnce(false);
+
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    const resetBtn = screen.getByRole('button', { name: /Restaurar/i });
+    await waitFor(() => expect(resetBtn).not.toBeDisabled());
+    fireEvent.click(resetBtn);
+
+    expect(window.confirm).toHaveBeenCalled();
+    expect(api.resetLab).not.toHaveBeenCalled();
+  });
+
+  it('deve disparar execução da consulta ao pressionar Ctrl + Enter no textarea', async () => {
+    vi.mocked(api.executeQuery).mockResolvedValueOnce({
+      success: true,
+      message: 'Consulta executada',
+      columns: ['num'],
+      rows: [{ num: 42 }],
+      rowCount: 1,
+      executionTimeMs: 8,
+      errorMessage: null,
+    });
+
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
+    await waitFor(() => expect(screen.getByRole('button', { name: /Executar/i })).not.toBeDisabled());
+
+    fireEvent.keyDown(codeTextarea, { key: 'Enter', ctrlKey: true });
+
+    await waitFor(() => {
+      expect(api.executeQuery).toHaveBeenCalledWith(
+        mockLab.challenges[0].starterTemplate,
+        'POSTGRES',
+        mockLab.id
+      );
+      expect(screen.getByText('42')).toBeInTheDocument();
+    });
+  });
+
+  it('deve permitir visualizar resultado no formato JSON e restaurar template inicial via botão Recarregar Template', async () => {
+    vi.mocked(api.executeQuery).mockResolvedValueOnce({
+      success: true,
+      message: 'Ok',
+      columns: ['id'],
+      rows: [{ id: 99 }],
+      rowCount: 1,
+      executionTimeMs: 10,
+      errorMessage: null,
+    });
+
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    const executeBtn = screen.getByRole('button', { name: /Executar/i });
+    await waitFor(() => expect(executeBtn).not.toBeDisabled());
+    fireEvent.click(executeBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('99')).toBeInTheDocument();
+    });
+
+    // Clica na aba JSON
+    const jsonTabBtn = screen.getByRole('button', { name: /JSON/i });
+    fireEvent.click(jsonTabBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/"rowCount": 1/i)).toBeInTheDocument();
+      expect(screen.getByText(/"id": 99/i)).toBeInTheDocument();
+    });
+
+    // Modifica código no textarea
+    const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
+    fireEvent.change(codeTextarea, { target: { value: 'SELECT * FROM custom;' } });
+    expect(codeTextarea).toHaveValue('SELECT * FROM custom;');
+
+    // Clica em Recarregar Template
+    const reloadBtn = screen.getByRole('button', { name: /Recarregar Template/i });
+    fireEvent.click(reloadBtn);
+    expect(codeTextarea).toHaveValue(mockLab.challenges[0].starterTemplate);
+  });
+
+  it('deve realizar polling de getLabStatus quando provisionLab retornar PROVISIONING e atualizar para READY', async () => {
+    vi.useFakeTimers();
+
+    vi.mocked(provisioningApi.provisionLab).mockResolvedValueOnce({
+      labId: 'ddia-cap-03-lab-01',
+      engineType: 'POSTGRES',
+      status: 'PROVISIONING',
+      message: 'Criando container...',
+      allocatedPort: 5432,
+      estimatedWaitSeconds: 5,
+    });
+
+    vi.mocked(provisioningApi.getLabStatus).mockResolvedValueOnce({
+      labId: 'ddia-cap-03-lab-01',
+      engineType: 'POSTGRES',
+      status: 'READY',
+      allocatedPort: 5432,
+      uptimeSeconds: 2,
+      lastHeartbeatAt: Date.now(),
+    });
+
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    await vi.waitFor(() => {
+      expect(provisioningApi.provisionLab).toHaveBeenCalled();
+    });
+
+    await vi.waitFor(() => {
+      expect(screen.getByText(/Criando container.../i)).toBeInTheDocument();
+    });
+
+    await vi.advanceTimersByTimeAsync(2000);
+
+    await vi.waitFor(() => {
+      expect(provisioningApi.getLabStatus).toHaveBeenCalledWith('ddia-cap-03-lab-01', mockLab.challenges[0].id);
+      const badge = screen.getByTestId('active-engine-badge');
+      expect(badge).toHaveTextContent('ON');
+    });
+
+    vi.useRealTimers();
+  });
+
+  it('deve exibir banner de erro com botão Tentar Novamente quando o status for ERROR', async () => {
+    vi.mocked(provisioningApi.provisionLab).mockResolvedValueOnce({
+      labId: 'ddia-cap-03-lab-01',
+      engineType: 'POSTGRES',
+      status: 'ERROR',
+      message: 'Container falhou ao iniciar',
+      allocatedPort: 5432,
+      estimatedWaitSeconds: 0,
+    });
+
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Container falhou ao iniciar/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Tentar Novamente/i })).toBeInTheDocument();
+    });
+
+    // Mock do retry
+    vi.mocked(provisioningApi.provisionLab).mockResolvedValueOnce({
+      labId: 'ddia-cap-03-lab-01',
+      engineType: 'POSTGRES',
+      status: 'READY',
+      message: 'Ambiente recuperado',
+      allocatedPort: 5432,
+      estimatedWaitSeconds: 0,
+    });
+
+    const retryBtn = screen.getByRole('button', { name: /Tentar Novamente/i });
+    fireEvent.click(retryBtn);
+
+    await waitFor(() => {
+      const badge = screen.getByTestId('active-engine-badge');
+      expect(badge).toHaveTextContent('ON');
+    });
   });
 });
 

@@ -160,4 +160,43 @@ describe('App Component Flow', () => {
       expect(screen.getByText('The definitive guide.')).toBeInTheDocument();
     });
   });
+
+  it('deve exibir tela de erro com botão Tentar Novamente quando getBooks falhar', async () => {
+    localStorage.setItem('tbl_locale', 'pt');
+    vi.spyOn(api, 'getBooks').mockRejectedValueOnce(new Error('Conexão recusada'));
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Falha ao Conectar ao Servidor Backend/i)).toBeInTheDocument();
+      expect(screen.getByText(/Certifique-se de que a API Java Spring Boot está em execução na porta 8080/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Tentar Novamente/i })).toBeInTheDocument();
+    });
+  });
+
+  it('deve abrir o modal de configurações de IA a partir da barra de navegação e persistir credenciais salvas', async () => {
+    localStorage.clear();
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Biblioteca de Livros Técnicos/i)).toBeInTheDocument();
+    });
+
+    const aiSettingsBtn = screen.getByRole('button', { name: /CONFIGURAR TUTOR IA/i });
+    fireEvent.click(aiSettingsBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Configuração do Tutor de Inteligência Artificial/i)).toBeInTheDocument();
+    });
+
+    const apiKeyInput = screen.getByPlaceholderText(/AIzaSy.../i);
+    fireEvent.change(apiKeyInput, { target: { value: 'chave-secreta-gemini' } });
+
+    const saveBtn = screen.getByRole('button', { name: /Salvar Configurações/i });
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(localStorage.getItem('gemini_api_key')).toBe('chave-secreta-gemini');
+    });
+  });
 });
