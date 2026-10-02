@@ -16,6 +16,7 @@ export interface Challenge {
   description: string;
   scenario: string;
   starterTemplate: string;
+  savedCode?: string | null;
   guidelines: string[];
   reflectionPrompt: string;
   engineType?: EngineType;

@@ -6,7 +6,9 @@ import {
   assessWithAi,
   testAiConnection,
   getAiProviders,
-  getInfraStatus
+  getInfraStatus,
+  saveChallengeSolution,
+  resetChallengeSolution
 } from './api';
 
 describe('API Service', () => {
@@ -255,5 +257,36 @@ describe('API Service', () => {
     }));
     expect(result).toEqual(mockStatus);
   });
+
+  it('saveChallengeSolution deve realizar PUT em /api/catalog/challenges/:id/solution com body JSON', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({})
+    } as Response);
+
+    await saveChallengeSolution('lab-01-ch-1', 'SELECT 1;');
+
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/catalog/challenges/lab-01-ch-1/solution', expect.objectContaining({
+      method: 'PUT',
+      headers: expect.objectContaining({
+        'Content-Type': 'application/json'
+      }),
+      body: JSON.stringify({ code: 'SELECT 1;' })
+    }));
+  });
+
+  it('resetChallengeSolution deve realizar DELETE em /api/catalog/challenges/:id/solution', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({})
+    } as Response);
+
+    await resetChallengeSolution('lab-01-ch-1');
+
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/catalog/challenges/lab-01-ch-1/solution', expect.objectContaining({
+      method: 'DELETE'
+    }));
+  });
 });
+
 

@@ -130,3 +130,11 @@ export async function getInfraStatus(): Promise<InfraStatus> {
   return res.json();
 }
 
+export async function saveChallengeSolution(_challengeId: string, _code: string): Promise<void> {
+  throw new Error('Not implemented');
+}
+
+export async function resetChallengeSolution(_challengeId: string): Promise<void> {
+  throw new Error('Not implemented');
+}
+
