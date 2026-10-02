@@ -25,6 +25,7 @@ public class LabProvisioningService {
     private final LabProvisioningProperties properties;
     private final java.time.Clock clock;
     private final EngineLifecycleCoordinator lifecycleCoordinator;
+    private final Optional<LabDatabaseResetter> databaseResetter;
     private final Map<String, LabSession> activeSessions = new ConcurrentHashMap<>();
 
     @Autowired
@@ -32,12 +33,23 @@ public class LabProvisioningService {
                                   LabContainerManager containerManager,
                                   LabProvisioningProperties properties,
                                   Optional<java.time.Clock> clock,
-                                  Optional<EngineLifecycleCoordinator> lifecycleCoordinator) {
+                                  Optional<EngineLifecycleCoordinator> lifecycleCoordinator,
+                                  Optional<LabDatabaseResetter> databaseResetter) {
         this.catalogRepository = catalogRepository;
         this.containerManager = containerManager;
         this.properties = properties != null ? properties : new LabProvisioningProperties();
         this.clock = clock.orElse(java.time.Clock.systemUTC());
         this.lifecycleCoordinator = lifecycleCoordinator.orElseGet(EngineLifecycleCoordinator::new);
+        this.databaseResetter = databaseResetter != null ? databaseResetter : Optional.empty();
+    }
+
+    public LabProvisioningService(CatalogRepository catalogRepository,
+                                  LabContainerManager containerManager,
+                                  LabProvisioningProperties properties,
+                                  java.time.Clock clock,
+                                  EngineLifecycleCoordinator lifecycleCoordinator,
+                                  LabDatabaseResetter databaseResetter) {
+        this(catalogRepository, containerManager, properties, Optional.ofNullable(clock), Optional.ofNullable(lifecycleCoordinator), Optional.ofNullable(databaseResetter));
     }
 
     public LabProvisioningService(CatalogRepository catalogRepository,
@@ -45,24 +57,20 @@ public class LabProvisioningService {
                                   LabProvisioningProperties properties,
                                   java.time.Clock clock,
                                   EngineLifecycleCoordinator lifecycleCoordinator) {
-        this.catalogRepository = catalogRepository;
-        this.containerManager = containerManager;
-        this.properties = properties != null ? properties : new LabProvisioningProperties();
-        this.clock = clock != null ? clock : java.time.Clock.systemUTC();
-        this.lifecycleCoordinator = lifecycleCoordinator != null ? lifecycleCoordinator : new EngineLifecycleCoordinator();
+        this(catalogRepository, containerManager, properties, Optional.ofNullable(clock), Optional.ofNullable(lifecycleCoordinator), Optional.empty());
     }
 
     public LabProvisioningService(CatalogRepository catalogRepository,
                                   LabContainerManager containerManager,
                                   LabProvisioningProperties properties,
                                   java.time.Clock clock) {
-        this(catalogRepository, containerManager, properties, clock, new EngineLifecycleCoordinator());
+        this(catalogRepository, containerManager, properties, clock, new EngineLifecycleCoordinator(), null);
     }
 
     public LabProvisioningService(CatalogRepository catalogRepository,
                                   LabContainerManager containerManager,
                                   LabProvisioningProperties properties) {
-        this(catalogRepository, containerManager, properties, java.time.Clock.systemUTC(), new EngineLifecycleCoordinator());
+        this(catalogRepository, containerManager, properties, java.time.Clock.systemUTC(), new EngineLifecycleCoordinator(), null);
     }
 
 
