@@ -218,18 +218,22 @@ describe('API Service', () => {
       .rejects.toThrow('Provedor de IA não suportado: chatgpt. Provedores suportados: gemini, ollama');
   });
 
-  it('getAiProviders deve realizar GET em /api/ai/providers e retornar lista de provedores', async () => {
+  it('getAiProviders deve realizar GET em /api/ai/providers com cabeçalho Accept-Language', async () => {
     const mockProviders = [
-      { id: 'gemini', name: 'Google Gemini', requiresApiKey: true, defaultModel: 'gemini-2.5-flash', models: [] }
+      { id: 'gemini', name: 'Google Gemini', description: 'desc', requiresApiKey: true, defaultModel: 'gemini-2.5-flash', models: [] }
     ];
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
       ok: true,
       json: async () => mockProviders
     } as Response);
 
-    const result = await getAiProviders();
+    const result = await getAiProviders('en');
 
-    expect(globalThis.fetch).toHaveBeenCalledWith('/api/ai/providers');
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/ai/providers', expect.objectContaining({
+      headers: expect.objectContaining({
+        'Accept-Language': 'en'
+      })
+    }));
     expect(result).toEqual(mockProviders);
   });
 

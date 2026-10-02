@@ -69,6 +69,8 @@ export interface TranslationSchema {
     testing: string;
     description: string;
     providerLabel: string;
+    geminiDescription: string;
+    ollamaDescription: string;
     modelVersion: string;
     recommendedLatest: string;
     getFreeKey: string;
@@ -83,6 +85,10 @@ export interface TranslationSchema {
     contactError: string;
     cancel: string;
     saved: string;
+  };
+  navbar: {
+    practicalNotebook: string;
+    generalCatalog: string;
   };
   bookCover: {
     defaultBanner: string;

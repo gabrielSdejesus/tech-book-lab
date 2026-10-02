@@ -77,6 +77,10 @@ export const translations: Record<'pt' | 'en', TranslationSchema> = {
       description:
         'Defina o provedor e a chave de acesso. O Tutor de IA avaliará a conformidade de suas consultas com os conceitos fundamentais de sistemas intensivos em dados.',
       providerLabel: 'Provedor de IA',
+      geminiDescription:
+        'Modelos de linguagem do Google AI Studio (requer chave gratuita).',
+      ollamaDescription:
+        'Execução local e privada via Ollama (sem necessidade de API Key).',
       modelVersion: 'Versão do Modelo',
       recommendedLatest: '(Recomendado - Mais Recente)',
       getFreeKey: 'Obter chave gratuita no Google AI Studio →',
@@ -92,6 +96,10 @@ export const translations: Record<'pt' | 'en', TranslationSchema> = {
       contactError: 'Erro ao contatar backend para teste.',
       cancel: 'Cancelar',
       saved: 'Salvo!',
+    },
+    navbar: {
+      practicalNotebook: 'Caderno de Estudos Práticos',
+      generalCatalog: 'Catálogo Geral',
     },
     bookCover: {
       defaultBanner: 'Sistemas • Edição Técnica',
@@ -173,6 +181,10 @@ export const translations: Record<'pt' | 'en', TranslationSchema> = {
       description:
         'Define provider and access key. The AI Tutor evaluates compliance of your queries with fundamental data-intensive systems concepts.',
       providerLabel: 'AI Provider',
+      geminiDescription:
+        'Language models from Google AI Studio (requires free API key).',
+      ollamaDescription:
+        'Local and private execution via Ollama (no API key required).',
       modelVersion: 'Model Version',
       recommendedLatest: '(Recommended - Latest)',
       getFreeKey: 'Get free key at Google AI Studio →',
@@ -188,6 +200,10 @@ export const translations: Record<'pt' | 'en', TranslationSchema> = {
       contactError: 'Error contacting backend for testing.',
       cancel: 'Cancel',
       saved: 'Saved!',
+    },
+    navbar: {
+      practicalNotebook: 'Practical Study Notebook',
+      generalCatalog: 'General Catalog',
     },
     bookCover: {
       defaultBanner: 'Systems • Technical Edition',

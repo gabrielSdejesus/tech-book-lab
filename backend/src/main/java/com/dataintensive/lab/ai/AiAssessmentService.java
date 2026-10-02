@@ -69,6 +69,10 @@ public class AiAssessmentService {
         return aiProviderRegistry.getAllProviders();
     }
 
+    public List<AiProviderInfo> getAvailableProviders(String language) {
+        return aiProviderRegistry.getAllProviders(language);
+    }
+
     public AiTestConnectionResponse testConnection(AiTestConnectionRequest request) {
         String provider = (request.provider() != null && !request.provider().isBlank())
                 ? request.provider().trim().toLowerCase()

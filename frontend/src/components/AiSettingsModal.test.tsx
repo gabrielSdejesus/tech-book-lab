@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { AiSettingsModal } from './AiSettingsModal';
 import * as api from '../services/api';
+import { LanguageProvider } from '../i18n/LanguageContext';
 
 vi.mock('../services/api', () => ({
   testAiConnection: vi.fn(),
@@ -229,6 +230,58 @@ describe('AiSettingsModal Component', () => {
     expect(screen.getByText('DeepSeek LLM API')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('sk-deepseek-...')).toBeInTheDocument();
     expect(screen.getByText(/DeepSeek V3/i)).toBeInTheDocument();
+  });
+
+  it('deve renderizar descrições dos provedores em português por padrão e ao alternar entre Gemini e Ollama', async () => {
+    localStorage.setItem('tbl_locale', 'pt');
+    render(
+      <LanguageProvider>
+        <AiSettingsModal
+          isOpen={true}
+          onClose={vi.fn()}
+          apiKey="test-key"
+          onSaveApiKey={vi.fn()}
+          provider="gemini"
+          onSaveProvider={vi.fn()}
+          model="gemini-2.5-flash"
+          onSaveModel={vi.fn()}
+        />
+      </LanguageProvider>
+    );
+
+    expect(screen.getByText(/Modelos de linguagem do Google AI Studio/i)).toBeInTheDocument();
+
+    const ollamaBtn = screen.getByRole('button', { name: /Ollama Local/i });
+    fireEvent.click(ollamaBtn);
+
+    expect(screen.getByText(/Execução local e privada via Ollama/i)).toBeInTheDocument();
+    localStorage.removeItem('tbl_locale');
+  });
+
+  it('deve renderizar descrições dos provedores em inglês quando o idioma for en e alternar entre Gemini e Ollama', async () => {
+    localStorage.setItem('tbl_locale', 'en');
+    render(
+      <LanguageProvider>
+        <AiSettingsModal
+          isOpen={true}
+          onClose={vi.fn()}
+          apiKey="test-key"
+          onSaveApiKey={vi.fn()}
+          provider="gemini"
+          onSaveProvider={vi.fn()}
+          model="gemini-2.5-flash"
+          onSaveModel={vi.fn()}
+        />
+      </LanguageProvider>
+    );
+
+    expect(screen.getByText(/Language models from Google AI Studio/i)).toBeInTheDocument();
+
+    const ollamaBtn = screen.getByRole('button', { name: /Ollama Local/i });
+    fireEvent.click(ollamaBtn);
+
+    expect(screen.getByText(/Local and private execution via Ollama/i)).toBeInTheDocument();
+    localStorage.removeItem('tbl_locale');
   });
 });
 

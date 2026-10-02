@@ -46,4 +46,18 @@ public class AiProviderRegistry {
     public List<AiProviderInfo> getAllProviders() {
         return clients.values().stream().map(AiProviderClient::getInfo).toList();
     }
+
+    public List<AiProviderInfo> getAllProviders(String language) {
+        if (language == null || language.isBlank()) {
+            return getAllProviders();
+        }
+        return clients.values().stream().map(c -> c.getInfo(language)).toList();
+    }
+
+    public List<AiProviderInfo> getAllProviders(com.dataintensive.lab.domain.AssessmentLanguage language) {
+        if (language == null) {
+            return getAllProviders();
+        }
+        return clients.values().stream().map(c -> c.getInfo(language)).toList();
+    }
 }

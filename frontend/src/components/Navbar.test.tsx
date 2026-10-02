@@ -203,4 +203,60 @@ describe('Navbar Component', () => {
     fireEvent.keyDown(brandBtn, { key: ' ' });
     expect(handleNavigate).toHaveBeenCalledTimes(2);
   });
+
+  it('deve renderizar subtítulo localizado em português quando na estante', () => {
+    localStorage.setItem('tbl_locale', 'pt');
+    render(
+      <LanguageProvider>
+        <Navbar
+          onOpenSettings={vi.fn()}
+          selectedBookTitle="DDIA"
+          theme="dark"
+          onToggleTheme={vi.fn()}
+          isBookshelfActive={true}
+        />
+      </LanguageProvider>
+    );
+
+    expect(screen.getByText(/Caderno de Estudos Práticos • Catálogo Geral/i)).toBeInTheDocument();
+    localStorage.removeItem('tbl_locale');
+  });
+
+  it('deve renderizar subtítulo localizado em inglês quando na estante com locale en', () => {
+    localStorage.setItem('tbl_locale', 'en');
+    render(
+      <LanguageProvider>
+        <Navbar
+          onOpenSettings={vi.fn()}
+          selectedBookTitle="DDIA"
+          theme="dark"
+          onToggleTheme={vi.fn()}
+          isBookshelfActive={true}
+        />
+      </LanguageProvider>
+    );
+
+    expect(screen.getByText(/Practical Study Notebook • General Catalog/i)).toBeInTheDocument();
+    localStorage.removeItem('tbl_locale');
+  });
+
+  it('deve renderizar fallback bilíngue do botão de retorno à estante no modo en', () => {
+    localStorage.setItem('tbl_locale', 'en');
+    render(
+      <LanguageProvider>
+        <Navbar
+          onOpenSettings={vi.fn()}
+          selectedBookTitle="DDIA"
+          theme="dark"
+          onToggleTheme={vi.fn()}
+          isBookshelfActive={false}
+          onNavigateBookshelf={vi.fn()}
+        />
+      </LanguageProvider>
+    );
+
+    const bookshelfBtn = screen.getByRole('button', { name: /^BOOKSHELF$/i });
+    expect(bookshelfBtn).toBeInTheDocument();
+    localStorage.removeItem('tbl_locale');
+  });
 });

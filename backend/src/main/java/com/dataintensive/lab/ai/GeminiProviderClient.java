@@ -1,5 +1,6 @@
 package com.dataintensive.lab.ai;
 
+import com.dataintensive.lab.domain.AssessmentLanguage;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,21 +52,29 @@ public class GeminiProviderClient implements AiProviderClient {
     }
 
     @Override
-    public AiProviderInfo getInfo() {
+    public AiProviderInfo getInfo(AssessmentLanguage language) {
+        boolean isEn = language == AssessmentLanguage.EN;
         return new AiProviderInfo(
                 "gemini",
                 "Google Gemini",
-                "Modelos de linguagem do Google AI Studio (requer chave gratuita).",
+                isEn
+                        ? "Language models from Google AI Studio (requires free API key)."
+                        : "Modelos de linguagem do Google AI Studio (requer chave gratuita).",
                 true,
                 "AIzaSy...",
                 "https://aistudio.google.com/",
                 defaultModel,
                 List.of(
-                        new AiModelInfo("gemini-3.8-flash", "Gemini 3.8 Flash (Recomendado)", true),
+                        new AiModelInfo("gemini-3.8-flash", isEn ? "Gemini 3.8 Flash (Recommended)" : "Gemini 3.8 Flash (Recomendado)", true),
                         new AiModelInfo("gemini-3.5-flash", "Gemini 3.5 Flash", false),
                         new AiModelInfo("gemini-2.5-flash", "Gemini 2.5 Flash", false)
                 )
         );
+    }
+
+    @Override
+    public AiProviderInfo getInfo() {
+        return getInfo(AssessmentLanguage.PT);
     }
 
     @Override

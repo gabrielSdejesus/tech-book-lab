@@ -3,6 +3,7 @@ import { X, Key, Cpu, Check, AlertCircle, Loader2, Zap, Sliders } from 'lucide-r
 import { testAiConnection, getAiProviders } from '../services/api';
 import type { AiTestConnectionResponse, AiProviderInfo } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
+import type { TranslationSchema } from '../i18n/types';
 
 interface Props {
   isOpen: boolean;
@@ -15,11 +16,11 @@ interface Props {
   onSaveModel: (model: string) => void;
 }
 
-const DEFAULT_PROVIDERS: AiProviderInfo[] = [
+const getDefaultProviders = (t: TranslationSchema): AiProviderInfo[] => [
   {
     id: 'gemini',
     name: 'Google Gemini',
-    description: 'Modelos de linguagem do Google AI Studio (requer chave gratuita).',
+    description: t.aiModal.geminiDescription,
     requiresApiKey: true,
     apiKeyPlaceholder: 'AIzaSy...',
     helpUrl: 'https://aistudio.google.com/app/apikey',
@@ -36,7 +37,7 @@ const DEFAULT_PROVIDERS: AiProviderInfo[] = [
   {
     id: 'ollama',
     name: 'Ollama Local',
-    description: 'Execução local e privada via Ollama (sem necessidade de API Key).',
+    description: t.aiModal.ollamaDescription,
     requiresApiKey: false,
     apiKeyPlaceholder: '',
     helpUrl: 'https://ollama.com/',
@@ -55,8 +56,8 @@ export const AiSettingsModal: React.FC<Props> = ({
   model,
   onSaveModel,
 }) => {
-  const { t } = useLanguage();
-  const [providers, setProviders] = useState<AiProviderInfo[]>(DEFAULT_PROVIDERS);
+  const { t, locale } = useLanguage();
+  const [customProviders, setCustomProviders] = useState<AiProviderInfo[] | null>(null);
   const [tempKey, setTempKey] = useState(apiKey);
   const [tempProvider, setTempProvider] = useState(provider || 'gemini');
   const [tempModel, setTempModel] = useState(model || 'gemini-2.5-flash');
@@ -76,24 +77,40 @@ export const AiSettingsModal: React.FC<Props> = ({
 
   useEffect(() => {
     if (isOpen) {
-      Promise.resolve(getAiProviders())
+      Promise.resolve(getAiProviders(locale))
         .then((data) => {
           if (Array.isArray(data) && data.length > 0) {
-            setProviders(data);
+            setCustomProviders(data);
           }
         })
         .catch(() => {
           // Keep default providers
         });
     }
-  }, [isOpen]);
+  }, [isOpen, locale]);
 
   if (!isOpen) return null;
 
+  const defaultProviders = getDefaultProviders(t);
+  const providers = customProviders || defaultProviders;
   const currentProvider =
     providers.find((p) => p.id.toLowerCase() === tempProvider.toLowerCase()) ||
     providers[0] ||
-    DEFAULT_PROVIDERS[0];
+    defaultProviders[0];
+
+  const getProviderDescription = (p: AiProviderInfo) => {
+    if (p.id === 'gemini') {
+      return (p.description && !p.description.includes('Google AI Studio'))
+        ? p.description
+        : t.aiModal.geminiDescription;
+    }
+    if (p.id === 'ollama') {
+      return (p.description && !p.description.includes('Ollama'))
+        ? p.description
+        : t.aiModal.ollamaDescription;
+    }
+    return p.description;
+  };
 
   const handleSelectProvider = (p: AiProviderInfo) => {
     setTempProvider(p.id);
@@ -190,9 +207,9 @@ export const AiSettingsModal: React.FC<Props> = ({
             </div>
           </div>
 
-          {currentProvider.description && (
+          {getProviderDescription(currentProvider) && (
             <p className="text-[11px] leading-relaxed text-stone-600 dark:text-stone-400 italic">
-              {currentProvider.description}
+              {getProviderDescription(currentProvider)}
             </p>
           )}
 
@@ -281,7 +298,7 @@ export const AiSettingsModal: React.FC<Props> = ({
             ) : (
               <div className="space-y-3">
                 <div className="p-3 bg-[#f5f0e4] dark:bg-[#1f1d1a] border border-stone-400 dark:border-stone-700 text-xs font-serif text-stone-800 dark:text-stone-300">
-                  {currentProvider.id === 'ollama' ? t.aiModal.ollamaNotice : currentProvider.description}
+                  {currentProvider.id === 'ollama' ? t.aiModal.ollamaNotice : getProviderDescription(currentProvider)}
                 </div>
                 <button
                   type="button"
