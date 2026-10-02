@@ -16,15 +16,21 @@ public class LabEngineProperties {
         private String serviceName;
         private int defaultPort;
         private String image;
+        private String containerName;
         private List<String> ports = new ArrayList<>();
         private Map<String, String> env = new LinkedHashMap<>();
 
         public EngineConfig() {}
 
         public EngineConfig(String serviceName, int defaultPort, String image, List<String> ports, Map<String, String> env) {
+            this(serviceName, defaultPort, image, "tbl-lab-" + serviceName, ports, env);
+        }
+
+        public EngineConfig(String serviceName, int defaultPort, String image, String containerName, List<String> ports, Map<String, String> env) {
             this.serviceName = serviceName;
             this.defaultPort = defaultPort;
             this.image = image;
+            this.containerName = containerName;
             this.ports = ports;
             this.env = env;
         }
@@ -53,6 +59,14 @@ public class LabEngineProperties {
             this.image = image;
         }
 
+        public String getContainerName() {
+            return containerName != null ? containerName : (serviceName != null ? "tbl-lab-" + serviceName : "tbl-lab-unknown");
+        }
+
+        public void setContainerName(String containerName) {
+            this.containerName = containerName;
+        }
+
         public List<String> getPorts() {
             return ports;
         }
@@ -77,6 +91,7 @@ public class LabEngineProperties {
                 "postgres",
                 5432,
                 "postgres:16-alpine",
+                "tbl-lab-postgres",
                 List.of("0:5432"),
                 Map.of(
                         "POSTGRES_USER", "postgres",
@@ -88,6 +103,7 @@ public class LabEngineProperties {
                 "neo4j",
                 7687,
                 "neo4j:5-community",
+                "tbl-lab-neo4j",
                 List.of("0:7687", "0:7474"),
                 Map.of("NEO4J_AUTH", "neo4j/tblpassword")
         ));

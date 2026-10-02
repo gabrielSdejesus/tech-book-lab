@@ -43,15 +43,15 @@ public class DockerComposeLabManager implements LabContainerManager {
         }
     }
 
-    public static String resolveContainerName(SessionId sessionId, String labId, EngineType engine) {
-        String rawSession = (sessionId != null && sessionId.value() != null) ? sessionId.value() : "default";
-        String userHash = rawSession.replaceAll("-", "").toLowerCase();
-        if (userHash.length() > 8) {
-            userHash = userHash.substring(0, 8);
+    public static String resolveContainerName(EngineType engine) {
+        if (engine == null) {
+            return "tbl-lab-unknown";
         }
-        String cleanLab = (labId != null ? labId : "lab").replaceAll("[^a-zA-Z0-9]", "-").toLowerCase();
-        String engineSuffix = engine != null ? "-" + engine.name().toLowerCase() : "";
-        return "user-" + userHash + "-" + cleanLab + engineSuffix;
+        return "tbl-lab-" + engine.name().toLowerCase();
+    }
+
+    public static String resolveContainerName(SessionId sessionId, String labId, EngineType engine) {
+        return resolveContainerName(engine);
     }
 
     public static List<String> buildRunCommand(String containerName, EngineType engine) {

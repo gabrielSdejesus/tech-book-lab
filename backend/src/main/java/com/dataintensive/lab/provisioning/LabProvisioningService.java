@@ -43,7 +43,7 @@ public class LabProvisioningService {
         EngineType requiredEngine = resolveRequiredEngine(lab, challengeId);
         int port = resolveDefaultPort(requiredEngine);
         String sessionKey = toKey(sessionId, labId);
-        String containerName = DockerComposeLabManager.resolveContainerName(sessionId, lab.id(), requiredEngine);
+        String containerName = DockerComposeLabManager.resolveContainerName(requiredEngine);
 
         LabSession currentSession = activeSessions.get(sessionKey);
         if (currentSession != null && currentSession.status() == LabEnvironmentStatus.READY) {
@@ -109,7 +109,7 @@ public class LabProvisioningService {
         LabSession session = activeSessions.get(sessionKey);
 
         if (session == null || !session.labId().equals(labId) || session.engineType() != requiredEngine) {
-            String containerName = DockerComposeLabManager.resolveContainerName(sessionId, lab.id(), requiredEngine);
+            String containerName = DockerComposeLabManager.resolveContainerName(requiredEngine);
             return new LabSession(
                     sessionId,
                     lab.id(),
@@ -163,7 +163,7 @@ public class LabProvisioningService {
 
         Lab lab = catalogRepository.findLabById(labId)
                 .orElseThrow(() -> new LabNotFoundException(labId));
-        String containerName = DockerComposeLabManager.resolveContainerName(sessionId, lab.id(), lab.engineType());
+        String containerName = DockerComposeLabManager.resolveContainerName(lab.engineType());
         return new LabSession(sessionId, lab.id(), null, containerName, lab.engineType(), LabEnvironmentStatus.STOPPED, Instant.now(), resolveDefaultPort(lab.engineType()), null);
     }
 
