@@ -8,7 +8,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.*;
 
 class QueryExecutionServiceTest {
 
@@ -70,5 +70,44 @@ class QueryExecutionServiceTest {
                 com.dataintensive.lab.domain.DomainValidationException.class,
                 () -> queryExecutionService.resetLab("lab-fantasma")
         );
+    }
+
+    @Test
+    @DisplayName("Deve executar reset de schema no Postgres e scripts do laboratório")
+    void shouldExecutePostgresSchemaResetAndLabResetSqlWhenResettingPostgresDatabase() {
+        QueryEngineExecutor pgExecutor = mock(QueryEngineExecutor.class);
+        when(pgExecutor.getEngineType()).thenReturn(EngineType.POSTGRES);
+        when(pgExecutor.execute(anyString(), anyLong())).thenReturn(QueryResult.ok(java.util.List.of(), java.util.List.of(), 10));
+
+        QueryEngineRegistry registry = new QueryEngineRegistry(java.util.List.of(pgExecutor));
+        QueryExecutionService service = new QueryExecutionService(registry, catalogService);
+
+        com.dataintensive.lab.domain.Lab testLab = new com.dataintensive.lab.domain.Lab(
+                "lab-1", 1, "slug", "Title", "Summary", java.util.List.of(), EngineType.POSTGRES, "tbl_lab", "DROP TABLE IF EXISTS custom_tbl CASCADE;", java.util.List.of()
+        );
+
+        service.resetDatabase(EngineType.POSTGRES, testLab);
+
+        verify(pgExecutor).execute(contains("DROP SCHEMA IF EXISTS public CASCADE"), anyLong());
+        verify(pgExecutor).execute(eq("DROP TABLE IF EXISTS custom_tbl CASCADE;"), anyLong());
+    }
+
+    @Test
+    @DisplayName("Deve executar DETACH DELETE no Neo4j ao resetar banco do motor Neo4j")
+    void shouldExecuteCypherDetachDeleteWhenResettingNeo4jDatabase() {
+        QueryEngineExecutor neoExecutor = mock(QueryEngineExecutor.class);
+        when(neoExecutor.getEngineType()).thenReturn(EngineType.NEO4J);
+        when(neoExecutor.execute(anyString(), anyLong())).thenReturn(QueryResult.ok(java.util.List.of(), java.util.List.of(), 10));
+
+        QueryEngineRegistry registry = new QueryEngineRegistry(java.util.List.of(neoExecutor));
+        QueryExecutionService service = new QueryExecutionService(registry, catalogService);
+
+        com.dataintensive.lab.domain.Lab testLab = new com.dataintensive.lab.domain.Lab(
+                "lab-2", 2, "slug2", "Title2", "Summary2", java.util.List.of(), EngineType.NEO4J, "neo4j", null, java.util.List.of()
+        );
+
+        service.resetDatabase(EngineType.NEO4J, testLab);
+
+        verify(neoExecutor).execute(eq("MATCH (n) DETACH DELETE n;"), anyLong());
     }
 }
