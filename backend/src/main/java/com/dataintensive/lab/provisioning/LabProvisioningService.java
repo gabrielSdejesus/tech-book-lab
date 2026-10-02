@@ -25,19 +25,32 @@ public class LabProvisioningService {
     private final LabProvisioningProperties properties;
     private final java.time.Clock clock;
     private final EngineLifecycleCoordinator lifecycleCoordinator;
+    private final Optional<LabDatabaseResetter> databaseResetter;
     private final Map<String, LabSession> activeSessions = new ConcurrentHashMap<>();
+    private final Map<SessionId, String> lastResetLabBySession = new ConcurrentHashMap<>();
 
     @Autowired
     public LabProvisioningService(CatalogRepository catalogRepository,
                                   LabContainerManager containerManager,
                                   LabProvisioningProperties properties,
                                   Optional<java.time.Clock> clock,
-                                  Optional<EngineLifecycleCoordinator> lifecycleCoordinator) {
+                                  Optional<EngineLifecycleCoordinator> lifecycleCoordinator,
+                                  Optional<LabDatabaseResetter> databaseResetter) {
         this.catalogRepository = catalogRepository;
         this.containerManager = containerManager;
         this.properties = properties != null ? properties : new LabProvisioningProperties();
         this.clock = clock.orElse(java.time.Clock.systemUTC());
         this.lifecycleCoordinator = lifecycleCoordinator.orElseGet(EngineLifecycleCoordinator::new);
+        this.databaseResetter = databaseResetter != null ? databaseResetter : Optional.empty();
+    }
+
+    public LabProvisioningService(CatalogRepository catalogRepository,
+                                  LabContainerManager containerManager,
+                                  LabProvisioningProperties properties,
+                                  java.time.Clock clock,
+                                  EngineLifecycleCoordinator lifecycleCoordinator,
+                                  LabDatabaseResetter databaseResetter) {
+        this(catalogRepository, containerManager, properties, Optional.ofNullable(clock), Optional.ofNullable(lifecycleCoordinator), Optional.ofNullable(databaseResetter));
     }
 
     public LabProvisioningService(CatalogRepository catalogRepository,
@@ -45,24 +58,20 @@ public class LabProvisioningService {
                                   LabProvisioningProperties properties,
                                   java.time.Clock clock,
                                   EngineLifecycleCoordinator lifecycleCoordinator) {
-        this.catalogRepository = catalogRepository;
-        this.containerManager = containerManager;
-        this.properties = properties != null ? properties : new LabProvisioningProperties();
-        this.clock = clock != null ? clock : java.time.Clock.systemUTC();
-        this.lifecycleCoordinator = lifecycleCoordinator != null ? lifecycleCoordinator : new EngineLifecycleCoordinator();
+        this(catalogRepository, containerManager, properties, Optional.ofNullable(clock), Optional.ofNullable(lifecycleCoordinator), Optional.empty());
     }
 
     public LabProvisioningService(CatalogRepository catalogRepository,
                                   LabContainerManager containerManager,
                                   LabProvisioningProperties properties,
                                   java.time.Clock clock) {
-        this(catalogRepository, containerManager, properties, clock, new EngineLifecycleCoordinator());
+        this(catalogRepository, containerManager, properties, clock, new EngineLifecycleCoordinator(), null);
     }
 
     public LabProvisioningService(CatalogRepository catalogRepository,
                                   LabContainerManager containerManager,
                                   LabProvisioningProperties properties) {
-        this(catalogRepository, containerManager, properties, java.time.Clock.systemUTC(), new EngineLifecycleCoordinator());
+        this(catalogRepository, containerManager, properties, java.time.Clock.systemUTC(), new EngineLifecycleCoordinator(), null);
     }
 
 
@@ -98,6 +107,7 @@ public class LabProvisioningService {
             } else {
                 // Mesmo motor já em execução e saudável
                 if (containerManager.isEngineHealthy(requiredEngine, currentSession.allocatedPort())) {
+                    resetDatabaseIfNewLab(sessionId, requiredEngine, lab);
                     LabSession updated = new LabSession(
                             sessionId,
                             lab.id(),
@@ -117,6 +127,7 @@ public class LabProvisioningService {
 
         // Se o teardown foi cancelado a tempo e o contêiner já está saudável, mantém READY diretamente
         if (teardownCancelled && containerManager.isEngineHealthy(requiredEngine, port)) {
+            resetDatabaseIfNewLab(sessionId, requiredEngine, lab);
             LabSession session = new LabSession(
                     sessionId,
                     lab.id(),
@@ -137,6 +148,9 @@ public class LabProvisioningService {
         boolean healthy = containerManager.isEngineHealthy(requiredEngine, port);
         LabEnvironmentStatus status = healthy ? LabEnvironmentStatus.READY : LabEnvironmentStatus.PROVISIONING;
 
+        if (healthy) {
+            resetDatabaseIfNewLab(sessionId, requiredEngine, lab);
+        }
 
         LabSession session = new LabSession(
                 sessionId,
@@ -184,12 +198,23 @@ public class LabProvisioningService {
 
         if (session.status() == LabEnvironmentStatus.PROVISIONING) {
             if (containerManager.isEngineHealthy(session.engineType(), session.allocatedPort())) {
+                resetDatabaseIfNewLab(sessionId, session.engineType(), lab);
                 session = session.withStatus(LabEnvironmentStatus.READY);
                 activeSessions.put(sessionKey, session);
             }
         }
 
         return session;
+    }
+
+    private void resetDatabaseIfNewLab(SessionId sessionId, EngineType engineType, Lab lab) {
+        String lastResetLab = lastResetLabBySession.get(sessionId);
+        if (lastResetLab == null || !lastResetLab.equals(lab.id())) {
+            log.info("Executando reset automático de banco para o motor {} no laboratório {} (sessão: {})...",
+                    engineType, lab.id(), sessionId);
+            databaseResetter.ifPresent(resetter -> resetter.resetDatabase(engineType, lab));
+            lastResetLabBySession.put(sessionId, lab.id());
+        }
     }
 
     public Optional<LabSession> getSession(SessionId sessionId, String labId) {

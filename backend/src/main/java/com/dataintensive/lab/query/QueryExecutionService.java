@@ -5,6 +5,9 @@ import com.dataintensive.lab.domain.DomainValidationException;
 import com.dataintensive.lab.domain.EngineType;
 import com.dataintensive.lab.domain.Lab;
 import com.dataintensive.lab.domain.QueryExecutionException;
+import com.dataintensive.lab.provisioning.LabDatabaseResetter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -13,7 +16,9 @@ import java.util.Map;
 import java.util.Optional;
 
 @Service
-public class QueryExecutionService {
+public class QueryExecutionService implements LabDatabaseResetter {
+
+    private static final Logger log = LoggerFactory.getLogger(QueryExecutionService.class);
 
     private final QueryEngineRegistry engineRegistry;
     private final CatalogService catalogService;
@@ -74,5 +79,29 @@ public class QueryExecutionService {
         }
 
         return execute(new QueryRequest(lab.resetSchemaSql(), lab.engineType(), lab.id()));
+    }
+
+    @Override
+    public void resetDatabase(EngineType engineType, Lab lab) {
+        String cleanSql;
+        if (engineType == EngineType.NEO4J) {
+            cleanSql = "MATCH (n) DETACH DELETE n;";
+        } else {
+            cleanSql = "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO postgres; GRANT ALL ON SCHEMA public TO public;";
+        }
+
+        try {
+            execute(new QueryRequest(cleanSql, engineType, null));
+        } catch (Exception e) {
+            log.warn("Erro ao executar limpeza geral do banco de dados (motor {}): {}", engineType, e.getMessage());
+        }
+
+        if (lab != null && lab.resetSchemaSql() != null && !lab.resetSchemaSql().isBlank()) {
+            try {
+                execute(new QueryRequest(lab.resetSchemaSql(), engineType, null));
+            } catch (Exception e) {
+                log.warn("Erro ao executar resetSchemaSql do laboratório {}: {}", lab.id(), e.getMessage());
+            }
+        }
     }
 }

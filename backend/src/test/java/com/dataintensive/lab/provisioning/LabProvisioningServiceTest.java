@@ -30,6 +30,9 @@ class LabProvisioningServiceTest {
     @Mock
     private LabContainerManager containerManager;
 
+    @Mock
+    private LabDatabaseResetter databaseResetter;
+
     private LabProvisioningService provisioningService;
 
     private final SessionId sessionId = SessionId.of(UUID.randomUUID().toString());
@@ -84,7 +87,7 @@ class LabProvisioningServiceTest {
         properties = new LabProvisioningProperties();
         clock = new MutableClock(Instant.parse("2026-10-02T12:00:00Z"));
         lifecycleCoordinator = new EngineLifecycleCoordinator();
-        provisioningService = new LabProvisioningService(catalogRepository, containerManager, properties, clock, lifecycleCoordinator);
+        provisioningService = new LabProvisioningService(catalogRepository, containerManager, properties, clock, lifecycleCoordinator, databaseResetter);
     }
 
     @org.junit.jupiter.api.AfterEach
@@ -335,5 +338,63 @@ class LabProvisioningServiceTest {
         verify(containerManager, never()).stopEngine(EngineType.POSTGRES);
         verify(containerManager, times(1)).startEngine(EngineType.POSTGRES);
     }
+
+    @Test
+    @DisplayName("Deve executar reset automático do banco de dados ao provisionar novo laboratório para a sessão")
+    void shouldResetDatabaseWhenProvisioningNewLabForSession() {
+        when(catalogRepository.findLabById(validLabId)).thenReturn(Optional.of(mockLab));
+        when(containerManager.isEngineHealthy(EngineType.POSTGRES, 5432)).thenReturn(true);
+
+        LabSession session = provisioningService.provisionLab(sessionId, validLabId);
+
+        assertThat(session.status()).isEqualTo(LabEnvironmentStatus.READY);
+        verify(databaseResetter, times(1)).resetDatabase(EngineType.POSTGRES, mockLab);
+    }
+
+    @Test
+    @DisplayName("Não deve executar reset automático do banco ao re-provisionar o mesmo laboratório na sessão")
+    void shouldNotResetDatabaseWhenReprovisioningSameLabInSession() {
+        when(catalogRepository.findLabById(validLabId)).thenReturn(Optional.of(mockLab));
+        when(containerManager.isEngineHealthy(EngineType.POSTGRES, 5432)).thenReturn(true);
+
+        // Primeiro provisionamento do Lab 1
+        provisioningService.provisionLab(sessionId, validLabId);
+        verify(databaseResetter, times(1)).resetDatabase(EngineType.POSTGRES, mockLab);
+
+        // Segundo provisionamento do MESMO Lab 1 (ex: troca de desafio ou reload)
+        provisioningService.provisionLab(sessionId, validLabId, "lab-01-ch-2");
+        // O reset NÃO deve ter sido chamado novamente
+        verify(databaseResetter, times(1)).resetDatabase(EngineType.POSTGRES, mockLab);
+    }
+
+    @Test
+    @DisplayName("Deve executar reset do banco ao alternar entre laboratórios diferentes")
+    void shouldResetDatabaseWhenSwitchingBetweenDifferentLabs() {
+        Lab thirdLab = new Lab(
+                "ddia-cap-03-lab-03",
+                3,
+                "modelagem-dimensional-olap",
+                "Modelagem Dimensional OLAP",
+                "Sumário",
+                List.of(),
+                EngineType.POSTGRES,
+                "tbl_lab",
+                "DROP TABLE IF EXISTS fato_vendas;",
+                List.of()
+        );
+
+        when(catalogRepository.findLabById(validLabId)).thenReturn(Optional.of(mockLab));
+        when(catalogRepository.findLabById("ddia-cap-03-lab-03")).thenReturn(Optional.of(thirdLab));
+        when(containerManager.isEngineHealthy(EngineType.POSTGRES, 5432)).thenReturn(true);
+
+        // 1. Provisiona Lab 1 -> deve resetar para Lab 1
+        provisioningService.provisionLab(sessionId, validLabId);
+        verify(databaseResetter, times(1)).resetDatabase(EngineType.POSTGRES, mockLab);
+
+        // 2. Transita para Lab 3 (outro lab do mesmo motor POSTGRES) -> deve resetar para Lab 3
+        provisioningService.provisionLab(sessionId, "ddia-cap-03-lab-03");
+        verify(databaseResetter, times(1)).resetDatabase(EngineType.POSTGRES, thirdLab);
+    }
 }
+
 
