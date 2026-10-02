@@ -17,6 +17,7 @@ describe('labProvisioning API client', () => {
         engineType: 'POSTGRES',
         status: 'READY',
         allocatedPort: 5432,
+        heartbeatIntervalSeconds: 30,
       }),
     } as any);
 
@@ -31,6 +32,7 @@ describe('labProvisioning API client', () => {
     });
     expect(result.status).toBe('READY');
     expect(result.containerName).toBe('tbl-lab-postgres');
+    expect(result.heartbeatIntervalSeconds).toBe(30);
   });
 
   it('deve chamar GET /api/lab/:labId/status com header X-Session-Id', async () => {
@@ -58,13 +60,13 @@ describe('labProvisioning API client', () => {
     expect(result.containerName).toBe('tbl-lab-postgres');
   });
 
-  it('deve chamar POST /api/lab/:labId/heartbeat com header X-Session-Id e retornar TTL de 60s (1 minuto)', async () => {
+  it('deve chamar POST /api/lab/:labId/heartbeat com header X-Session-Id e retornar TTL de 900s (15 minutos)', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         status: 'ACK',
         labId: 'ddia-cap-03-lab-01',
-        ttlRemainingSeconds: 60,
+        ttlRemainingSeconds: 900,
         lastHeartbeatAt: Date.now(),
       }),
     } as any);
@@ -79,7 +81,7 @@ describe('labProvisioning API client', () => {
       },
     });
     expect(result.status).toBe('ACK');
-    expect(result.ttlRemainingSeconds).toBe(60);
+    expect(result.ttlRemainingSeconds).toBe(900);
   });
 
   it('deve chamar POST /api/lab/:labId/teardown com header X-Session-Id', async () => {

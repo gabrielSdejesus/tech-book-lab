@@ -11,13 +11,15 @@ import java.time.Duration;
 public class LabInactivityMonitor {
 
     private final LabProvisioningService provisioningService;
+    private final LabProvisioningProperties properties;
 
-    public LabInactivityMonitor(LabProvisioningService provisioningService) {
+    public LabInactivityMonitor(LabProvisioningService provisioningService, LabProvisioningProperties properties) {
         this.provisioningService = provisioningService;
+        this.properties = properties;
     }
 
     @Scheduled(fixedDelay = 15000)
     public void monitorInactivity() {
-        provisioningService.cleanupInactiveSessions(Duration.ofMinutes(1));
+        provisioningService.cleanupInactiveSessions(Duration.ofMinutes(properties.getInactivityTimeoutMinutes()));
     }
 }

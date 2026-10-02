@@ -11,8 +11,22 @@ public record LabProvisionResponse(
         LabEnvironmentStatus status,
         String message,
         int allocatedPort,
-        int estimatedWaitSeconds
+        int estimatedWaitSeconds,
+        int heartbeatIntervalSeconds
 ) {
+    public LabProvisionResponse(
+            String labId,
+            String challengeId,
+            String containerName,
+            EngineType engineType,
+            LabEnvironmentStatus status,
+            String message,
+            int allocatedPort,
+            int estimatedWaitSeconds
+    ) {
+        this(labId, challengeId, containerName, engineType, status, message, allocatedPort, estimatedWaitSeconds, 30);
+    }
+
     public LabProvisionResponse(
             String labId,
             String challengeId,
@@ -22,7 +36,7 @@ public record LabProvisionResponse(
             int allocatedPort,
             int estimatedWaitSeconds
     ) {
-        this(labId, challengeId, null, engineType, status, message, allocatedPort, estimatedWaitSeconds);
+        this(labId, challengeId, null, engineType, status, message, allocatedPort, estimatedWaitSeconds, 30);
     }
 
     public LabProvisionResponse(
@@ -33,6 +47,6 @@ public record LabProvisionResponse(
             int allocatedPort,
             int estimatedWaitSeconds
     ) {
-        this(labId, null, null, engineType, status, message, allocatedPort, estimatedWaitSeconds);
+        this(labId, null, null, engineType, status, message, allocatedPort, estimatedWaitSeconds, 30);
     }
 }
