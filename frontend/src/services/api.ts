@@ -132,8 +132,13 @@ export async function testAiConnection(req: AiTestConnectionRequest): Promise<Ai
   return res.json();
 }
 
-export async function getAiProviders(): Promise<AiProviderInfo[]> {
-  const res = await fetch(`${API_BASE}/ai/providers`);
+export async function getAiProviders(locale?: string): Promise<AiProviderInfo[]> {
+  const activeLocale = locale || getActiveLocale();
+  const res = await fetch(`${API_BASE}/ai/providers`, {
+    headers: {
+      'Accept-Language': activeLocale,
+    },
+  });
   if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao consultar provedores de IA'));
   return res.json();
 }

@@ -9,11 +9,11 @@ public enum AssessmentLanguage {
             return PT;
         }
         String clean = raw.trim().toLowerCase();
-        if (clean.equals("pt") || clean.equals("pt-br") || clean.equals("pt_br")) {
-            return PT;
-        }
-        if (clean.equals("en") || clean.equals("en-us") || clean.equals("en_us")) {
+        if (clean.startsWith("en")) {
             return EN;
+        }
+        if (clean.startsWith("pt")) {
+            return PT;
         }
         throw new IllegalArgumentException("Idioma '" + raw + "' não suportado. Idiomas válidos permitidos: 'pt', 'en'.");
     }

@@ -19,8 +19,9 @@ public class AiAssessmentController {
     }
 
     @GetMapping("/providers")
-    public ResponseEntity<java.util.List<AiProviderInfo>> getProviders() {
-        return ResponseEntity.ok(aiAssessmentService.getAvailableProviders());
+    public ResponseEntity<java.util.List<AiProviderInfo>> getProviders(
+            @RequestHeader(value = "Accept-Language", required = false) String acceptLanguage) {
+        return ResponseEntity.ok(aiAssessmentService.getAvailableProviders(acceptLanguage));
     }
 
     @PostMapping("/test-connection")

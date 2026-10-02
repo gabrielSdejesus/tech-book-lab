@@ -46,7 +46,7 @@ export const Navbar: React.FC<Props> = ({
               onNavigateBookshelf ? 'cursor-pointer hover:scale-105 transition-transform' : ''
             }`}
             onClick={onNavigateBookshelf}
-            title={onNavigateBookshelf ? 'Ir para a Estante de Livros' : undefined}
+            title={onNavigateBookshelf ? (t.common.goToBookshelf || (locale === 'pt' ? 'Ir para a Estante de Livros' : 'Go to Bookshelf')) : undefined}
           >
             <BookOpen className="w-5 h-5 stroke-[2.2]" />
           </div>
@@ -55,7 +55,7 @@ export const Navbar: React.FC<Props> = ({
         <div
           role={onNavigateBookshelf ? 'button' : undefined}
           tabIndex={onNavigateBookshelf ? 0 : undefined}
-          aria-label={onNavigateBookshelf ? (t.common.goToBookshelf || 'Ir para a Estante de Livros') : undefined}
+          aria-label={onNavigateBookshelf ? (t.common.goToBookshelf || (locale === 'pt' ? 'Ir para a Estante de Livros' : 'Go to Bookshelf')) : undefined}
           className={`${onNavigateBookshelf ? 'cursor-pointer group focus-visible:outline-2 focus-visible:outline-[#8f1d1d] focus-visible:outline-offset-2 dark:focus-visible:outline-[#df4444]' : ''}`}
           onClick={onNavigateBookshelf}
           onKeyDown={(e) => {
@@ -64,7 +64,7 @@ export const Navbar: React.FC<Props> = ({
               onNavigateBookshelf();
             }
           }}
-          title={onNavigateBookshelf ? (t.common.goToBookshelf || 'Ir para a Estante de Livros') : undefined}
+          title={onNavigateBookshelf ? (t.common.goToBookshelf || (locale === 'pt' ? 'Ir para a Estante de Livros' : 'Go to Bookshelf')) : undefined}
         >
           <div className="flex items-center gap-2">
             <h1 className="text-lg font-serif font-black tracking-tight text-stone-900 dark:text-stone-100 uppercase group-hover:text-[#8f1d1d] dark:group-hover:text-[#df4444] transition-colors">
@@ -75,7 +75,7 @@ export const Navbar: React.FC<Props> = ({
             </span>
           </div>
           <p className="text-xs font-serif italic text-stone-600 dark:text-stone-400">
-            Caderno de Estudos Práticos &bull; {isBookshelfActive ? 'Catálogo Geral' : selectedBookTitle}
+            {t.navbar.practicalNotebook} &bull; {isBookshelfActive ? t.navbar.generalCatalog : selectedBookTitle}
           </p>
         </div>
       </div>
@@ -90,7 +90,7 @@ export const Navbar: React.FC<Props> = ({
             className="flex items-center gap-1.5 px-3 py-1.5 bg-[#efebe1] dark:bg-[#23211e] hover:bg-[#e4dfd3] dark:hover:bg-[#2e2b27] border-2 border-stone-800 dark:border-stone-700 text-stone-900 dark:text-stone-200 text-xs font-mono font-bold tracking-tight transition-all book-shadow-sm book-shadow-pressed"
           >
             <Library className="w-3.5 h-3.5 text-[#8f1d1d] dark:text-[#df4444]" />
-            <span>{t.common.bookshelf.toUpperCase()}</span>
+            <span>{(t.common.bookshelf || (locale === 'pt' ? 'Estante de Livros' : 'Bookshelf')).toUpperCase()}</span>
           </button>
         )}
         {/* Theme Toggle Button */}

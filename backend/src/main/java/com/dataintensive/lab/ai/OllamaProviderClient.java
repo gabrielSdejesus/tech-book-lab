@@ -1,5 +1,6 @@
 package com.dataintensive.lab.ai;
 
+import com.dataintensive.lab.domain.AssessmentLanguage;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,21 +50,29 @@ public class OllamaProviderClient implements AiProviderClient {
     }
 
     @Override
-    public AiProviderInfo getInfo() {
+    public AiProviderInfo getInfo(AssessmentLanguage language) {
+        boolean isEn = language == AssessmentLanguage.EN;
         return new AiProviderInfo(
                 "ollama",
                 "Ollama Local",
-                "Execução local e privada via Ollama (sem necessidade de API Key).",
+                isEn
+                        ? "Local and private execution via Ollama (no API key required)."
+                        : "Execução local e privada via Ollama (sem necessidade de API Key).",
                 false,
                 "",
                 "https://ollama.com/",
                 defaultModel,
                 List.of(
-                        new AiModelInfo("qwen2.5-coder:1.5b", "Qwen 2.5 Coder 1.5B (Recomendado)", true),
+                        new AiModelInfo("qwen2.5-coder:1.5b", isEn ? "Qwen 2.5 Coder 1.5B (Recommended)" : "Qwen 2.5 Coder 1.5B (Recomendado)", true),
                         new AiModelInfo("deepseek-r1:1.5b", "DeepSeek R1 1.5B", false),
                         new AiModelInfo("llama3.2:1b", "Llama 3.2 1B", false)
                 )
         );
+    }
+
+    @Override
+    public AiProviderInfo getInfo() {
+        return getInfo(AssessmentLanguage.PT);
     }
 
     @Override
