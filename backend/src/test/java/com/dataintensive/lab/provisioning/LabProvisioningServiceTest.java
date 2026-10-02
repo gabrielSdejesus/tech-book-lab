@@ -198,6 +198,7 @@ class LabProvisioningServiceTest {
     @Test
     @DisplayName("Deve executar teardown explícito do contêiner e marcar como STOPPED")
     void shouldTeardownExplicitly() {
+        properties.setTeardownGracePeriodSeconds(0);
         when(catalogRepository.findLabById(validLabId)).thenReturn(Optional.of(mockLab));
         when(containerManager.isEngineHealthy(EngineType.POSTGRES, 5432)).thenReturn(true);
 
@@ -207,6 +208,7 @@ class LabProvisioningServiceTest {
         assertThat(stopped.status()).isEqualTo(LabEnvironmentStatus.STOPPED);
         verify(containerManager).stopEngine(EngineType.POSTGRES);
     }
+
 
     @Test
     @DisplayName("Deve desprovisionar automaticamente sessões inativas há mais de 15 minutos")

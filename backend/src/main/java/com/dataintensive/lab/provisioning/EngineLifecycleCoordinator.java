@@ -30,6 +30,11 @@ public class EngineLifecycleCoordinator {
     public void scheduleTeardown(EngineType engine, Duration gracePeriod, Runnable teardownAction) {
         cancelScheduledTeardown(engine);
 
+        if (gracePeriod == null || gracePeriod.isZero() || gracePeriod.isNegative()) {
+            executeExclusive(engine, teardownAction);
+            return;
+        }
+
         log.info("Agendando teardown do motor {} com grace period de {}ms...", engine, gracePeriod.toMillis());
 
         ScheduledFuture<?> future = scheduler.schedule(() -> {
@@ -58,21 +63,36 @@ public class EngineLifecycleCoordinator {
         return future != null && !future.isDone();
     }
 
-    public Future<?> executeExclusive(EngineType engine, Runnable action) {
+    public void executeExclusive(EngineType engine, Runnable action) {
+        cancelScheduledTeardown(engine);
+
         ExecutorService executor = engineExecutors.computeIfAbsent(engine, e -> Executors.newSingleThreadExecutor(r -> {
             Thread t = new Thread(r, "engine-coord-" + e.name().toLowerCase());
             t.setDaemon(true);
             return t;
         }));
 
-        return executor.submit(() -> {
-            try {
-                action.run();
-            } catch (Exception e) {
-                log.error("Erro ao executar ação exclusiva no motor {}: {}", engine, e.getMessage(), e);
-                throw e;
+        try {
+            executor.submit(() -> {
+                try {
+                    action.run();
+                } catch (Exception e) {
+                    log.error("Erro ao executar ação exclusiva no motor {}: {}", engine, e.getMessage(), e);
+                    throw e;
+                }
+            }).get(45, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Operação interrompida no motor " + engine, e);
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof RuntimeException re) {
+                throw re;
             }
-        });
+            throw new RuntimeException("Erro ao executar ação exclusiva no motor " + engine, cause);
+        } catch (TimeoutException e) {
+            throw new RuntimeException("Timeout ao executar ação exclusiva no motor " + engine, e);
+        }
     }
 
     @PreDestroy

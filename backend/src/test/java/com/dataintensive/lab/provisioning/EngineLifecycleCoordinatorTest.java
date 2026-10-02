@@ -81,26 +81,33 @@ class EngineLifecycleCoordinatorTest {
         List<String> executionLog = Collections.synchronizedList(new ArrayList<>());
         CountDownLatch latch = new CountDownLatch(2);
 
-        coordinator.executeExclusive(EngineType.POSTGRES, () -> {
-            try {
-                Thread.sleep(80);
-                executionLog.add("STOP_DONE");
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            } finally {
+        new Thread(() -> {
+            coordinator.executeExclusive(EngineType.POSTGRES, () -> {
+                try {
+                    Thread.sleep(80);
+                    executionLog.add("STOP_DONE");
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }).start();
+
+        Thread.sleep(15);
+
+        new Thread(() -> {
+            coordinator.executeExclusive(EngineType.POSTGRES, () -> {
+                executionLog.add("START_DONE");
                 latch.countDown();
-            }
-        });
+            });
+        }).start();
 
-        coordinator.executeExclusive(EngineType.POSTGRES, () -> {
-            executionLog.add("START_DONE");
-            latch.countDown();
-        });
-
-        boolean completed = latch.await(1, TimeUnit.SECONDS);
+        boolean completed = latch.await(2, TimeUnit.SECONDS);
         assertThat(completed).isTrue();
         assertThat(executionLog).containsExactly("STOP_DONE", "START_DONE");
     }
+
 
     @Test
     @DisplayName("Deve renovar o debounce caso um novo teardown seja agendado para o mesmo motor")
