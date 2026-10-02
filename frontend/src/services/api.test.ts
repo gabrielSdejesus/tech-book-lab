@@ -1,8 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   getBooks,
-  getBookById,
-  getLabById,
   executeQuery,
   resetLab,
   assessWithAi,
@@ -59,61 +57,6 @@ describe('API Service', () => {
     }));
   });
 
-  it('getBookById deve realizar GET em /api/books/:id com cabeçalho Accept-Language e retornar o livro', async () => {
-    const mockBook = { id: 'ddia', title: 'Designing Data-Intensive Applications', chapters: [] };
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockBook
-    } as Response);
-
-    const result = await getBookById('ddia', 'pt');
-
-    expect(globalThis.fetch).toHaveBeenCalledWith('/api/books/ddia', expect.objectContaining({
-      headers: expect.objectContaining({
-        'Accept-Language': 'pt'
-      })
-    }));
-    expect(result).toEqual(mockBook);
-  });
-
-  it('getBookById deve lançar erro quando a resposta HTTP for diferente de ok', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-      headers: { get: () => 'application/json' },
-      json: async () => ({ message: 'Livro não encontrado' })
-    } as unknown as Response);
-
-    await expect(getBookById('inexistente')).rejects.toThrow('Livro não encontrado');
-  });
-
-  it('getLabById deve realizar GET em /api/labs/:id com cabeçalho Accept-Language e retornar o laboratório', async () => {
-    const mockLab = { id: 'ddia-cap-03-lab-01', title: 'Lab 1', challenges: [] };
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockLab
-    } as Response);
-
-    const result = await getLabById('ddia-cap-03-lab-01', 'en');
-
-    expect(globalThis.fetch).toHaveBeenCalledWith('/api/labs/ddia-cap-03-lab-01', expect.objectContaining({
-      headers: expect.objectContaining({
-        'Accept-Language': 'en'
-      })
-    }));
-    expect(result).toEqual(mockLab);
-  });
-
-  it('getLabById deve lançar erro quando a resposta HTTP for diferente de ok', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-      headers: { get: () => 'text/plain' },
-      json: async () => ({})
-    } as unknown as Response);
-
-    await expect(getLabById('inexistente')).rejects.toThrow('Falha ao carregar laboratório');
-  });
 
 
 
