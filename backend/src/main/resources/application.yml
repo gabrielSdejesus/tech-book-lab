@@ -32,6 +32,9 @@ lab:
     uri: bolt://localhost:7687
     username: neo4j
     password: tblpassword
+  provisioning:
+    inactivity-timeout-minutes: ${LAB_PROVISIONING_INACTIVITY_TIMEOUT_MINUTES:15}
+    heartbeat-interval-seconds: ${LAB_PROVISIONING_HEARTBEAT_INTERVAL_SECONDS:30}
   ai:
     provider: ${AI_PROVIDER:gemini} # gemini, ollama, or heuristic
     gemini:
