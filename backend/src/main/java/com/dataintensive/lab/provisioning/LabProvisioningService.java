@@ -27,6 +27,7 @@ public class LabProvisioningService {
     private final EngineLifecycleCoordinator lifecycleCoordinator;
     private final Optional<LabDatabaseResetter> databaseResetter;
     private final Map<String, LabSession> activeSessions = new ConcurrentHashMap<>();
+    private final Map<SessionId, String> lastResetLabBySession = new ConcurrentHashMap<>();
 
     @Autowired
     public LabProvisioningService(CatalogRepository catalogRepository,
@@ -106,6 +107,7 @@ public class LabProvisioningService {
             } else {
                 // Mesmo motor já em execução e saudável
                 if (containerManager.isEngineHealthy(requiredEngine, currentSession.allocatedPort())) {
+                    resetDatabaseIfNewLab(sessionId, requiredEngine, lab);
                     LabSession updated = new LabSession(
                             sessionId,
                             lab.id(),
@@ -125,6 +127,7 @@ public class LabProvisioningService {
 
         // Se o teardown foi cancelado a tempo e o contêiner já está saudável, mantém READY diretamente
         if (teardownCancelled && containerManager.isEngineHealthy(requiredEngine, port)) {
+            resetDatabaseIfNewLab(sessionId, requiredEngine, lab);
             LabSession session = new LabSession(
                     sessionId,
                     lab.id(),
@@ -145,6 +148,9 @@ public class LabProvisioningService {
         boolean healthy = containerManager.isEngineHealthy(requiredEngine, port);
         LabEnvironmentStatus status = healthy ? LabEnvironmentStatus.READY : LabEnvironmentStatus.PROVISIONING;
 
+        if (healthy) {
+            resetDatabaseIfNewLab(sessionId, requiredEngine, lab);
+        }
 
         LabSession session = new LabSession(
                 sessionId,
@@ -192,12 +198,23 @@ public class LabProvisioningService {
 
         if (session.status() == LabEnvironmentStatus.PROVISIONING) {
             if (containerManager.isEngineHealthy(session.engineType(), session.allocatedPort())) {
+                resetDatabaseIfNewLab(sessionId, session.engineType(), lab);
                 session = session.withStatus(LabEnvironmentStatus.READY);
                 activeSessions.put(sessionKey, session);
             }
         }
 
         return session;
+    }
+
+    private void resetDatabaseIfNewLab(SessionId sessionId, EngineType engineType, Lab lab) {
+        String lastResetLab = lastResetLabBySession.get(sessionId);
+        if (lastResetLab == null || !lastResetLab.equals(lab.id())) {
+            log.info("Executando reset automático de banco para o motor {} no laboratório {} (sessão: {})...",
+                    engineType, lab.id(), sessionId);
+            databaseResetter.ifPresent(resetter -> resetter.resetDatabase(engineType, lab));
+            lastResetLabBySession.put(sessionId, lab.id());
+        }
     }
 
     public Optional<LabSession> getSession(SessionId sessionId, String labId) {
