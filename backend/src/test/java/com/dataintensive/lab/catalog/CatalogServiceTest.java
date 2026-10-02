@@ -123,4 +123,19 @@ class CatalogServiceTest {
         assertThat(result).contains(lab);
         verify(catalogRepository).findLabById("ddia-cap-03-lab-01", "en");
     }
+
+    @Test
+    @DisplayName("Deve delegar ao repositório para salvar solução de desafio")
+    void shouldDelegateSaveChallengeSolution() {
+        catalogService.saveChallengeSolution("lab-01-ch-1", "SELECT 1;");
+        verify(catalogRepository).saveChallengeSolution("lab-01-ch-1", "SELECT 1;");
+    }
+
+    @Test
+    @DisplayName("Deve delegar ao repositório para deletar solução de desafio")
+    void shouldDelegateDeleteChallengeSolution() {
+        catalogService.deleteChallengeSolution("lab-01-ch-1");
+        verify(catalogRepository).deleteChallengeSolution("lab-01-ch-1");
+    }
 }
+

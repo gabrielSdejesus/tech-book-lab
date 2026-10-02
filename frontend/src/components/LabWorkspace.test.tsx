@@ -12,6 +12,8 @@ vi.mock('../services/api', () => ({
   getBooks: vi.fn(),
   testAiConnection: vi.fn(),
   getInfraStatus: vi.fn().mockResolvedValue({}),
+  saveChallengeSolution: vi.fn().mockResolvedValue(undefined),
+  resetChallengeSolution: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../services/labProvisioning', () => ({
@@ -581,5 +583,88 @@ describe('LabWorkspace Component', () => {
     expect(codeTextarea.value).not.toMatch(/--|\/\/|\/\*|\*\//);
     expect(codeTextarea.value).toContain('CREATE TABLE IF NOT EXISTS usuarios');
   });
+
+  it('deve priorizar savedCode em relação a starterTemplate ao carregar o laboratório', async () => {
+    const labWithSavedCode: Lab = {
+      ...mockLab,
+      challenges: [
+        {
+          ...mockLab.challenges[0],
+          savedCode: 'SELECT id, nome FROM usuarios WHERE id = 42;'
+        }
+      ]
+    };
+
+    render(<LabWorkspace lab={labWithSavedCode} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i) as HTMLTextAreaElement;
+    expect(codeTextarea.value).toBe('SELECT id, nome FROM usuarios WHERE id = 42;');
+  });
+
+  it('deve acionar auto-save com debounce de 600ms após digitação no editor', async () => {
+    vi.useFakeTimers();
+
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
+    fireEvent.change(codeTextarea, { target: { value: 'SELECT * FROM usuarios WHERE ativo = true;' } });
+
+    // Após 300ms, ainda não deve ter chamado
+    vi.advanceTimersByTime(300);
+    expect(api.saveChallengeSolution).not.toHaveBeenCalled();
+
+    // Após mais 350ms (total > 600ms), deve ter chamado
+    vi.advanceTimersByTime(350);
+    expect(api.saveChallengeSolution).toHaveBeenCalledWith('lab-01-ch-1', 'SELECT * FROM usuarios WHERE ativo = true;');
+
+    vi.useRealTimers();
+  });
+
+  it('deve preservar o código digitado ao alternar entre exercícios do laboratório', async () => {
+    render(<LabWorkspace lab={mockHybridLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    // Digita no Exercício 1
+    const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
+    fireEvent.change(codeTextarea, { target: { value: 'MATCH (u:User) RETURN u;' } });
+
+    // Alterna para o Exercício 2
+    const exercise2Tab = screen.getByRole('button', { name: /Exercício 2/i });
+    fireEvent.click(exercise2Tab);
+
+    expect(codeTextarea).toHaveValue(mockHybridLab.challenges[1].starterTemplate);
+
+    // Retorna ao Exercício 1
+    const exercise1Tab = screen.getByRole('button', { name: /Exercício 1/i });
+    fireEvent.click(exercise1Tab);
+
+    // Deve preservar o que foi digitado
+    expect(codeTextarea).toHaveValue('MATCH (u:User) RETURN u;');
+  });
+
+  it('deve chamar resetChallengeSolution e restaurar starterTemplate ao clicar em Recarregar Template', async () => {
+    const labWithSavedCode: Lab = {
+      ...mockLab,
+      challenges: [
+        {
+          ...mockLab.challenges[0],
+          savedCode: 'SELECT custom_code;'
+        }
+      ]
+    };
+
+    render(<LabWorkspace lab={labWithSavedCode} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
+    expect(codeTextarea).toHaveValue('SELECT custom_code;');
+
+    const reloadBtn = screen.getByRole('button', { name: /Recarregar Template/i });
+    fireEvent.click(reloadBtn);
+
+    await waitFor(() => {
+      expect(api.resetChallengeSolution).toHaveBeenCalledWith('lab-01-ch-1');
+      expect(codeTextarea).toHaveValue(mockLab.challenges[0].starterTemplate);
+    });
+  });
 });
+
 

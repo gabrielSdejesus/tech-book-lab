@@ -92,4 +92,32 @@ class CatalogControllerTest {
         ResponseEntity<Lab> notFound = controller.getLabById("unknown", "en", null);
         assertThat(notFound.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
+
+    @Test
+    @DisplayName("saveChallengeSolution deve retornar 200 OK e delegar ao CatalogService")
+    void shouldSaveChallengeSolution() {
+        CatalogService mockService = mock(CatalogService.class);
+        CatalogController controller = new CatalogController(mockService);
+
+        ResponseEntity<Void> response = controller.saveChallengeSolution(
+                "lab-01-ch-1",
+                new CatalogController.SaveSolutionRequest("SELECT 1;")
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        verify(mockService).saveChallengeSolution("lab-01-ch-1", "SELECT 1;");
+    }
+
+    @Test
+    @DisplayName("deleteChallengeSolution deve retornar 200 OK e delegar ao CatalogService")
+    void shouldDeleteChallengeSolution() {
+        CatalogService mockService = mock(CatalogService.class);
+        CatalogController controller = new CatalogController(mockService);
+
+        ResponseEntity<Void> response = controller.deleteChallengeSolution("lab-01-ch-1");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        verify(mockService).deleteChallengeSolution("lab-01-ch-1");
+    }
 }
+

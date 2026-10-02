@@ -40,6 +40,14 @@ public class CatalogService {
         return catalogRepository.findLabById(labId, normalizeLocale(locale));
     }
 
+    public void saveChallengeSolution(String challengeId, String code) {
+        catalogRepository.saveChallengeSolution(challengeId, code);
+    }
+
+    public void deleteChallengeSolution(String challengeId) {
+        catalogRepository.deleteChallengeSolution(challengeId);
+    }
+
     private String normalizeLocale(String raw) {
         if (raw == null || raw.isBlank()) {
             return "pt";

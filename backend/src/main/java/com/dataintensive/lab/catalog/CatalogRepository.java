@@ -21,4 +21,8 @@ public interface CatalogRepository {
     default Optional<Lab> findLabById(String labIdOrSlug, String locale) {
         return findLabById(labIdOrSlug);
     }
+
+    void saveChallengeSolution(String challengeId, String code);
+
+    void deleteChallengeSolution(String challengeId);
 }
