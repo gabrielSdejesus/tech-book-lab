@@ -159,7 +159,7 @@ describe('LabWorkspace Component', () => {
     expect(screen.getByRole('button', { name: /Validar Solução \(Offline\)/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Consultar Tutor IA/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Validação Offline/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Tutor IA/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Tutor IA$/i })).toBeInTheDocument();
   });
 
   it('deve executar a validação offline ao clicar em "Validar Solução (Offline)" e exibir o parecer determinístico', async () => {
@@ -178,7 +178,7 @@ describe('LabWorkspace Component', () => {
     await waitFor(() => expect(validateBtn).not.toBeDisabled());
 
     const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
-    fireEvent.change(codeTextarea, { target: { value: 'CREATE TABLE IF NOT EXISTS usuarios (id INT PRIMARY KEY);' } });
+    fireEvent.change(codeTextarea, { target: { value: 'CREATE TABLE IF NOT EXISTS usuarios (id INT PRIMARY KEY, nome VARCHAR(100));' } });
 
     fireEvent.click(validateBtn);
 
@@ -241,7 +241,7 @@ describe('LabWorkspace Component', () => {
     await waitFor(() => expect(aiBtn).not.toBeDisabled());
 
     const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
-    fireEvent.change(codeTextarea, { target: { value: 'CREATE TABLE IF NOT EXISTS usuarios (id INT PRIMARY KEY);' } });
+    fireEvent.change(codeTextarea, { target: { value: 'CREATE TABLE IF NOT EXISTS usuarios (id INT PRIMARY KEY, nome VARCHAR(100));' } });
 
     fireEvent.click(aiBtn);
 
@@ -272,7 +272,7 @@ describe('LabWorkspace Component', () => {
     await waitFor(() => expect(aiBtn).not.toBeDisabled());
 
     const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
-    fireEvent.change(codeTextarea, { target: { value: 'CREATE TABLE IF NOT EXISTS usuarios (id INT PRIMARY KEY);' } });
+    fireEvent.change(codeTextarea, { target: { value: 'CREATE TABLE IF NOT EXISTS usuarios (id INT PRIMARY KEY, nome VARCHAR(100));' } });
 
     fireEvent.click(aiBtn);
 
@@ -394,7 +394,10 @@ describe('LabWorkspace Component', () => {
     const executeBtn = screen.getByRole('button', { name: /Executar/i });
     expect(executeBtn).toHaveClass('disabled:cursor-not-allowed');
 
-    const assessBtn = screen.getByRole('button', { name: /Submeter ao Tutor IA/i });
+    const validateBtn = screen.getByRole('button', { name: /Validar Solução \(Offline\)/i });
+    expect(validateBtn).toHaveClass('disabled:cursor-not-allowed');
+
+    const assessBtn = screen.getByRole('button', { name: /Consultar Tutor IA/i });
     expect(assessBtn).toHaveClass('disabled:cursor-not-allowed');
 
     const resetBtn = screen.getByRole('button', { name: /Restaurar/i });
@@ -492,7 +495,7 @@ describe('LabWorkspace Component', () => {
   it('deve bloquear envio ao Tutor IA via validação local se a query for apenas comentários ou template inalterado', async () => {
     render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
 
-    const assessBtn = screen.getByRole('button', { name: /Submeter ao Tutor IA/i });
+    const assessBtn = screen.getByRole('button', { name: /Consultar Tutor IA/i });
     await waitFor(() => expect(assessBtn).not.toBeDisabled());
 
     // Clica sem alterar o template
