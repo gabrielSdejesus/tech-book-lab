@@ -36,9 +36,13 @@ export interface TranslationSchema {
     reflectionPlaceholder: string;
     evaluateWithAi: string;
     evaluating: string;
+    validateOffline: string;
+    validatingOffline: string;
+    consultAiTutor: string;
     noResult: string;
     tabs: {
       results: string;
+      offlineValidation: string;
       aiTutor: string;
       json: string;
     };
@@ -53,8 +57,14 @@ export interface TranslationSchema {
     queryPlaceholder: string;
     emptyResultsPrompt: string;
     executionErrorTitle: string;
+    offlinePromptInstruction: string;
+    offlineExamining: string;
+    offlineBadge: string;
     aiPromptInstruction: string;
     aiExamining: string;
+    aiAuthPendingTitle: string;
+    aiAuthPendingAction: string;
+    aiErrorTitle: string;
     solutionApproved: string;
     revisionNeeded: string;
     modelLabel: string;

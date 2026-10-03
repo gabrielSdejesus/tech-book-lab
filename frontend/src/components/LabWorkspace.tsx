@@ -19,6 +19,8 @@ import {
   Play,
   RotateCcw,
   Sparkles,
+  ShieldCheck,
+  Key,
   Table as TableIcon,
   Code2,
   CheckCircle2,
@@ -38,9 +40,17 @@ interface Props {
   apiKey: string;
   provider: string;
   model: string;
+  onOpenAiSettings?: () => void;
 }
 
-export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, provider, model }) => {
+export const LabWorkspace: React.FC<Props> = ({
+  lab,
+  chapterNumber,
+  apiKey,
+  provider,
+  model,
+  onOpenAiSettings
+}) => {
   const { t, locale } = useLanguage();
 
   const [solutionsByChallenge, setSolutionsByChallenge] = useState<Record<string, string>>(() => {
@@ -63,10 +73,13 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
   const [executing, setExecuting] = useState(false);
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
 
+  const [validatingOffline, setValidatingOffline] = useState(false);
+  const [offlineResponse, setOfflineResponse] = useState<AiAssessmentResponse | null>(null);
+
   const [assessing, setAssessing] = useState(false);
   const [aiResponse, setAiResponse] = useState<AiAssessmentResponse | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'result' | 'ai' | 'json'>('result');
+  const [activeTab, setActiveTab] = useState<'result' | 'offline' | 'ai' | 'json'>('result');
   const [resetting, setResetting] = useState(false);
   const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
 
@@ -109,6 +122,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
       setQueryCode(first.savedCode || first.starterTemplate || '');
       setUserReflection('');
       setQueryResult(null);
+      setOfflineResponse(null);
       setAiResponse(null);
       setActiveTab('result');
     }
@@ -201,6 +215,7 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
     setQueryCode(code);
     setUserReflection('');
     setQueryResult(null);
+    setOfflineResponse(null);
     setAiResponse(null);
     setActiveTab('result');
   };
@@ -276,6 +291,86 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
     }
   };
 
+  const handleValidateOffline = async () => {
+    const cleanUser = queryCode
+      .replace(/--.*$|\/\/.*$/gm, '')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const cleanTemplate = (selectedChallenge.starterTemplate || '')
+      .replace(/--.*$|\/\/.*$/gm, '')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!cleanUser || cleanUser === cleanTemplate) {
+      setActiveTab('offline');
+      setOfflineResponse({
+        status: 'NEEDS_REVISION',
+        feedback:
+          locale === 'pt'
+            ? 'Nenhuma implementação submetida. O editor de código está vazio ou contém apenas o template de comentários inicial. Escreva os comandos do exercício e execute-os antes de solicitar a validação.'
+            : 'No implementation submitted. The code editor is empty or contains only the initial comment template. Write the exercise commands and run them before requesting validation.',
+        tradeOffAnalysis:
+          locale === 'pt'
+            ? 'Para examinar os trade-offs descritos no livro de Martin Kleppmann, você deve executar a consulta e comparar o comportamento das estruturas.'
+            : 'To examine the trade-offs described in Martin Kleppmann\'s book, you should execute the query and compare the behavior of the structures.',
+        efficiencyNotes: locale === 'pt' ? 'Nenhuma instrução executada.' : 'No instructions executed.',
+        alternativeApproaches: [
+          locale === 'pt'
+            ? 'Leia os requisitos do exercício na coluna à esquerda.'
+            : 'Read the exercise requirements in the column on the left.'
+        ],
+        modelUsed: locale === 'pt' ? 'Validador Local de Submissão' : 'Local Submission Validator'
+      });
+      return;
+    }
+
+    setValidatingOffline(true);
+    setActiveTab('offline');
+    try {
+      const executionSummary = queryResult
+        ? queryResult.success
+          ? `Sucesso. Linhas afetadas/retornadas: ${queryResult.rowCount}, Tempo: ${queryResult.executionTimeMs}ms. Amostra: ${JSON.stringify(
+              queryResult.rows.slice(0, 3)
+            )}`
+          : `Erro na execução do banco: ${queryResult.errorMessage}`
+        : 'Consulta ainda não foi executada no banco';
+
+      const response = await assessWithAi({
+        labId: lab.id,
+        challengeId: selectedChallenge.id,
+        userQuery: queryCode,
+        executionSummary,
+        userReflection,
+        apiKeyOverride: '',
+        providerOverride: 'heuristic',
+        modelOverride: 'rules-engine-v1',
+        language: locale
+      });
+
+      setOfflineResponse(response);
+    } catch (err: any) {
+      setOfflineResponse({
+        status: 'NEEDS_REVISION',
+        feedback:
+          locale === 'pt'
+            ? 'Falha ao executar validação offline: ' + (err.message || 'Erro inesperado')
+            : 'Failed to run offline validation: ' + (err.message || 'Unexpected error'),
+        tradeOffAnalysis:
+          locale === 'pt'
+            ? 'Não foi possível avaliar os trade-offs offline.'
+            : 'Could not evaluate offline trade-offs.',
+        efficiencyNotes: locale === 'pt' ? 'Erro no validador.' : 'Validator error.',
+        alternativeApproaches: [],
+        modelUsed: 'Motor Heurístico DDIA'
+      });
+    } finally {
+      setValidatingOffline(false);
+    }
+  };
+
   const handleAssessWithAi = async () => {
     // Validação local: impede falso positivo se o usuário não escreveu nada ou deixou apenas o template inalterado
     const cleanUser = queryCode
@@ -342,19 +437,12 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
         status: 'NEEDS_REVISION',
         feedback:
           locale === 'pt'
-            ? 'Falha ao contatar o Tutor de IA: ' + err.message + '. Verifique sua API Key ou conexão de rede.'
-            : 'Failed to contact AI Tutor: ' + err.message + '. Check your API Key or network connection.',
-        tradeOffAnalysis:
-          locale === 'pt'
-            ? 'Análise de trade-offs não disponível devido a erro de comunicação.'
-            : 'Trade-off analysis not available due to communication error.',
-        efficiencyNotes: locale === 'pt' ? 'Erro de comunicação.' : 'Communication error.',
-        alternativeApproaches: [
-          locale === 'pt'
-            ? 'Clique no botão "CONFIGURAR TUTOR IA" no cabeçalho para testar a chave.'
-            : 'Click the "CONFIGURE AI TUTOR" button in the header to test your key.'
-        ],
-        modelUsed: locale === 'pt' ? 'Erro de Conexão' : 'Connection Error'
+            ? 'Falha na comunicação com o Tutor de IA: ' + err.message + '. Verifique sua API Key ou conexão de rede.'
+            : 'Failed to communicate with AI Tutor: ' + err.message + '. Check your API Key or network connection.',
+        tradeOffAnalysis: '',
+        efficiencyNotes: '',
+        alternativeApproaches: [],
+        modelUsed: 'AI Error'
       });
     } finally {
       setAssessing(false);
@@ -476,11 +564,29 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-3 pt-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-2">
+            <button
+              onClick={handleValidateOffline}
+              disabled={validatingOffline || provisionStatus !== 'READY'}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 bg-[#15803d] hover:bg-[#166534] dark:bg-[#166534] dark:hover:bg-[#14532d] border-2 border-stone-900 dark:border-stone-600 text-white text-xs font-mono font-bold uppercase tracking-wider book-shadow book-shadow-pressed transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {validatingOffline ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>{t.lab.validatingOffline}</span>
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="w-4 h-4 text-emerald-200" />
+                  <span>{t.lab.validateOffline}</span>
+                </>
+              )}
+            </button>
+
             <button
               onClick={handleAssessWithAi}
               disabled={assessing || provisionStatus !== 'READY'}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-[#8f1d1d] hover:bg-[#771818] dark:bg-[#991b1b] dark:hover:bg-[#7f1d1d] border-2 border-stone-900 dark:border-stone-600 text-white text-xs font-mono font-bold uppercase tracking-wider book-shadow book-shadow-pressed transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 bg-[#8f1d1d] hover:bg-[#771818] dark:bg-[#991b1b] dark:hover:bg-[#7f1d1d] border-2 border-stone-900 dark:border-stone-600 text-white text-xs font-mono font-bold uppercase tracking-wider book-shadow book-shadow-pressed transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             >
               {assessing ? (
                 <>
@@ -490,17 +596,16 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
               ) : (
                 <>
                   <Sparkles className="w-4 h-4 text-amber-200" />
-                  <span>{t.lab.evaluateWithAi}</span>
+                  <span>{t.lab.consultAiTutor}</span>
                 </>
               )}
             </button>
-
 
             <button
               onClick={handleReset}
               disabled={resetting || provisionStatus !== 'READY'}
               title={t.lab.resetTooltip}
-              className="flex items-center gap-1.5 py-2.5 px-3 bg-[#eee8db] dark:bg-[#252320] hover:bg-[#ded7c8] dark:hover:bg-[#302c28] border-2 border-stone-800 dark:border-stone-600 text-stone-900 dark:text-stone-200 text-xs font-mono font-bold uppercase book-shadow-sm book-shadow-pressed transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-[#eee8db] dark:bg-[#252320] hover:bg-[#ded7c8] dark:hover:bg-[#302c28] border-2 border-stone-800 dark:border-stone-600 text-stone-900 dark:text-stone-200 text-xs font-mono font-bold uppercase book-shadow-sm book-shadow-pressed transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             >
               <RotateCcw className={`w-3.5 h-3.5 ${resetting ? 'animate-spin' : ''}`} />
               <span>{t.lab.reset}</span>
@@ -625,6 +730,21 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
                 <span className="text-[10px] bg-stone-200 dark:bg-stone-800 px-1 border border-stone-400 dark:border-stone-600 font-mono text-stone-900 dark:text-stone-200">
                   {queryResult.rowCount}
                 </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('offline')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-mono font-bold uppercase border-t-2 border-r-2 border-l-2 transition-colors ${
+                activeTab === 'offline'
+                  ? 'bg-[#fbf9f4] dark:bg-[#141312] border-stone-800 dark:border-stone-700 -mb-[2px] text-[#15803d] dark:text-[#4ade80]'
+                  : 'bg-transparent border-transparent text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-[#15803d] dark:text-[#4ade80]" />
+              <span>{t.lab.tabs.offlineValidation}</span>
+              {offlineResponse && (
+                <span className="w-2 h-2 rounded-full bg-[#15803d] dark:bg-[#4ade80]" />
               )}
             </button>
 
@@ -754,6 +874,100 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
             </div>
           )}
 
+          {activeTab === 'offline' && (
+            <div className="space-y-4 font-serif text-xs">
+              {!offlineResponse && !validatingOffline && (
+                <div className="h-44 flex flex-col items-center justify-center text-stone-500 dark:text-stone-400 gap-2 font-serif italic text-sm">
+                  <ShieldCheck className="w-6 h-6 stroke-1 text-[#15803d] dark:text-[#4ade80]" />
+                  <span>{t.lab.offlinePromptInstruction}</span>
+                </div>
+              )}
+
+              {validatingOffline && (
+                <div className="h-44 flex flex-col items-center justify-center text-[#15803d] dark:text-[#4ade80] gap-3 font-mono font-bold text-xs uppercase">
+                  <Loader2 className="w-8 h-8 animate-spin" />
+                  <span>{t.lab.offlineExamining}</span>
+                </div>
+              )}
+
+              {offlineResponse && !validatingOffline && (
+                <div className="space-y-4">
+                  {/* Status Card */}
+                  <div className="flex items-center justify-between p-3.5 bg-[#efebe1] dark:bg-[#1f1d1a] border-2 border-stone-800 dark:border-stone-700 book-shadow-sm">
+                    <div className="flex items-center gap-2.5">
+                      {offlineResponse.status === 'APPROVED' ? (
+                        <span className="flex items-center gap-1.5 px-3 py-1 text-xs font-mono font-bold uppercase bg-[#dcfce7] dark:bg-[#152e18] text-[#14532d] dark:text-[#86efac] border border-[#166534] dark:border-[#15803d]">
+                          <CheckCircle2 className="w-4 h-4 text-[#15803d] dark:text-[#4ade80]" />
+                          <span>{t.lab.solutionApproved}</span>
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1.5 px-3 py-1 text-xs font-mono font-bold uppercase bg-[#fee2e2] dark:bg-[#381616] text-[#991b1b] dark:text-[#fca5a5] border border-[#b91c1c] dark:border-[#7f1d1d]">
+                          <AlertTriangle className="w-4 h-4 text-[#b91c1c] dark:text-[#f87171]" />
+                          <span>{t.lab.revisionNeeded}</span>
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-stone-600 dark:text-stone-400 font-mono">
+                      <strong className="text-stone-900 dark:text-stone-200">{t.lab.offlineBadge}</strong>
+                    </span>
+                  </div>
+
+                  {/* Offline Validation Feedback */}
+                  <div className="p-4 bg-[#fdfcf9] dark:bg-[#181715] border-2 border-stone-800 dark:border-stone-700 space-y-2 book-shadow-sm">
+                    <h4 className="font-mono font-bold text-xs uppercase tracking-wider text-[#15803d] dark:text-[#4ade80] flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>{locale === 'pt' ? 'Parecer da Validação Determinística' : 'Deterministic Validation Assessment'}</span>
+                    </h4>
+                    <p className="text-stone-900 dark:text-stone-200 leading-relaxed whitespace-pre-line text-xs font-serif">
+                      {offlineResponse.feedback}
+                    </p>
+                  </div>
+
+                  {/* Trade-off Analysis */}
+                  {offlineResponse.tradeOffAnalysis && (
+                    <div className="p-4 bg-[#f5f0e4] dark:bg-[#1e1c19] border-l-4 border-l-[#15803d] dark:border-l-[#4ade80] border border-stone-300 dark:border-stone-700 space-y-2 book-shadow-sm">
+                      <h4 className="font-mono font-bold text-xs uppercase tracking-wider text-stone-800 dark:text-stone-200">
+                        {t.lab.theoreticalTradeOffs}
+                      </h4>
+                      <p className="text-stone-800 dark:text-stone-300 leading-relaxed text-xs font-serif italic">
+                        {offlineResponse.tradeOffAnalysis}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Efficiency Notes */}
+                  {offlineResponse.efficiencyNotes && (
+                    <div className="p-3.5 bg-[#fbf9f4] dark:bg-[#141312] border border-stone-400 dark:border-stone-700 space-y-1">
+                      <h4 className="font-mono font-bold text-[11px] uppercase tracking-wider text-stone-600 dark:text-stone-400">
+                        {t.lab.performanceNotes}
+                      </h4>
+                      <p className="text-stone-800 dark:text-stone-300 text-xs font-mono leading-relaxed">
+                        {offlineResponse.efficiencyNotes}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Alternative Approaches */}
+                  {offlineResponse.alternativeApproaches?.length > 0 && (
+                    <div className="p-4 bg-[#efebe1] dark:bg-[#1e1c19] border border-stone-400 dark:border-stone-700 space-y-2">
+                      <h4 className="font-mono font-bold text-xs uppercase tracking-wider text-stone-700 dark:text-stone-300">
+                        {t.lab.alternativeApproaches}
+                      </h4>
+                      <ul className="space-y-1.5 font-serif">
+                        {offlineResponse.alternativeApproaches.map((alt, idx) => (
+                          <li key={idx} className="flex items-start gap-2 text-stone-800 dark:text-stone-200 text-xs">
+                            <span className="font-mono text-[#15803d] dark:text-[#4ade80] font-bold">&bull;</span>
+                            <span>{alt}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === 'ai' && (
             <div className="space-y-4 font-serif text-xs">
               {!aiResponse && !assessing && (
@@ -772,79 +986,152 @@ export const LabWorkspace: React.FC<Props> = ({ lab, chapterNumber, apiKey, prov
                 </div>
               )}
 
-              {aiResponse && !assessing && (
-                <div className="space-y-4">
-                  {/* Status Card (Parecer Técnico) */}
-                  <div className="flex items-center justify-between p-3.5 bg-[#efebe1] dark:bg-[#1f1d1a] border-2 border-stone-800 dark:border-stone-700 book-shadow-sm">
-                    <div className="flex items-center gap-2.5">
-                      {aiResponse.status === 'APPROVED' ? (
-                        <span className="flex items-center gap-1.5 px-3 py-1 text-xs font-mono font-bold uppercase bg-[#dcfce7] dark:bg-[#152e18] text-[#14532d] dark:text-[#86efac] border border-[#166534] dark:border-[#15803d]">
-                          <CheckCircle2 className="w-4 h-4 text-[#15803d] dark:text-[#4ade80]" />
-                          <span>{t.lab.solutionApproved}</span>
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1.5 px-3 py-1 text-xs font-mono font-bold uppercase bg-[#fee2e2] dark:bg-[#381616] text-[#991b1b] dark:text-[#fca5a5] border border-[#b91c1c] dark:border-[#7f1d1d]">
-                          <AlertTriangle className="w-4 h-4 text-[#b91c1c] dark:text-[#f87171]" />
-                          <span>{t.lab.revisionNeeded}</span>
-                        </span>
+              {aiResponse && !assessing && (() => {
+                const isAuthPending = Boolean(
+                  aiResponse.modelUsed === 'Pending Authentication' ||
+                  aiResponse.modelUsed === 'Autenticação Pendente' ||
+                  aiResponse.feedback?.toLowerCase().includes('chave de api') ||
+                  aiResponse.feedback?.toLowerCase().includes('api key')
+                );
+
+                const isAiError = Boolean(
+                  !isAuthPending &&
+                  (aiResponse.modelUsed === 'AI Error' ||
+                   aiResponse.modelUsed?.startsWith('Erro de API') ||
+                   aiResponse.modelUsed === 'Validador Local de Submissão' ||
+                   aiResponse.feedback?.toLowerCase().includes('falha na comunicação') ||
+                   aiResponse.feedback?.toLowerCase().includes('falha ao contatar') ||
+                   aiResponse.feedback?.toLowerCase().includes('failed to contact') ||
+                   aiResponse.feedback?.toLowerCase().includes('connection timeout') ||
+                   aiResponse.feedback?.toLowerCase().includes('connection error'))
+                );
+
+                if (isAuthPending) {
+                  return (
+                    <div className="p-5 bg-amber-50 dark:bg-amber-950/40 border-2 border-amber-600 dark:border-amber-500 space-y-3 book-shadow-sm">
+                      <div className="flex items-center gap-2 font-mono font-bold text-xs text-amber-900 dark:text-amber-200 uppercase tracking-wider">
+                        <Key className="w-4 h-4 text-amber-700 dark:text-amber-400" />
+                        <span>{t.lab.aiAuthPendingTitle}</span>
+                      </div>
+                      <p className="text-stone-800 dark:text-stone-200 text-xs font-serif leading-relaxed">
+                        {aiResponse.feedback}
+                      </p>
+                      {onOpenAiSettings && (
+                        <button
+                          onClick={onOpenAiSettings}
+                          className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-amber-700 hover:bg-amber-800 dark:bg-amber-600 dark:hover:bg-amber-700 text-white font-mono text-xs font-bold uppercase transition-colors cursor-pointer"
+                        >
+                          <Key className="w-3.5 h-3.5" />
+                          <span>{t.lab.aiAuthPendingAction}</span>
+                        </button>
                       )}
                     </div>
-                    <span className="text-[11px] text-stone-600 dark:text-stone-400 font-mono">
-                      {t.lab.modelLabel} <strong className="text-stone-900 dark:text-stone-200">{aiResponse.modelUsed}</strong>
-                    </span>
-                  </div>
+                  );
+                }
 
-                  {/* Pedagogical Critique */}
-                  <div className="p-4 bg-[#fdfcf9] dark:bg-[#181715] border-2 border-stone-800 dark:border-stone-700 space-y-2 book-shadow-sm">
-                    <h4 className="font-mono font-bold text-xs uppercase tracking-wider text-[#8f1d1d] dark:text-[#df4444] flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>{t.lab.criticalAnalysis}</span>
-                    </h4>
-                    <p className="text-stone-900 dark:text-stone-200 leading-relaxed whitespace-pre-line text-xs font-serif">
-                      {aiResponse.feedback}
-                    </p>
-                  </div>
+                if (isAiError) {
+                  return (
+                    <div className="p-5 bg-red-50 dark:bg-red-950/40 border-2 border-red-700 dark:border-red-600 space-y-3 book-shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 font-mono font-bold text-xs text-red-900 dark:text-red-200 uppercase tracking-wider">
+                          <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                          <span>{t.lab.aiErrorTitle}</span>
+                        </div>
+                        {aiResponse.modelUsed && (
+                          <span className="text-[10px] text-stone-600 dark:text-stone-400 font-mono">
+                            {aiResponse.modelUsed}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-stone-800 dark:text-stone-200 text-xs font-serif leading-relaxed whitespace-pre-line">
+                        {aiResponse.feedback}
+                      </p>
+                      {onOpenAiSettings && (
+                        <button
+                          onClick={onOpenAiSettings}
+                          className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-red-800 hover:bg-red-900 dark:bg-red-700 dark:hover:bg-red-800 text-white font-mono text-xs font-bold uppercase transition-colors cursor-pointer"
+                        >
+                          <span>{t.lab.aiAuthPendingAction}</span>
+                        </button>
+                      )}
+                    </div>
+                  );
+                }
 
-                  {/* Trade-off Analysis */}
-                  <div className="p-4 bg-[#f5f0e4] dark:bg-[#1e1c19] border-l-4 border-l-[#8f1d1d] dark:border-l-[#df4444] border border-stone-300 dark:border-stone-700 space-y-2 book-shadow-sm">
-                    <h4 className="font-mono font-bold text-xs uppercase tracking-wider text-stone-800 dark:text-stone-200">
-                      {t.lab.theoreticalTradeOffs}
-                    </h4>
-                    <p className="text-stone-800 dark:text-stone-300 leading-relaxed text-xs font-serif italic">
-                      {aiResponse.tradeOffAnalysis}
-                    </p>
-                  </div>
+                return (
+                  <div className="space-y-4">
+                    {/* Status Card (Parecer Técnico) */}
+                    <div className="flex items-center justify-between p-3.5 bg-[#efebe1] dark:bg-[#1f1d1a] border-2 border-stone-800 dark:border-stone-700 book-shadow-sm">
+                      <div className="flex items-center gap-2.5">
+                        {aiResponse.status === 'APPROVED' ? (
+                          <span className="flex items-center gap-1.5 px-3 py-1 text-xs font-mono font-bold uppercase bg-[#dcfce7] dark:bg-[#152e18] text-[#14532d] dark:text-[#86efac] border border-[#166534] dark:border-[#15803d]">
+                            <CheckCircle2 className="w-4 h-4 text-[#15803d] dark:text-[#4ade80]" />
+                            <span>{t.lab.solutionApproved}</span>
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1.5 px-3 py-1 text-xs font-mono font-bold uppercase bg-[#fee2e2] dark:bg-[#381616] text-[#991b1b] dark:text-[#fca5a5] border border-[#b91c1c] dark:border-[#7f1d1d]">
+                            <AlertTriangle className="w-4 h-4 text-[#b91c1c] dark:text-[#f87171]" />
+                            <span>{t.lab.revisionNeeded}</span>
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-stone-600 dark:text-stone-400 font-mono">
+                        {t.lab.modelLabel} <strong className="text-stone-900 dark:text-stone-200">{aiResponse.modelUsed}</strong>
+                      </span>
+                    </div>
 
-                  {/* Efficiency Notes */}
-                  {aiResponse.efficiencyNotes && (
-                    <div className="p-3.5 bg-[#fbf9f4] dark:bg-[#141312] border border-stone-400 dark:border-stone-700 space-y-1">
-                      <h4 className="font-mono font-bold text-[11px] uppercase tracking-wider text-stone-600 dark:text-stone-400">
-                        {t.lab.performanceNotes}
+                    {/* Pedagogical Critique */}
+                    <div className="p-4 bg-[#fdfcf9] dark:bg-[#181715] border-2 border-stone-800 dark:border-stone-700 space-y-2 book-shadow-sm">
+                      <h4 className="font-mono font-bold text-xs uppercase tracking-wider text-[#8f1d1d] dark:text-[#df4444] flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>{t.lab.criticalAnalysis}</span>
                       </h4>
-                      <p className="text-stone-800 dark:text-stone-300 text-xs font-mono leading-relaxed">
-                        {aiResponse.efficiencyNotes}
+                      <p className="text-stone-900 dark:text-stone-200 leading-relaxed whitespace-pre-line text-xs font-serif">
+                        {aiResponse.feedback}
                       </p>
                     </div>
-                  )}
 
-                  {/* Alternative Approaches */}
-                  {aiResponse.alternativeApproaches?.length > 0 && (
-                    <div className="p-4 bg-[#efebe1] dark:bg-[#1e1c19] border border-stone-400 dark:border-stone-700 space-y-2">
-                      <h4 className="font-mono font-bold text-xs uppercase tracking-wider text-stone-700 dark:text-stone-300">
-                        {t.lab.alternativeApproaches}
+                    {/* Trade-off Analysis */}
+                    <div className="p-4 bg-[#f5f0e4] dark:bg-[#1e1c19] border-l-4 border-l-[#8f1d1d] dark:border-l-[#df4444] border border-stone-300 dark:border-stone-700 space-y-2 book-shadow-sm">
+                      <h4 className="font-mono font-bold text-xs uppercase tracking-wider text-stone-800 dark:text-stone-200">
+                        {t.lab.theoreticalTradeOffs}
                       </h4>
-                      <ul className="space-y-1.5 font-serif">
-                        {aiResponse.alternativeApproaches.map((alt, idx) => (
-                          <li key={idx} className="flex items-start gap-2 text-stone-800 dark:text-stone-200 text-xs">
-                            <span className="font-mono text-[#8f1d1d] dark:text-[#df4444] font-bold">&bull;</span>
-                            <span>{alt}</span>
-                          </li>
-                        ))}
-                      </ul>
+                      <p className="text-stone-800 dark:text-stone-300 leading-relaxed text-xs font-serif italic">
+                        {aiResponse.tradeOffAnalysis}
+                      </p>
                     </div>
-                  )}
-                </div>
-              )}
+
+                    {/* Efficiency Notes */}
+                    {aiResponse.efficiencyNotes && (
+                      <div className="p-3.5 bg-[#fbf9f4] dark:bg-[#141312] border border-stone-400 dark:border-stone-700 space-y-1">
+                        <h4 className="font-mono font-bold text-[11px] uppercase tracking-wider text-stone-600 dark:text-stone-400">
+                          {t.lab.performanceNotes}
+                        </h4>
+                        <p className="text-stone-800 dark:text-stone-300 text-xs font-mono leading-relaxed">
+                          {aiResponse.efficiencyNotes}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Alternative Approaches */}
+                    {aiResponse.alternativeApproaches?.length > 0 && (
+                      <div className="p-4 bg-[#efebe1] dark:bg-[#1e1c19] border border-stone-400 dark:border-stone-700 space-y-2">
+                        <h4 className="font-mono font-bold text-xs uppercase tracking-wider text-stone-700 dark:text-stone-300">
+                          {t.lab.alternativeApproaches}
+                        </h4>
+                        <ul className="space-y-1.5 font-serif">
+                          {aiResponse.alternativeApproaches.map((alt, idx) => (
+                            <li key={idx} className="flex items-start gap-2 text-stone-800 dark:text-stone-200 text-xs">
+                              <span className="font-mono text-[#8f1d1d] dark:text-[#df4444] font-bold">&bull;</span>
+                              <span>{alt}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
 
