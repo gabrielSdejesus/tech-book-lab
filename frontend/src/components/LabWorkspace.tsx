@@ -419,6 +419,7 @@ export const LabWorkspace: React.FC<Props> = ({
           : `Erro na execução do banco: ${queryResult.errorMessage}`
         : 'Consulta ainda não foi executada no banco';
 
+      const targetProvider = (provider && provider !== 'heuristic') ? provider : 'gemini';
       const response = await assessWithAi({
         labId: lab.id,
         challengeId: selectedChallenge.id,
@@ -426,7 +427,7 @@ export const LabWorkspace: React.FC<Props> = ({
         executionSummary,
         userReflection,
         apiKeyOverride: apiKey,
-        providerOverride: provider,
+        providerOverride: targetProvider,
         modelOverride: model,
         language: locale
       });

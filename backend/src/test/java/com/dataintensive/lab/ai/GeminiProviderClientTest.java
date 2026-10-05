@@ -46,6 +46,20 @@ class GeminiProviderClientTest {
     }
 
     @Test
+    @DisplayName("isConfigured deve rejeitar chaves que sejam placeholders ou inválidas")
+    void shouldRejectPlaceholderAndInvalidApiKeys() {
+        GeminiProviderClient client = new GeminiProviderClient(objectMapper, null, "", "gemini-3.8-flash");
+        assertThat(client.isConfigured("string")).isFalse();
+        assertThat(client.isConfigured("AIzaSy...")).isFalse();
+        assertThat(client.isConfigured("your_api_key_here")).isFalse();
+        assertThat(client.isConfigured("undefined")).isFalse();
+        assertThat(client.isConfigured("null")).isFalse();
+        assertThat(client.isConfigured("   ")).isFalse();
+        assertThat(client.isConfigured(null)).isFalse();
+        assertThat(client.isConfigured("valid-api-key-123")).isTrue();
+    }
+
+    @Test
     @DisplayName("testConnection deve retornar erro quando nenhuma API Key for informada")
     void shouldFailTestConnectionWhenNoKeyProvided() {
         GeminiProviderClient client = new GeminiProviderClient(objectMapper, null, "", "gemini-3.8-flash");

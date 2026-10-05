@@ -246,6 +246,12 @@ describe('LabWorkspace Component', () => {
     fireEvent.click(aiBtn);
 
     await waitFor(() => {
+      expect(api.assessWithAi).toHaveBeenCalledWith(
+        expect.objectContaining({
+          providerOverride: 'gemini',
+          apiKeyOverride: ''
+        })
+      );
       expect(screen.getByText(/Chave de API Não Configurada/i)).toBeInTheDocument();
       expect(screen.getByText(/Chave de API não informada para o Google Gemini/i)).toBeInTheDocument();
       // Não deve renderizar os 4 subtópicos

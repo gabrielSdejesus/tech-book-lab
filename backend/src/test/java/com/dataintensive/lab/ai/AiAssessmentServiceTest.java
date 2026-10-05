@@ -400,8 +400,8 @@ class AiAssessmentServiceTest {
     }
 
     @Test
-    @DisplayName("Deve fazer fallback seguro para o provedor heurístico quando nenhuma chave ou provedor for fornecido")
-    void shouldFallbackToHeuristicProviderWhenNoApiKeyAndNoProviderOverride() {
+    @DisplayName("Não deve fazer fallback silencioso para o heurístico quando nenhuma chave for informada para o Gemini")
+    void shouldNotFallbackToHeuristicWhenNoApiKeyProvided() {
         AiAssessmentRequest request = new AiAssessmentRequest(
                 "ddia-cap-03-lab-01",
                 "lab-01-ch-1",
@@ -413,16 +413,38 @@ class AiAssessmentServiceTest {
                 "1 linha",
                 "Normalização 3NF",
                 null, // sem API key
-                null, // sem override de provedor
+                null, // sem override de provedor (usa default gemini)
                 null,
                 "pt"
         );
 
         AiAssessmentResponse response = aiAssessmentService.assess(request);
 
-        assertThat(response.status()).isEqualTo("APPROVED");
-        assertThat(response.modelUsed()).containsIgnoringCase("Heurístico");
-        assertThat(response.feedback()).containsIgnoringCase("normaliz");
+        assertThat(response.status()).isEqualTo("NEEDS_REVISION");
+        assertThat(response.modelUsed()).isEqualTo("Autenticação Pendente");
+        assertThat(response.feedback()).containsIgnoringCase("chave de api não informada");
+    }
+
+    @Test
+    @DisplayName("Deve rejeitar chave placeholder 'string' e exigir autenticação real")
+    void shouldRejectPlaceholderStringKey() {
+        AiAssessmentRequest request = new AiAssessmentRequest(
+                "ddia-cap-03-lab-01",
+                "lab-01-ch-1",
+                "SELECT * FROM usuarios WHERE id = 1;",
+                "1 linha",
+                "Normalização 3NF",
+                "string", // placeholder
+                "gemini",
+                "gemini-3.8-flash",
+                "pt"
+        );
+
+        AiAssessmentResponse response = aiAssessmentService.assess(request);
+
+        assertThat(response.status()).isEqualTo("NEEDS_REVISION");
+        assertThat(response.modelUsed()).isEqualTo("Autenticação Pendente");
+        assertThat(response.feedback()).containsIgnoringCase("chave de api não informada");
     }
 
     @Test
@@ -451,13 +473,12 @@ class AiAssessmentServiceTest {
     }
 
     @Test
-    @DisplayName("Deve listar provedor heurístico entre os provedores disponíveis")
-    void shouldListHeuristicInAvailableProviders() {
+    @DisplayName("Não deve listar o provedor heurístico entre os provedores de Tutor IA configuráveis")
+    void shouldNotListHeuristicInAvailableTutors() {
         List<AiProviderInfo> providers = aiAssessmentService.getAvailableProviders();
 
-        assertThat(providers).extracting(AiProviderInfo::id).contains("heuristic");
-        var heuristicInfo = providers.stream().filter(p -> p.id().equals("heuristic")).findFirst().orElseThrow();
-        assertThat(heuristicInfo.requiresApiKey()).isFalse();
+        assertThat(providers).extracting(AiProviderInfo::id).doesNotContain("heuristic");
+        assertThat(providers).extracting(AiProviderInfo::id).contains("gemini", "ollama");
     }
 }
 
