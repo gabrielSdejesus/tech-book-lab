@@ -32,4 +32,8 @@ public interface AiProviderClient {
     default boolean isConfigured(String apiKeyOverride) {
         return true;
     }
+
+    default boolean isConfigurableTutor() {
+        return true;
+    }
 }

@@ -41,6 +41,11 @@ public class HeuristicProviderClient implements AiProviderClient {
     }
 
     @Override
+    public boolean isConfigurableTutor() {
+        return false;
+    }
+
+    @Override
     public AiTestConnectionResponse testConnection(AiTestConnectionRequest request) {
         return new AiTestConnectionResponse(true, "Motor heurístico local operacional e pronto para avaliações offline.", "rules-engine-v1", 0L);
     }

@@ -80,7 +80,19 @@ public class GeminiProviderClient implements AiProviderClient {
     @Override
     public boolean isConfigured(String apiKeyOverride) {
         String key = (apiKeyOverride != null && !apiKeyOverride.isBlank()) ? apiKeyOverride.trim() : defaultApiKey;
-        return key != null && !key.isBlank();
+        return isKeyConfigured(key);
+    }
+
+    public static boolean isKeyConfigured(String key) {
+        if (key == null || key.isBlank()) {
+            return false;
+        }
+        String normalized = key.trim().toLowerCase();
+        return !normalized.equals("string")
+                && !normalized.equals("aizasy...")
+                && !normalized.equals("your_api_key_here")
+                && !normalized.equals("undefined")
+                && !normalized.equals("null");
     }
 
     @Override
@@ -89,7 +101,7 @@ public class GeminiProviderClient implements AiProviderClient {
                 ? request.apiKey().trim()
                 : defaultApiKey;
 
-        if (key == null || key.isBlank()) {
+        if (!isKeyConfigured(key)) {
             return new AiTestConnectionResponse(false, "Nenhuma API Key informada para o Google Gemini.", null, 0);
         }
 

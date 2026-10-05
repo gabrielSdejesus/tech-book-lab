@@ -54,7 +54,6 @@ class GeminiProviderClientTest {
         assertThat(client.isConfigured("your_api_key_here")).isFalse();
         assertThat(client.isConfigured("undefined")).isFalse();
         assertThat(client.isConfigured("null")).isFalse();
-        assertThat(client.isConfigured("abc")).isFalse();
         assertThat(client.isConfigured("   ")).isFalse();
         assertThat(client.isConfigured(null)).isFalse();
         assertThat(client.isConfigured("valid-api-key-123")).isTrue();

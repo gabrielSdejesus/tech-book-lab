@@ -60,4 +60,31 @@ public class AiProviderRegistry {
         }
         return clients.values().stream().map(c -> c.getInfo(language)).toList();
     }
+
+    public List<AiProviderInfo> getConfigurableTutors() {
+        return clients.values().stream()
+                .filter(AiProviderClient::isConfigurableTutor)
+                .map(AiProviderClient::getInfo)
+                .toList();
+    }
+
+    public List<AiProviderInfo> getConfigurableTutors(String language) {
+        if (language == null || language.isBlank()) {
+            return getConfigurableTutors();
+        }
+        return clients.values().stream()
+                .filter(AiProviderClient::isConfigurableTutor)
+                .map(c -> c.getInfo(language))
+                .toList();
+    }
+
+    public List<AiProviderInfo> getConfigurableTutors(com.dataintensive.lab.domain.AssessmentLanguage language) {
+        if (language == null) {
+            return getConfigurableTutors();
+        }
+        return clients.values().stream()
+                .filter(AiProviderClient::isConfigurableTutor)
+                .map(c -> c.getInfo(language))
+                .toList();
+    }
 }
