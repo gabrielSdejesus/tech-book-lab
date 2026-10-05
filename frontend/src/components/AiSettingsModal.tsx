@@ -44,18 +44,6 @@ const getDefaultProviders = (t: TranslationSchema): AiProviderInfo[] => [
     defaultModel: 'qwen2.5-coder:1.5b',
     models: [],
   },
-  {
-    id: 'heuristic',
-    name: 'Heurístico Offline',
-    description: t.aiModal.heuristicDescription,
-    requiresApiKey: false,
-    apiKeyPlaceholder: '',
-    helpUrl: '',
-    defaultModel: 'rules-v1',
-    models: [
-      { id: 'rules-v1', name: 'Motor Heurístico DDIA (Offline)', recommended: true },
-    ],
-  },
 ];
 
 export const AiSettingsModal: React.FC<Props> = ({
@@ -71,7 +59,8 @@ export const AiSettingsModal: React.FC<Props> = ({
   const { t, locale } = useLanguage();
   const [customProviders, setCustomProviders] = useState<AiProviderInfo[] | null>(null);
   const [tempKey, setTempKey] = useState(apiKey);
-  const [tempProvider, setTempProvider] = useState(provider || 'gemini');
+  const safeProvider = (provider && provider !== 'heuristic') ? provider : 'gemini';
+  const [tempProvider, setTempProvider] = useState(safeProvider);
   const [tempModel, setTempModel] = useState(model || 'gemini-2.5-flash');
   const [saved, setSaved] = useState(false);
 
@@ -80,10 +69,11 @@ export const AiSettingsModal: React.FC<Props> = ({
 
   const [prevProps, setPrevProps] = useState({ isOpen, apiKey, provider, model });
   if (isOpen && (!prevProps.isOpen || prevProps.apiKey !== apiKey || prevProps.provider !== provider || prevProps.model !== model)) {
+    const nextProvider = (provider && provider !== 'heuristic') ? provider : 'gemini';
     setPrevProps({ isOpen, apiKey, provider, model });
     setTempKey(apiKey);
-    setTempProvider(provider || 'gemini');
-    setTempModel(model || (provider === 'ollama' ? 'qwen2.5-coder:1.5b' : 'gemini-2.5-flash'));
+    setTempProvider(nextProvider);
+    setTempModel(model || (nextProvider === 'ollama' ? 'qwen2.5-coder:1.5b' : 'gemini-2.5-flash'));
     setTestResult(null);
   }
 
@@ -92,7 +82,7 @@ export const AiSettingsModal: React.FC<Props> = ({
       Promise.resolve(getAiProviders(locale))
         .then((data) => {
           if (Array.isArray(data) && data.length > 0) {
-            setCustomProviders(data);
+            setCustomProviders(data.filter((p) => p.id !== 'heuristic'));
           }
         })
         .catch(() => {
@@ -120,11 +110,6 @@ export const AiSettingsModal: React.FC<Props> = ({
       return (p.description && !p.description.includes('Ollama'))
         ? p.description
         : t.aiModal.ollamaDescription;
-    }
-    if (p.id === 'heuristic') {
-      return (p.description && !p.description.includes('Heurístico'))
-        ? p.description
-        : t.aiModal.heuristicDescription;
     }
     return p.description;
   };

@@ -50,7 +50,10 @@ function AppContent() {
   // AI settings
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('gemini_api_key') || '');
-  const [provider, setProvider] = useState<string>(() => localStorage.getItem('ai_provider') || 'gemini');
+  const [provider, setProvider] = useState<string>(() => {
+    const saved = localStorage.getItem('ai_provider');
+    return (saved && saved !== 'heuristic') ? saved : 'gemini';
+  });
   const [model, setModel] = useState<string>(() => localStorage.getItem('gemini_model') || 'gemini-3.8-flash');
 
   const handleSaveApiKey = (key: string) => {
@@ -59,8 +62,9 @@ function AppContent() {
   };
 
   const handleSaveProvider = (prov: string) => {
-    setProvider(prov);
-    localStorage.setItem('ai_provider', prov);
+    const safeProvider = prov === 'heuristic' ? 'gemini' : prov;
+    setProvider(safeProvider);
+    localStorage.setItem('ai_provider', safeProvider);
   };
 
   const handleSaveModel = (mod: string) => {
