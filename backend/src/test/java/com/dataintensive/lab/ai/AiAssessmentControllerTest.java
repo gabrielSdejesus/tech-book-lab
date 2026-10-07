@@ -74,4 +74,26 @@ class AiAssessmentControllerTest {
                 .andExpect(jsonPath("$.status").value("NEEDS_REVISION"))
                 .andExpect(jsonPath("$.modelUsed").value("Autenticação Pendente"));
     }
+
+    @Test
+    @DisplayName("POST /api/ai/assess com provedor heurístico offline deve validar rigorosamente e retornar feedback pedagógico")
+    void shouldAssessViaHeuristicProviderWithRigorousRequirements() throws Exception {
+        String json = """
+            {
+              "labId": "ddia-cap-03-lab-01",
+              "challengeId": "lab-01-ch-1",
+              "userQuery": "SELECT u.nome FROM usuarios u JOIN experiencias_profissionais e ON e.usuario_id = u.id;",
+              "userReflection": "Reflexão sobre 3NF",
+              "providerOverride": "heuristic"
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/ai/assess")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("NEEDS_REVISION"))
+                .andExpect(jsonPath("$.feedback").value(containsString("LEFT JOIN")))
+                .andExpect(jsonPath("$.modelUsed").value(containsString("Heurístico")));
+    }
 }

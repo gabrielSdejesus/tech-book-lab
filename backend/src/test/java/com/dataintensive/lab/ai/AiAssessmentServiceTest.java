@@ -456,7 +456,8 @@ class AiAssessmentServiceTest {
                 """
                 CREATE TABLE IF NOT EXISTS usuarios (id INT PRIMARY KEY, nome VARCHAR(100));
                 CREATE TABLE IF NOT EXISTS experiencias_profissionais (id INT PRIMARY KEY, usuario_id INT REFERENCES usuarios(id));
-                SELECT u.nome FROM usuarios u JOIN experiencias_profissionais e ON e.usuario_id = u.id;
+                INSERT INTO usuarios VALUES (1, 'Ana'), (2, 'Beto');
+                SELECT u.nome FROM usuarios u LEFT JOIN experiencias_profissionais e ON e.usuario_id = u.id;
                 """,
                 "1 linha",
                 "Normalização 3NF",
