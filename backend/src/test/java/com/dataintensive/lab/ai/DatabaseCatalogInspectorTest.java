@@ -13,6 +13,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -128,7 +129,9 @@ class DatabaseCatalogInspectorTest {
     @Test
     @DisplayName("Deve ser resiliente e retornar false/zero quando o motor lançar erro ou consulta falhar")
     void shouldHandleExceptionsGracefullyWithoutThrowing() {
-        when(mockPostgresExecutor.execute(anyLong() == 0 ? eq("") : contains("SELECT"), anyLong()))
+        when(mockPostgresExecutor.execute(anyString(), anyLong()))
+                .thenThrow(new RuntimeException("Connection refused"));
+        when(mockNeo4jExecutor.execute(anyString(), anyLong()))
                 .thenThrow(new RuntimeException("Connection refused"));
 
         assertThat(inspector.tableExists(EngineType.POSTGRES, "usuarios")).isFalse();
