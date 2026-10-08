@@ -4,7 +4,6 @@ import com.dataintensive.lab.domain.AssessmentLanguage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.net.http.HttpClient;

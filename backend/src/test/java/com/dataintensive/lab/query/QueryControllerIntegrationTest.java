@@ -7,7 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -33,7 +33,7 @@ class QueryControllerIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @MockitoBean
     private QueryExecutionService queryExecutionService;
 
     @Test
@@ -71,5 +71,56 @@ class QueryControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.rowCount", is(0)));
+    }
+
+    @Test
+    @DisplayName("POST /api/query/execute - Deve retornar HTTP 400 quando corpo da requisição for JSON malformado")
+    void shouldReturn400WhenRequestBodyIsMalformed() throws Exception {
+        mockMvc.perform(post("/api/query/execute")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{query: invalid-json"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type", is("urn:problem:malformed-json")))
+                .andExpect(jsonPath("$.title", is("Requisição JSON inválida")));
+    }
+
+    @Test
+    @DisplayName("POST /api/query/execute - Deve retornar HTTP 400 com lista de erros quando campos obrigatórios estiverem ausentes")
+    void shouldReturn400WhenRequiredFieldsAreMissing() throws Exception {
+        QueryRequest invalidRequest = new QueryRequest("", null, "");
+
+        mockMvc.perform(post("/api/query/execute")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type", is("urn:problem:validation-error")))
+                .andExpect(jsonPath("$.title", is("Erro de validação sintática")))
+                .andExpect(jsonPath("$.errors", hasSize(3)));
+    }
+
+    @Test
+    @DisplayName("POST /api/query/execute - Deve retornar HTTP 400 quando query exceder 10.000 caracteres")
+    void shouldReturn400WhenQueryExceedsMaxCharacters() throws Exception {
+        String largeQuery = "A".repeat(10001);
+        QueryRequest tooLargeRequest = new QueryRequest(largeQuery, EngineType.POSTGRES, "ddia-cap-03-lab-01");
+
+        mockMvc.perform(post("/api/query/execute")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(tooLargeRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type", is("urn:problem:validation-error")))
+                .andExpect(jsonPath("$.errors", hasSize(1)))
+                .andExpect(jsonPath("$.errors[0].field", is("query")))
+                .andExpect(jsonPath("$.errors[0].message", is("A consulta não pode exceder 10.000 caracteres")));
+    }
+
+    @Test
+    @DisplayName("POST /api/query/cancel - Deve retornar HTTP 200 confirmando cancelamento da consulta")
+    void shouldCancelQuerySuccessfullyWithStatus200() throws Exception {
+        mockMvc.perform(post("/api/query/cancel")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Consulta cancelada com sucesso")));
     }
 }
