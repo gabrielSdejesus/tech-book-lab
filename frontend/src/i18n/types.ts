@@ -34,6 +34,8 @@ export interface TranslationSchema {
     requirementsAndConstraints: string;
     reflectiveQuestion: string;
     reflectionPlaceholder: string;
+    modelReflectionTitle: string;
+    modelReflectionBadge: string;
     evaluateWithAi: string;
     evaluating: string;
     validateOffline: string;

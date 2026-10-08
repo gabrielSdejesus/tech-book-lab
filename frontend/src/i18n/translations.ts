@@ -41,6 +41,8 @@ export const translations: Record<'pt' | 'en', TranslationSchema> = {
       reflectiveQuestion: 'Questão Reflexiva de Trade-off',
       reflectionPlaceholder:
         'Digite aqui sua análise sobre os trade-offs de modelagem, localidade e leitura vs escrita...',
+      modelReflectionTitle: 'Resposta Modelo (Gabarito de Trade-off)',
+      modelReflectionBadge: 'Gabarito Conceitual',
       evaluateWithAi: 'Submeter ao Tutor IA',
       evaluating: 'Avaliando...',
       validateOffline: 'Validar Solução (Offline)',
@@ -160,6 +162,8 @@ export const translations: Record<'pt' | 'en', TranslationSchema> = {
       reflectiveQuestion: 'Reflective Trade-off Question',
       reflectionPlaceholder:
         'Enter your analysis on modeling trade-offs, data locality, and read vs write...',
+      modelReflectionTitle: 'Reference Answer (Trade-off Model)',
+      modelReflectionBadge: 'Conceptual Reference',
       evaluateWithAi: 'Evaluate with AI Tutor',
       evaluating: 'Evaluating...',
       validateOffline: 'Validate Solution (Offline)',
