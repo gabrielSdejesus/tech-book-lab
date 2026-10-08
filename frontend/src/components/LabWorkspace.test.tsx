@@ -331,6 +331,46 @@ describe('LabWorkspace Component', () => {
     });
   });
 
+  it('deve exibir o painel de erro com título e mensagem detalhada quando a execução retornar success false', async () => {
+    vi.mocked(api.executeQuery).mockResolvedValueOnce({
+      success: false,
+      message: 'Falha na execução',
+      columns: [],
+      rows: [],
+      rowCount: 0,
+      executionTimeMs: 15,
+      errorMessage: 'PSQLException: ERROR: syntax error at or near "SELCT"'
+    });
+
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    const executeBtn = screen.getByRole('button', { name: /Executar/i });
+    await waitFor(() => expect(executeBtn).not.toBeDisabled());
+    fireEvent.click(executeBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Erro de Execução no Banco')).toBeInTheDocument();
+      expect(screen.getByText(/PSQLException: ERROR: syntax error at or near "SELCT"/i)).toBeInTheDocument();
+    });
+  });
+
+  it('deve capturar falha na execução disparada pelo atalho Ctrl + Enter no editor de código', async () => {
+    vi.mocked(api.executeQuery).mockRejectedValueOnce(
+      new Error('Timeout durante execução de consulta pesada')
+    );
+
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    const textarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
+    await waitFor(() => expect(screen.getByRole('button', { name: /Executar/i })).not.toBeDisabled());
+
+    fireEvent.keyDown(textarea, { ctrlKey: true, key: 'Enter' });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Timeout durante execução de consulta pesada/i)).toBeInTheDocument();
+    });
+  });
+
   it('deve bloquear defensivamente o botão de execução e exibir banner enquanto status for PROVISIONING', async () => {
     vi.mocked(provisioningApi.provisionLab).mockReturnValueOnce(
       new Promise(() => {}) // never resolves to keep PROVISIONING state
