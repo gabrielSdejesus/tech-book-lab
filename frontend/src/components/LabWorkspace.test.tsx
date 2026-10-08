@@ -812,6 +812,95 @@ describe('LabWorkspace Component', () => {
       expect(screen.getByText('25ms')).toBeInTheDocument();
     });
   });
+
+  it('não deve exibir a caixa de resposta padrão (gabarito) na barra lateral inicialmente', () => {
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+    expect(screen.queryByTestId('model-reflection-box')).not.toBeInTheDocument();
+  });
+
+  it('deve exibir a caixa de resposta padrão na barra lateral após validação offline', async () => {
+    vi.mocked(api.assessWithAi).mockResolvedValueOnce({
+      status: 'APPROVED',
+      feedback: 'Modelagem correta',
+      tradeOffAnalysis: 'Análise de trade-offs',
+      efficiencyNotes: 'Bom plano',
+      alternativeApproaches: [],
+      modelUsed: 'Tutor Heurístico',
+      expectedReflection: 'Gabarito oficial de trade-off para o modelo 3NF'
+    });
+
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    // Digita uma query válida para poder validar
+    const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
+    fireEvent.change(codeTextarea, { target: { value: 'SELECT 1;' } });
+
+    const validateBtn = screen.getByRole('button', { name: /Validar.*Offline/i });
+    await waitFor(() => expect(validateBtn).not.toBeDisabled());
+    fireEvent.click(validateBtn);
+
+    await waitFor(() => {
+      const modelBox = screen.getByTestId('model-reflection-box');
+      expect(modelBox).toBeInTheDocument();
+      expect(modelBox).toHaveTextContent('Gabarito oficial de trade-off para o modelo 3NF');
+    });
+  });
+
+  it('não deve exibir a caixa de resposta padrão na barra lateral ao consultar Tutor IA', async () => {
+    vi.mocked(api.assessWithAi).mockResolvedValueOnce({
+      status: 'APPROVED',
+      feedback: 'Crítica socrática',
+      tradeOffAnalysis: 'Trade-offs sob demanda',
+      efficiencyNotes: 'Eficiente',
+      alternativeApproaches: [],
+      modelUsed: 'Gemini 3.8 Flash'
+    });
+
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
+    fireEvent.change(codeTextarea, { target: { value: 'SELECT id FROM usuarios;' } });
+
+    const aiBtn = screen.getByRole('button', { name: /Consultar Tutor IA/i });
+    await waitFor(() => expect(aiBtn).not.toBeDisabled());
+    fireEvent.click(aiBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Crítica socrática')).toBeInTheDocument();
+      expect(screen.queryByTestId('model-reflection-box')).not.toBeInTheDocument();
+    });
+  });
+
+  it('deve ocultar a caixa de resposta padrão ao alternar entre exercícios do laboratório', async () => {
+    vi.mocked(api.assessWithAi).mockResolvedValueOnce({
+      status: 'APPROVED',
+      feedback: 'Modelagem correta',
+      tradeOffAnalysis: 'Análise',
+      efficiencyNotes: 'Notas',
+      alternativeApproaches: [],
+      modelUsed: 'Tutor Heurístico',
+      expectedReflection: 'Gabarito oficial de trade-off para o modelo 3NF'
+    });
+
+    render(<LabWorkspace lab={mockHybridLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
+    fireEvent.change(codeTextarea, { target: { value: 'SELECT 1;' } });
+
+    const validateBtn = screen.getByRole('button', { name: /Validar.*Offline/i });
+    await waitFor(() => expect(validateBtn).not.toBeDisabled());
+    fireEvent.click(validateBtn);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('model-reflection-box')).toBeInTheDocument();
+    });
+
+    // Alterna para o Exercício 2
+    const exercise2Tab = screen.getByRole('button', { name: /Exercício 2/i });
+    fireEvent.click(exercise2Tab);
+
+    expect(screen.queryByTestId('model-reflection-box')).not.toBeInTheDocument();
+  });
 });
 
 
