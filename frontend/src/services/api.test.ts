@@ -287,6 +287,121 @@ describe('API Service', () => {
       method: 'DELETE'
     }));
   });
+
+  describe('Cenários de Erro e Resiliência', () => {
+    it('getBooks deve propagar exceção quando fetch falhar por erro de rede', async () => {
+      vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+      await expect(getBooks()).rejects.toThrow('Failed to fetch');
+    });
+
+    it('executeQuery deve propagar exceção quando fetch falhar por erro de rede', async () => {
+      vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new TypeError('Network timeout'));
+
+      await expect(executeQuery('SELECT 1;', 'POSTGRES', 'ddia-cap-03-lab-01')).rejects.toThrow('Network timeout');
+    });
+
+    it('executeQuery deve usar mensagem de fallback padrão quando HTTP 500 não contiver RFC 7807', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        headers: { get: () => 'text/plain' },
+        json: async () => ({})
+      } as unknown as Response);
+
+      await expect(executeQuery('SELECT 1;', 'POSTGRES', 'ddia-cap-03-lab-01')).rejects.toThrow('Falha na comunicação com o servidor de execução');
+    });
+
+    it('resetLab deve usar mensagem de fallback padrão quando HTTP 500 ocorrer', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        headers: { get: () => 'text/plain' },
+        json: async () => ({})
+      } as unknown as Response);
+
+      await expect(resetLab('ddia-cap-03-lab-01')).rejects.toThrow('Falha ao resetar banco do laboratório');
+    });
+
+    it('getInfraStatus deve usar mensagem de fallback padrão quando HTTP 500 ocorrer', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        headers: { get: () => 'text/plain' },
+        json: async () => ({})
+      } as unknown as Response);
+
+      await expect(getInfraStatus()).rejects.toThrow('Falha ao consultar status da infraestrutura');
+    });
+
+    it('assessWithAi deve propagar erro quando fetch rejeitar por queda de rede', async () => {
+      vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new TypeError('Connection refused'));
+
+      await expect(assessWithAi({
+        labId: 'ddia-cap-03-lab-01',
+        challengeId: 'ch-1',
+        userQuery: 'SELECT 1;',
+        executionSummary: '',
+        userReflection: ''
+      })).rejects.toThrow('Connection refused');
+    });
+
+    it('assessWithAi deve usar mensagem de fallback padrão quando HTTP 500 ocorrer sem JSON estruturado', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        headers: { get: () => 'text/html' },
+        json: async () => { throw new Error('not json'); }
+      } as unknown as Response);
+
+      await expect(assessWithAi({
+        labId: 'ddia-cap-03-lab-01',
+        challengeId: 'ch-1',
+        userQuery: 'SELECT 1;',
+        executionSummary: '',
+        userReflection: ''
+      })).rejects.toThrow('Falha ao consultar Tutor de IA');
+    });
+
+    it('saveChallengeSolution e resetChallengeSolution devem lançar fallback amigável quando falharem', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        headers: { get: () => 'text/plain' },
+        json: async () => ({})
+      } as unknown as Response);
+
+      await expect(saveChallengeSolution('ch-1', 'SELECT 1;')).rejects.toThrow('Falha ao salvar solução do desafio');
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        headers: { get: () => 'text/plain' },
+        json: async () => ({})
+      } as unknown as Response);
+
+      await expect(resetChallengeSolution('ch-1')).rejects.toThrow('Falha ao resetar solução do desafio');
+    });
+
+    it('executeQuery deve extrair detalhe de sessão expirada (410 GONE) via RFC 7807', async () => {
+      const problemDetail = {
+        type: 'https://api.dataintensive.lab/errors/session-expired',
+        title: 'Sessão Expirada',
+        status: 410,
+        detail: 'Sessão 1234 expirada há mais de 15 minutos.'
+      };
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: false,
+        status: 410,
+        headers: { get: () => 'application/problem+json' },
+        json: async () => problemDetail
+      } as unknown as Response);
+
+      await expect(executeQuery('SELECT 1;', 'POSTGRES', 'ddia-cap-03-lab-01'))
+        .rejects.toThrow('Sessão 1234 expirada há mais de 15 minutos.');
+    });
+  });
 });
 
 

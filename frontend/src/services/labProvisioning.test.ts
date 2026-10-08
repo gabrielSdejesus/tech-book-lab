@@ -189,4 +189,23 @@ describe('labProvisioning API client', () => {
 
     await expect(teardownLab('ddia-cap-03-lab-01')).rejects.toThrow('Falha ao desprovisionar laboratório: HTTP 500');
   });
+
+  it('deve propagar erro de rede quando fetch falhar em qualquer operação de provisionamento', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+
+    await expect(provisionLab('ddia-cap-03-lab-01')).rejects.toThrow('Failed to fetch');
+    await expect(getLabStatus('ddia-cap-03-lab-01')).rejects.toThrow('Failed to fetch');
+    await expect(sendHeartbeat('ddia-cap-03-lab-01')).rejects.toThrow('Failed to fetch');
+    await expect(teardownLab('ddia-cap-03-lab-01')).rejects.toThrow('Failed to fetch');
+  });
+
+  it('deve lançar erro com status 410 quando sessão expirar no provisionLab ou getLabStatus', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 410,
+    } as any);
+
+    await expect(provisionLab('ddia-cap-03-lab-01')).rejects.toThrow('Falha ao provisionar laboratório: HTTP 410');
+    await expect(getLabStatus('ddia-cap-03-lab-01')).rejects.toThrow('Falha ao consultar status do laboratório: HTTP 410');
+  });
 });
