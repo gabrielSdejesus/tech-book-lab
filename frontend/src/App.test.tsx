@@ -56,30 +56,24 @@ describe('App Component Flow', () => {
   it('deve carregar inicialmente na Bookshelf e permitir navegar para o LabWorkspace e retornar', async () => {
     render(<App />);
 
-    // Waits for books to load and displays Bookshelf
     await waitFor(() => {
       expect(screen.getByText(/Biblioteca de Livros Técnicos/i)).toBeInTheDocument();
     });
 
     expect(screen.getByText('Designing Data-Intensive Applications')).toBeInTheDocument();
 
-    // Click "Abrir Caderno de Laboratório"
     const openBtn = screen.getByRole('button', { name: /Abrir Caderno de Laboratório/i });
     fireEvent.click(openBtn);
 
-    // Verify it transitioned to Workspace view (Sidebar is rendered)
     await waitFor(() => {
       expect(screen.getByText(/TÁBUA DE MATÉRIAS/i)).toBeInTheDocument();
     });
 
-    // In Workspace, Navbar should have "ESTANTE DE LIVROS"
     const backToBookshelfBtn = screen.getByRole('button', { name: /ESTANTE DE LIVROS/i });
     expect(backToBookshelfBtn).toBeInTheDocument();
 
-    // Click to return to Bookshelf
     fireEvent.click(backToBookshelfBtn);
 
-    // Verify we are back on Bookshelf
     await waitFor(() => {
       expect(screen.getByText(/Biblioteca de Livros Técnicos/i)).toBeInTheDocument();
     });

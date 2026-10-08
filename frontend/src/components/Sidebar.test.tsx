@@ -169,12 +169,10 @@ describe('Sidebar Component', () => {
       />
     );
 
-    // Valida que os rótulos de seção respeitam o número do capítulo pai
     expect(screen.getByText(/§\s*1\.1/)).toBeInTheDocument();
     expect(screen.getByText(/§\s*1\.2/)).toBeInTheDocument();
     expect(screen.getByText(/§\s*4\.1/)).toBeInTheDocument();
 
-    // Garante ausência de prefixo hardcoded § 3.
     expect(screen.queryByText(/§\s*3\./)).not.toBeInTheDocument();
   });
 
@@ -184,11 +182,9 @@ describe('Sidebar Component', () => {
     expect(screen.getByText('Relacional vs Documentos')).toBeInTheDocument();
     expect(screen.getByText('Grafos de Propriedades')).toBeInTheDocument();
 
-    // Badges de tipo de motor devem ser removidos dos sub-itens da barra lateral
     expect(screen.queryByText('POSTGRES')).not.toBeInTheDocument();
     expect(screen.queryByText('NEO4J')).not.toBeInTheDocument();
 
-    // Contadores de desafios continuam presentes
     expect(screen.getAllByText(/\[0 desafios\]/)).toHaveLength(2);
   });
 });
