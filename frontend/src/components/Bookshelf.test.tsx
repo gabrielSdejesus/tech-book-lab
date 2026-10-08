@@ -90,11 +90,9 @@ describe('Bookshelf Component', () => {
 
     expect(card).toHaveAttribute('tabIndex', '0');
 
-    // Aciona com tecla Enter
     fireEvent.keyDown(card, { key: 'Enter' });
     expect(handleSelectBook).toHaveBeenCalledTimes(1);
 
-    // Aciona com tecla Space
     fireEvent.keyDown(card, { key: ' ' });
     expect(handleSelectBook).toHaveBeenCalledTimes(2);
   });
@@ -121,7 +119,6 @@ describe('Bookshelf Component', () => {
 
     const redisBadge = screen.getByText('REDIS');
     expect(redisBadge).toBeInTheDocument();
-    // No engineConfig, motores desconhecidos usam fallback neutro bg-stone-100 e não a classe fixa do postgres
     expect(redisBadge).toHaveClass('bg-stone-100');
     expect(redisBadge).not.toHaveClass('bg-[#e5ebe4]');
   });

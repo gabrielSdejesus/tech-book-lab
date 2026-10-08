@@ -254,7 +254,6 @@ describe('LabWorkspace Component', () => {
       );
       expect(screen.getByText(/Chave de API Não Configurada/i)).toBeInTheDocument();
       expect(screen.getByText(/Chave de API não informada para o Google Gemini/i)).toBeInTheDocument();
-      // Não deve renderizar os 4 subtópicos
       expect(screen.queryByText(/Análise Crítica do Tutor/i)).not.toBeInTheDocument();
       expect(screen.queryByText(/Trade-offs Teóricos \(Martin Kleppmann - DDIA\)/i)).not.toBeInTheDocument();
       expect(screen.queryByText(/Observações de Desempenho & Custo Computacional/i)).not.toBeInTheDocument();
@@ -285,7 +284,6 @@ describe('LabWorkspace Component', () => {
     await waitFor(() => {
       expect(screen.getByText(/Falha na Comunicação com o Tutor IA/i)).toBeInTheDocument();
       expect(screen.getByText(/Connection timeout/i)).toBeInTheDocument();
-      // Não deve renderizar os 4 subtópicos
       expect(screen.queryByText(/Análise Crítica do Tutor/i)).not.toBeInTheDocument();
       expect(screen.queryByText(/Trade-offs Teóricos \(Martin Kleppmann - DDIA\)/i)).not.toBeInTheDocument();
     });
@@ -374,7 +372,6 @@ describe('LabWorkspace Component', () => {
 
     render(<LabWorkspace lab={mockHybridLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
 
-    // Initial challenge 1 (NEO4J)
     await waitFor(() => {
       expect(provisioningApi.provisionLab).toHaveBeenCalledWith('ddia-cap-03-lab-02', 'lab-02-ch-1');
       const badge = screen.getByTestId('active-engine-badge');
@@ -382,7 +379,6 @@ describe('LabWorkspace Component', () => {
       expect(screen.getByText(/MOTOR: NEO4J 5/i)).toBeInTheDocument();
     });
 
-    // Switch to challenge 2 (POSTGRES)
     const exercise2Tab = screen.getByRole('button', { name: /Exercício 2/i });
     fireEvent.click(exercise2Tab);
 
@@ -504,7 +500,6 @@ describe('LabWorkspace Component', () => {
     const assessBtn = screen.getByRole('button', { name: /Consultar Tutor IA/i });
     await waitFor(() => expect(assessBtn).not.toBeDisabled());
 
-    // Clica sem alterar o template
     fireEvent.click(assessBtn);
 
     await waitFor(() => {
@@ -513,7 +508,6 @@ describe('LabWorkspace Component', () => {
       expect(screen.getByText(/Validador Local de Submissão/i)).toBeInTheDocument();
     });
 
-    // Agora digita apenas comentários
     const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
     fireEvent.change(codeTextarea, { target: { value: '-- Apenas um comentário\n/* outro comentário */' } });
 
@@ -596,12 +590,10 @@ describe('LabWorkspace Component', () => {
       expect(screen.getByText(/"id": 99/i)).toBeInTheDocument();
     });
 
-    // Modifica código no textarea
     const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
     fireEvent.change(codeTextarea, { target: { value: 'SELECT * FROM custom;' } });
     expect(codeTextarea).toHaveValue('SELECT * FROM custom;');
 
-    // Clica em Recarregar Template
     const reloadBtn = screen.getByRole('button', { name: /Recarregar Template/i });
     fireEvent.click(reloadBtn);
     expect(codeTextarea).toHaveValue(mockLab.challenges[0].starterTemplate);
@@ -666,7 +658,6 @@ describe('LabWorkspace Component', () => {
       expect(screen.getByRole('button', { name: /Tentar Novamente/i })).toBeInTheDocument();
     });
 
-    // Mock do retry
     vi.mocked(provisioningApi.provisionLab).mockResolvedValueOnce({
       labId: 'ddia-cap-03-lab-01',
       engineType: 'POSTGRES',
@@ -718,11 +709,9 @@ describe('LabWorkspace Component', () => {
     const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
     fireEvent.change(codeTextarea, { target: { value: 'SELECT * FROM usuarios WHERE ativo = true;' } });
 
-    // Após 300ms, ainda não deve ter chamado
     vi.advanceTimersByTime(300);
     expect(api.saveChallengeSolution).not.toHaveBeenCalled();
 
-    // Após mais 350ms (total > 600ms), deve ter chamado
     vi.advanceTimersByTime(350);
     expect(api.saveChallengeSolution).toHaveBeenCalledWith('lab-01-ch-1', 'SELECT * FROM usuarios WHERE ativo = true;');
 
@@ -732,21 +721,17 @@ describe('LabWorkspace Component', () => {
   it('deve preservar o código digitado ao alternar entre exercícios do laboratório', async () => {
     render(<LabWorkspace lab={mockHybridLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
 
-    // Digita no Exercício 1
     const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
     fireEvent.change(codeTextarea, { target: { value: 'MATCH (u:User) RETURN u;' } });
 
-    // Alterna para o Exercício 2
     const exercise2Tab = screen.getByRole('button', { name: /Exercício 2/i });
     fireEvent.click(exercise2Tab);
 
     expect(codeTextarea).toHaveValue(mockHybridLab.challenges[1].starterTemplate);
 
-    // Retorna ao Exercício 1
     const exercise1Tab = screen.getByRole('button', { name: /Exercício 1/i });
     fireEvent.click(exercise1Tab);
 
-    // Deve preservar o que foi digitado
     expect(codeTextarea).toHaveValue('MATCH (u:User) RETURN u;');
   });
 

@@ -152,7 +152,6 @@ describe('AiSettingsModal Component', () => {
       });
     });
 
-    // O valor do select não deve ser revertido para o modelo retornado pelo teste
     expect(select).toHaveValue('gemini-2.5-flash');
 
     const saveBtn = screen.getByRole('button', { name: /Salvar Configurações/i });
@@ -395,7 +394,6 @@ describe('AiSettingsModal Component', () => {
     fireEvent.click(cancelBtn);
     expect(handleClose).toHaveBeenCalledTimes(1);
 
-    // O botão X fica no topo do modal dentro do cabeçalho
     const closeXBtn = container.querySelector('.lucide-x')?.closest('button');
     expect(closeXBtn).not.toBeNull();
     if (closeXBtn) {
