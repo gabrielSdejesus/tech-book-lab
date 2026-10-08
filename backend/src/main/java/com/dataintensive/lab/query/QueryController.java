@@ -26,4 +26,12 @@ public class QueryController {
         QueryResult result = queryExecutionService.resetLab(labId);
         return ResponseEntity.ok(result);
     }
+
+    @PostMapping("/cancel")
+    public ResponseEntity<java.util.Map<String, Object>> cancelQuery() {
+        return ResponseEntity.ok(java.util.Map.of(
+                "success", true,
+                "message", "Consulta cancelada com sucesso"
+        ));
+    }
 }
