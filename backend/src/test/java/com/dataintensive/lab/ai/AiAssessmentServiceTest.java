@@ -481,6 +481,74 @@ class AiAssessmentServiceTest {
         assertThat(providers).extracting(AiProviderInfo::id).doesNotContain("heuristic");
         assertThat(providers).extracting(AiProviderInfo::id).contains("gemini", "ollama");
     }
+
+    @Test
+    @DisplayName("Heurístico: Deve retornar expectedReflection quando avaliado via provedor heurístico")
+    void shouldReturnExpectedReflectionWhenUsingHeuristicProvider() {
+        Challenge ch = new Challenge(
+                "lab-01-ch-1",
+                1,
+                "Modelagem 3NF",
+                "Desc",
+                "Cenario",
+                "template",
+                null,
+                List.of(),
+                "Prompt",
+                "Gabarito de trade-off 3NF",
+                EngineType.POSTGRES
+        );
+        Lab lab = new Lab("ddia-cap-03-lab-01", 1, "slug", "Title", "Summary", List.of(), EngineType.POSTGRES, "db", null, List.of(ch));
+        CatalogRepository catalogRepo = mock(CatalogRepository.class);
+        when(catalogRepo.findLabById("ddia-cap-03-lab-01")).thenReturn(Optional.of(lab));
+
+        CatalogService catService = new CatalogService(catalogRepo);
+        AiAssessmentService service = new AiAssessmentService(catService, objectMapper, "gemini", "", "model", "http://ollama", "qwen");
+
+        AiAssessmentRequest req = new AiAssessmentRequest(
+                "ddia-cap-03-lab-01",
+                "lab-01-ch-1",
+                "CREATE TABLE usuarios (id INT PRIMARY KEY, nome VARCHAR(100)); CREATE TABLE experiencias_profissionais (id INT PRIMARY KEY, usuario_id INT REFERENCES usuarios(id), cargo VARCHAR(100)); INSERT INTO usuarios VALUES (1, 'Ana'), (2, 'Beto'); SELECT u.nome FROM usuarios u LEFT JOIN experiencias_profissionais e ON e.usuario_id = u.id;",
+                "ok",
+                "minha reflexao",
+                "",
+                "heuristic",
+                "",
+                "pt"
+        );
+        AiAssessmentResponse res = service.assess(req);
+
+        assertThat(res.expectedReflection()).isEqualTo("Gabarito de trade-off 3NF");
+    }
+
+    @Test
+    @DisplayName("Tutor IA: Não deve retornar expectedReflection estático na avaliação via IA generativa")
+    void shouldNotReturnStaticExpectedReflectionWhenUsingGenerativeAi() {
+        Challenge ch = new Challenge(
+                "lab-01-ch-1",
+                1,
+                "Modelagem 3NF",
+                "Desc",
+                "Cenario",
+                "template",
+                null,
+                List.of(),
+                "Prompt",
+                "Gabarito de trade-off 3NF",
+                EngineType.POSTGRES
+        );
+        Lab lab = new Lab("ddia-cap-03-lab-01", 1, "slug", "Title", "Summary", List.of(), EngineType.POSTGRES, "db", null, List.of(ch));
+        CatalogRepository catalogRepo = mock(CatalogRepository.class);
+        when(catalogRepo.findLabById("ddia-cap-03-lab-01")).thenReturn(Optional.of(lab));
+
+        CatalogService catService = new CatalogService(catalogRepo);
+        AiAssessmentService service = new AiAssessmentService(catService, objectMapper, "gemini", "", "gemini-3.8-flash", "http://ollama", "qwen");
+
+        AiAssessmentRequest req = new AiAssessmentRequest("ddia-cap-03-lab-01", "lab-01-ch-1", "CREATE TABLE usuarios (id INT);", "ok", "minha reflexao", "", "gemini", "", "pt");
+        AiAssessmentResponse res = service.assess(req);
+
+        assertThat(res.expectedReflection()).isNull();
+    }
 }
 
 
