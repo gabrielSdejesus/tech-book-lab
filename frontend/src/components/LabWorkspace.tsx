@@ -63,12 +63,26 @@ export const LabWorkspace: React.FC<Props> = ({
     return map;
   });
 
+  const [reflectionsByChallenge, setReflectionsByChallenge] = useState<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    if (lab.challenges) {
+      for (const ch of lab.challenges) {
+        if (ch.savedReflection) {
+          map[ch.id] = ch.savedReflection;
+        }
+      }
+    }
+    return map;
+  });
+
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge>(lab.challenges[0]);
 
   const [queryCode, setQueryCode] = useState<string>(
     lab.challenges[0]?.savedCode || lab.challenges[0]?.starterTemplate || ''
   );
-  const [userReflection, setUserReflection] = useState<string>('');
+  const [userReflection, setUserReflection] = useState<string>(
+    lab.challenges[0]?.savedReflection || ''
+  );
 
   const [executing, setExecuting] = useState(false);
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
@@ -115,12 +129,15 @@ export const LabWorkspace: React.FC<Props> = ({
       const first = lab.challenges[0];
       setSelectedChallenge(first);
       const map: Record<string, string> = {};
+      const refMap: Record<string, string> = {};
       for (const ch of lab.challenges) {
         map[ch.id] = ch.savedCode || ch.starterTemplate || '';
+        if (ch.savedReflection) refMap[ch.id] = ch.savedReflection;
       }
       setSolutionsByChallenge(map);
+      setReflectionsByChallenge(refMap);
       setQueryCode(first.savedCode || first.starterTemplate || '');
-      setUserReflection('');
+      setUserReflection(first.savedReflection || '');
       setQueryResult(null);
       setOfflineResponse(null);
       setAiResponse(null);
@@ -136,12 +153,12 @@ export const LabWorkspace: React.FC<Props> = ({
     if (!challengeId) return;
 
     const timer = setTimeout(() => {
-      saveChallengeSolution(challengeId, queryCode).catch(() => {});
+      saveChallengeSolution(challengeId, queryCode, userReflection).catch(() => {});
       isUserEditingRef.current = false;
     }, 600);
 
     return () => clearTimeout(timer);
-  }, [queryCode, selectedChallenge?.id]);
+  }, [queryCode, userReflection, selectedChallenge?.id]);
 
 
   useEffect(() => {
@@ -207,13 +224,14 @@ export const LabWorkspace: React.FC<Props> = ({
 
   const handleSelectChallenge = (ch: Challenge) => {
     if (isUserEditingRef.current && selectedChallenge?.id) {
-      saveChallengeSolution(selectedChallenge.id, queryCode).catch(() => {});
+      saveChallengeSolution(selectedChallenge.id, queryCode, userReflection).catch(() => {});
       isUserEditingRef.current = false;
     }
     setSelectedChallenge(ch);
     const code = solutionsByChallenge[ch.id] ?? (ch.savedCode || ch.starterTemplate || '');
     setQueryCode(code);
-    setUserReflection('');
+    const reflection = reflectionsByChallenge[ch.id] ?? (ch.savedReflection || '');
+    setUserReflection(reflection);
     setQueryResult(null);
     setOfflineResponse(null);
     setAiResponse(null);
@@ -224,9 +242,14 @@ export const LabWorkspace: React.FC<Props> = ({
     isUserEditingRef.current = false;
     const template = selectedChallenge.starterTemplate || '';
     setQueryCode(template);
+    setUserReflection('');
     setSolutionsByChallenge((prev) => ({
       ...prev,
       [selectedChallenge.id]: template
+    }));
+    setReflectionsByChallenge((prev) => ({
+      ...prev,
+      [selectedChallenge.id]: ''
     }));
     try {
       await resetChallengeSolution(selectedChallenge.id);
@@ -271,9 +294,14 @@ export const LabWorkspace: React.FC<Props> = ({
         isUserEditingRef.current = false;
         const template = selectedChallenge.starterTemplate || '';
         setQueryCode(template);
+        setUserReflection('');
         setSolutionsByChallenge((prev) => ({
           ...prev,
           [selectedChallenge.id]: template
+        }));
+        setReflectionsByChallenge((prev) => ({
+          ...prev,
+          [selectedChallenge.id]: ''
         }));
         setFeedbackToast(
           locale === 'pt'
@@ -558,7 +586,14 @@ export const LabWorkspace: React.FC<Props> = ({
             </p>
             <textarea
               value={userReflection}
-              onChange={(e) => setUserReflection(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setUserReflection(val);
+                isUserEditingRef.current = true;
+                if (selectedChallenge?.id) {
+                  setReflectionsByChallenge((prev) => ({ ...prev, [selectedChallenge.id]: val }));
+                }
+              }}
               placeholder={t.lab.reflectionPlaceholder}
               rows={4}
               className="w-full bg-[#fdfcf9] dark:bg-[#181715] border-2 border-stone-700 dark:border-stone-600 p-3 text-xs font-mono text-stone-900 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-500 focus:outline-none focus:border-stone-900 dark:focus:border-stone-300 leading-relaxed book-shadow-sm"
