@@ -144,5 +144,19 @@ class CatalogServiceTest {
         catalogService.deleteChallengeSolution("lab-01-ch-1");
         verify(catalogRepository).deleteChallengeSolution("lab-01-ch-1");
     }
+
+    @Test
+    @DisplayName("Deve preservar os metadados de expectedReflection nos desafios ao retornar Lab por ID")
+    void shouldPreserveExpectedReflectionInLabChallenges() {
+        var challenge = new com.dataintensive.lab.domain.Challenge("ch-1", 1, "Titulo", "Desc", "Cenario", "SELECT 1;", null, null, List.of(), "Reflexao", "Gabarito oficial de trade-off", EngineType.POSTGRES);
+        var lab = new Lab("lab-1", 1, "slug", "Lab 1", "Sum", List.of(), EngineType.POSTGRES, "db", "SQL", List.of(challenge));
+
+        when(catalogRepository.findLabById("lab-1", "pt")).thenReturn(Optional.of(lab));
+
+        Optional<Lab> result = catalogService.findLabById("lab-1", "pt");
+
+        assertThat(result).isPresent();
+        assertThat(result.get().challenges().get(0).expectedReflection()).isEqualTo("Gabarito oficial de trade-off");
+    }
 }
 
