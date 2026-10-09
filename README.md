@@ -20,11 +20,14 @@ Plataforma de laboratórios interativos para estudos práticos e aprofundados de
 O **Tech Book Lab** foi projetado para transformar o estudo teórico de literatura técnica avançada em experimentação prática direta. Ao invés de questionários de múltipla escolha com gabaritos rígidos, o desenvolvedor interage com bancos de dados reais e recebe feedback socrático sobre seus trade-offs arquiteturais.
 
 ### Principais Recursos
-- **Catálogo Dinâmico & Multilíngue:** Livros, capítulos, conceitos-chave e desafios carregados dinamicamente via SQLite com Flyway migrations e suporte nativo a internacionalização (PT-BR e EN).
-- **Motores de Execução Pluggáveis (SQL & Cypher):** Execução nativa de consultas em PostgreSQL 16 (relacional/documentos/OLAP) e Neo4j 5 (grafos de propriedades) com mapeamento em tempo real.
-- **Tutor Socrático de IA em Tempo Real:** Avaliação interativa via Google Gemini 2.0 Flash, modelos locais com Ollama ou fallback heurístico offline, explorando trade-offs práticos baseados na literatura.
-- **Isolamento de Recursos & Ciclo de Vida Inteligente:** Contêineres Docker sob demanda com portas locais determinísticas (`5432` Postgres, `7687`/`7474` Neo4j), monitoramento de inatividade (TTL de 15m) e *teardown* automático ao fechar o laboratório.
-- **Workbench Técnico Completo:** Editor de código com atalhos de teclado (`Ctrl + Enter`), visualizador tabular/JSON, reset de schema com 1 clique e indicadores de saúde da infraestrutura.
+- **Catálogo Dinâmico & Multilíngue (Flyway V1 a V8):** Livros, capítulos, conceitos-chave e desafios carregados dinamicamente via SQLite com Flyway migrations e suporte nativo a internacionalização (PT-BR e EN).
+- **Motores de Execução Pluggáveis (SQL & Cypher):** Execução nativa de consultas em PostgreSQL 16 (relacional/documentos/OLAP) e Neo4j 5 (grafos de propriedades) com drivers otimizados (`PostgresEngineExecutor` e `Neo4jEngineExecutor`).
+- **Dois Níveis Complementares de Avaliação de Soluções:**
+  - **Tutor Socrático de IA Configurável:** Análise interativa via **Google Gemini** (2.5 Flash / 2.0 Flash) ou **Ollama Local** (ex: `qwen2.5-coder`), explorando trade-offs teóricos, análise de planos de execução e recomendações canônicas de Martin Kleppmann.
+  - **Validador Heurístico Offline Determinístico:** Avaliação local instantânea com zero chamadas externas de rede, baseada em validação estática de palavras-chave e inspeção determinística do catálogo real dos bancos (`DatabaseCatalogInspector`) checando tabelas, colunas, tipos e constraints.
+- **Autosave Contínuo & Persistência de Progresso:** Salvamento automático das soluções com debounce de 600ms persistido na tabela `challenge_user_solutions`, permitindo alternar entre desafios e retornar ao workspace sem perda de código digitado.
+- **Isolamento de Recursos & Ciclo de Vida Inteligente:** Contêineres Docker sob demanda com portas locais determinísticas (`5432` Postgres, `7687`/`7474` Neo4j), health check em tempo real (`GET /api/infra/status`), monitoramento de inatividade (TTL de 15m) e *teardown* automático ao fechar ou trocar de laboratório.
+- **Workbench Técnico Completo:** Editor com atalhos de teclado (`Ctrl + Enter`), visualizador tabular e JSON estruturado, cancelamento de consultas ativas (`POST /api/query/cancel`), reset de schema em 1 clique (`POST /api/query/reset/{labId}`) e recarga de starter template limpo.
 
 ---
 
@@ -38,17 +41,20 @@ graph TD
     WebApp -->|REST API / JSON| Backend["Backend (Spring Boot 3.4 / Java 21)"]
 
     subgraph CoreServices["Serviços Principais"]
-        Backend -->|Persistência & i18n| Catalog["Catálogo Dinâmico (SQLite WAL + Flyway)"]
-        Backend -->|Strategy Registry| QueryEngines["Motores de Consulta (Postgres & Neo4j)"]
-        Backend -->|Strategy Registry| AiTutor["Tutor Socrático (Gemini, Ollama, Heurístico)"]
-        Backend -->|Orquestração & TTL| DockerMgr["Provisionamento de Contêineres"]
+        Backend -->|Catálogo & Soluções (V1-V8)| Catalog["Catálogo SQLite WAL (CatalogService + Flyway)"]
+        Backend -->|Strategy Registry| QueryEngines["Motores de Consulta (QueryExecutionService)"]
+        Backend -->|Tutor Socrático (Configurável)| AiTutor["Tutor de IA (Gemini & Ollama)"]
+        Backend -->|Validador Offline (Zero Config)| HeuristicEngine["Validador Heurístico + DatabaseCatalogInspector"]
+        Backend -->|Orquestração & TTL| DockerMgr["Provisionamento de Contêineres (LabProvisioningService)"]
     end
 
     subgraph RealInfra["Infraestrutura Isolada em Contêineres"]
         DockerMgr -.->|docker compose| PgCont["tbl-lab-postgres (Porta 5432)"]
         DockerMgr -.->|docker compose| NeoCont["tbl-lab-neo4j (Portas 7474 / 7687)"]
-        QueryEngines -->|JDBC / Bolt| PgCont
-        QueryEngines -->|JDBC / Bolt| NeoCont
+        QueryEngines -->|PostgresEngineExecutor| PgCont
+        QueryEngines -->|Neo4jEngineExecutor| NeoCont
+        HeuristicEngine -->|DatabaseCatalogInspector| PgCont
+        HeuristicEngine -->|DatabaseCatalogInspector| NeoCont
     end
 ```
 
@@ -64,7 +70,7 @@ graph TD
 - **Docker** e **Docker Compose**
 
 ### 1. Iniciar o Backend (Spring Boot)
-O backend gerencia o catálogo em SQLite e orquestra a inicialização dos contêineres Docker automaticamente sob demanda.
+O backend gerencia o catálogo em SQLite, executa automaticamente as migrações Flyway e orquestra a inicialização dos contêineres Docker sob demanda.
 ```bash
 cd backend
 ./mvnw spring-boot:run
@@ -91,41 +97,54 @@ docker compose -f infra/docker-compose.yml up -d
 
 ---
 
-## 🤖 Configuração do Tutor de IA
+## 🤖 Avaliação de Desafios: Tutor de IA vs Validação Offline
 
-O tutor socrático analisa sua consulta, o resultado retornado pelo banco real e a sua reflexão conceitual sobre trade-offs:
+A plataforma fornece duas formas complementares e independentes para avaliar a solução de cada desafio:
 
-1. **Online Gratuito (Google Gemini - Recomendado):**
-   - Obtenha uma chave gratuita no [Google AI Studio](https://aistudio.google.com/).
-   - Insira na interface web clicando no ícone do tutor no menu superior, ou configure a variável de ambiente:
-     ```bash
-     export GEMINI_API_KEY="sua_chave_aqui"
-     ```
-2. **Local e Privado (Ollama Offline):**
-   - Inicie o daemon do Ollama com um modelo leve de código:
-     ```bash
-     ollama run qwen2.5-coder:1.5b
-     ```
-   - Selecione **"Ollama Local"** nas configurações da interface.
-3. **Modo Heurístico (Zero Config):**
-   - Caso nenhuma chave ou servidor local seja fornecido, a plataforma executará automaticamente uma avaliação analítica local baseada em regras estruturadas de engenharia.
+### 1. Tutor Socrático de IA (Online ou Local Privado)
+Acessível pelo botão **"Consultar Tutor IA"** e configurável pelo menu **"Configurar Tutor IA"** no topo da tela:
+- **Google Gemini (Recomendado):**
+  - Obtenha uma chave gratuita no [Google AI Studio](https://aistudio.google.com/).
+  - Insira sua chave no modal de configurações da interface e selecione o modelo desejado (ex: `gemini-2.5-flash`).
+  - Opcionalmente, defina a variável de ambiente no backend:
+    ```bash
+    export GEMINI_API_KEY="sua_chave_aqui"
+    ```
+- **Ollama Local (100% Privado):**
+  - Inicie o daemon do Ollama com um modelo de código:
+    ```bash
+    ollama run qwen2.5-coder:1.5b
+    ```
+  - Selecione **"Ollama Local"** no modal de configurações.
+
+### 2. Validador Heurístico Offline (Zero Configuração)
+Acessível diretamente pelo botão e aba dedicada **"Validação Offline"** no workbench:
+- Opera **100% offline** e sem qualquer chave de API ou dependência de provedores de IA.
+- Executa validação em duas fases:
+  1. **Análise Sintática:** Verifica a presença de comandos estruturais mandatórios (ex: cláusulas de agregação, `JOIN`, nós Cypher).
+  2. **Inspeção de Catálogo no Banco Real:** Através do `DatabaseCatalogInspector`, checa se as tabelas, colunas, tipos de dados (`JSONB`, `SERIAL`), Foreign Keys e registros realmente foram criados no PostgreSQL ou Neo4j.
+- Emite feedback instantâneo com status `APPROVED` ou `NEEDS_REVISION`, detalhando os requisitos pendentes.
 
 ---
 
 ## 🧪 Testes Automatizados
 
-O projeto adota TDD estrito e cobertura completa de testes em todas as camadas:
+O projeto adota Test-Driven Development (TDD) estrito e cobertura completa de testes em todas as camadas:
 
 ```bash
-# Executar suíte de testes do Backend (Unitários e de Integração)
+# Executar suíte de testes do Backend (Unitários e de Integração com H2 e MockMvc)
 cd backend
 ./mvnw test
+
+# Executar linter estrito do Frontend (Zero warnings e zero erros)
+cd frontend
+npm run lint
 
 # Executar suíte de testes do Frontend (Vitest e Testing Library)
 cd frontend
 npm test
 
-# Validação de build estrito de produção
+# Validação de build estrito de produção (TypeScript + Vite)
 cd frontend
 npm run build
 ```
