@@ -41,11 +41,11 @@ graph TD
     WebApp -->|REST API / JSON| Backend["Backend (Spring Boot 3.4 / Java 21)"]
 
     subgraph CoreServices["Serviços Principais"]
-        Backend -->|Catálogo & Soluções (V1-V9)| Catalog["Catálogo SQLite WAL (CatalogService + Flyway)"]
+        Backend -->|Catálogo e Soluções V1-V9| Catalog["Catálogo SQLite WAL (CatalogService + Flyway)"]
         Backend -->|Strategy Registry| QueryEngines["Motores de Consulta (QueryExecutionService)"]
-        Backend -->|Tutor Socrático (Configurável)| AiTutor["Tutor de IA (Gemini & Ollama)"]
-        Backend -->|Validador Offline (Zero Config)| HeuristicEngine["Validador Heurístico + DatabaseCatalogInspector"]
-        Backend -->|Orquestração & TTL| DockerMgr["Provisionamento de Contêineres (LabProvisioningService)"]
+        Backend -->|Tutor Socrático Configurável| AiTutor["Tutor de IA (Gemini e Ollama)"]
+        Backend -->|Validador Offline Local| HeuristicEngine["Validador Heurístico e DatabaseCatalogInspector"]
+        Backend -->|Orquestração e TTL| DockerMgr["Provisionamento de Contêineres (LabProvisioningService)"]
     end
 
     subgraph RealInfra["Infraestrutura Isolada em Contêineres"]
