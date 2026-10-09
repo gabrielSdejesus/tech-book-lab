@@ -410,6 +410,7 @@ export const LabWorkspace: React.FC<Props> = ({
 
     setAssessing(true);
     setActiveTab('ai');
+    setOfflineResponse(null);
     try {
       const executionSummary = queryResult
         ? queryResult.success
@@ -562,6 +563,25 @@ export const LabWorkspace: React.FC<Props> = ({
               rows={4}
               className="w-full bg-[#fdfcf9] dark:bg-[#181715] border-2 border-stone-700 dark:border-stone-600 p-3 text-xs font-mono text-stone-900 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-500 focus:outline-none focus:border-stone-900 dark:focus:border-stone-300 leading-relaxed book-shadow-sm"
             />
+            {offlineResponse?.expectedReflection && (
+              <div
+                data-testid="model-reflection-box"
+                className="mt-3 p-3 bg-[#f5f0e4] dark:bg-[#1e1c19] border-2 border-[#15803d] dark:border-[#4ade80] space-y-1.5 book-shadow-sm"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#15803d] dark:text-[#4ade80] flex items-center gap-1.5">
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span>{t.lab.modelReflectionTitle}</span>
+                  </span>
+                  <span className="text-[9px] font-mono px-1.5 py-0.5 bg-[#dcfce7] dark:bg-[#152e18] text-[#14532d] dark:text-[#86efac] border border-[#166534] dark:border-[#15803d] font-bold uppercase">
+                    {t.lab.modelReflectionBadge}
+                  </span>
+                </div>
+                <p className="text-xs font-serif italic text-stone-800 dark:text-stone-200 leading-relaxed whitespace-pre-line">
+                  {offlineResponse.expectedReflection}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}

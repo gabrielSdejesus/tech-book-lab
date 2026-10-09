@@ -140,6 +140,7 @@ class CatalogRepositoryTest {
         assertThat(ch1.description()).contains("Create the 3NF model for a professional profile");
         assertThat(ch1.scenario()).contains("Each user has a name, bio");
         assertThat(ch1.reflectionPrompt()).contains("If a company changes its legal name");
+        assertThat(ch1.expectedReflection()).contains("In the 3NF model");
         assertThat(ch1.guidelines()).contains("Model coherent primary and foreign keys");
     }
 
@@ -152,6 +153,10 @@ class CatalogRepositoryTest {
 
         Chapter ch3 = ddia.chapters().get(0);
         assertThat(ch3.title()).isEqualTo("Modelos de Dados e Linguagens de Consulta");
+
+        Lab lab1 = ch3.labs().get(0);
+        var ch1 = lab1.challenges().get(0);
+        assertThat(ch1.expectedReflection()).contains("No modelo 3NF");
     }
 
     @Test

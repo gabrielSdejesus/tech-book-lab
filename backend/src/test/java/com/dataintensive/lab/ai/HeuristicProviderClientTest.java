@@ -352,6 +352,30 @@ class HeuristicProviderClientTest {
         assertThat(response.feedback()).containsIgnoringCase("CQRS");
     }
 
+    @Test
+    @DisplayName("Heurístico: Deve anexar a resposta de reflexão padrão (gabarito) do desafio no resultado da avaliação")
+    void shouldAttachExpectedReflectionFromChallengeInAssessmentResponse() {
+        Lab lab = createLab("ddia-cap-03-lab-01", EngineType.POSTGRES);
+        Challenge ch = new Challenge(
+                "lab-01-ch-1",
+                1,
+                "Modelagem 3NF",
+                "Descrição",
+                "Cenário",
+                "SELECT 1;",
+                null,
+                List.of(),
+                "Pergunta Reflexiva",
+                "Gabarito oficial de trade-off para 3NF",
+                EngineType.POSTGRES
+        );
+
+        AiAssessmentRequest request = new AiAssessmentRequest(lab.id(), ch.id(), "SELECT 1;", "ok", "", "heuristic", null, null, "pt");
+        AiAssessmentResponse response = client.assess(lab, ch, request, AssessmentLanguage.PT);
+
+        assertThat(response.expectedReflection()).isEqualTo("Gabarito oficial de trade-off para 3NF");
+    }
+
     private Lab createLab(String id, EngineType engine) {
         return new Lab(id, 1, "slug", "Lab Title", "Summary", List.of("Topic"), engine, "tbl", null, List.of());
     }

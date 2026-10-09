@@ -8,5 +8,17 @@ public record AiAssessmentResponse(
     String tradeOffAnalysis,
     String efficiencyNotes,
     List<String> alternativeApproaches,
-    String modelUsed
-) {}
+    String modelUsed,
+    String expectedReflection
+) {
+    public AiAssessmentResponse(
+        String status,
+        String feedback,
+        String tradeOffAnalysis,
+        String efficiencyNotes,
+        List<String> alternativeApproaches,
+        String modelUsed
+    ) {
+        this(status, feedback, tradeOffAnalysis, efficiencyNotes, alternativeApproaches, modelUsed, null);
+    }
+}

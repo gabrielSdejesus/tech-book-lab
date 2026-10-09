@@ -19,6 +19,7 @@ export interface Challenge {
   savedCode?: string | null;
   guidelines: string[];
   reflectionPrompt: string;
+  expectedReflection?: string;
   engineType?: EngineType;
 }
 
@@ -75,6 +76,7 @@ export interface AiAssessmentResponse {
   efficiencyNotes: string;
   alternativeApproaches: string[];
   modelUsed: string;
+  expectedReflection?: string;
 }
 
 export interface AiAssessmentRequest {

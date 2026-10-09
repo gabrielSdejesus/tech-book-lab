@@ -12,8 +12,39 @@ public record Challenge(
     String savedCode,
     List<String> guidelines,
     String reflectionPrompt,
+    String expectedReflection,
     EngineType engineType
 ) {
+    public Challenge(
+        String id,
+        int order,
+        String title,
+        String description,
+        String scenario,
+        String starterTemplate,
+        String savedCode,
+        List<String> guidelines,
+        String reflectionPrompt,
+        EngineType engineType
+    ) {
+        this(id, order, title, description, scenario, starterTemplate, savedCode, guidelines, reflectionPrompt, null, engineType);
+    }
+
+    public Challenge(
+        String id,
+        int order,
+        String title,
+        String description,
+        String scenario,
+        String starterTemplate,
+        List<String> guidelines,
+        String reflectionPrompt,
+        String expectedReflection,
+        EngineType engineType
+    ) {
+        this(id, order, title, description, scenario, starterTemplate, null, guidelines, reflectionPrompt, expectedReflection, engineType);
+    }
+
     public Challenge(
         String id,
         int order,
@@ -25,7 +56,7 @@ public record Challenge(
         String reflectionPrompt,
         EngineType engineType
     ) {
-        this(id, order, title, description, scenario, starterTemplate, null, guidelines, reflectionPrompt, engineType);
+        this(id, order, title, description, scenario, starterTemplate, null, guidelines, reflectionPrompt, null, engineType);
     }
 
     public Challenge(
@@ -38,6 +69,6 @@ public record Challenge(
         List<String> guidelines,
         String reflectionPrompt
     ) {
-        this(id, order, title, description, scenario, starterTemplate, null, guidelines, reflectionPrompt, null);
+        this(id, order, title, description, scenario, starterTemplate, null, guidelines, reflectionPrompt, null, null);
     }
 }

@@ -76,6 +76,22 @@ public class HeuristicProviderClient implements AiProviderClient {
 
     @Override
     public AiAssessmentResponse assess(Lab lab, Challenge challenge, AiAssessmentRequest request, AssessmentLanguage language) {
+        AiAssessmentResponse response = evaluateChallengeHeuristics(lab, challenge, request, language);
+        if (challenge != null && challenge.expectedReflection() != null && !challenge.expectedReflection().isBlank()) {
+            return new AiAssessmentResponse(
+                    response.status(),
+                    response.feedback(),
+                    response.tradeOffAnalysis(),
+                    response.efficiencyNotes(),
+                    response.alternativeApproaches(),
+                    response.modelUsed(),
+                    challenge.expectedReflection()
+            );
+        }
+        return response;
+    }
+
+    private AiAssessmentResponse evaluateChallengeHeuristics(Lab lab, Challenge challenge, AiAssessmentRequest request, AssessmentLanguage language) {
         boolean isEn = language == AssessmentLanguage.EN;
         String modelName = isEn ? "Offline Heuristic Tutor (Rules Engine)" : "Tutor Heurístico (Regras Locais)";
 
