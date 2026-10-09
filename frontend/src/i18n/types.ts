@@ -36,6 +36,7 @@ export interface TranslationSchema {
     reflectionPlaceholder: string;
     modelReflectionTitle: string;
     modelReflectionBadge: string;
+    checkReflectionAnswer: string;
     evaluateWithAi: string;
     evaluating: string;
     validateOffline: string;
