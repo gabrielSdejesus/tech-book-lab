@@ -15,6 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -126,6 +127,18 @@ class DatabaseCatalogInspectorTest {
     }
 
     @Test
+    @DisplayName("executeVerificationQuery deve executar query via executor correspondente")
+    void shouldExecuteVerificationQuerySuccessfully() {
+        when(mockPostgresExecutor.execute(eq("SELECT 1"), anyLong()))
+                .thenReturn(QueryResult.ok(List.of("val"), List.of(Map.of("val", 1)), 2));
+
+        QueryResult result = inspector.executeVerificationQuery(EngineType.POSTGRES, "SELECT 1");
+
+        assertThat(result.success()).isTrue();
+        assertThat(result.rows()).hasSize(1);
+    }
+
+    @Test
     @DisplayName("Deve ser resiliente e retornar false/zero quando o motor lançar erro ou consulta falhar")
     void shouldHandleExceptionsGracefullyWithoutThrowing() {
         when(mockPostgresExecutor.execute(anyString(), anyLong()))
@@ -136,5 +149,6 @@ class DatabaseCatalogInspectorTest {
         assertThat(inspector.tableExists(EngineType.POSTGRES, "usuarios")).isFalse();
         assertThat(inspector.getRowCount(EngineType.POSTGRES, "usuarios")).isEqualTo(0L);
         assertThat(inspector.countNeo4jNodes("Person")).isEqualTo(0L);
+        assertThat(inspector.executeVerificationQuery(EngineType.POSTGRES, "SELECT 1").success()).isFalse();
     }
 }

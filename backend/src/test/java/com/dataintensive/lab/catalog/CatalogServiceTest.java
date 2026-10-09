@@ -128,7 +128,14 @@ class CatalogServiceTest {
     @DisplayName("Deve delegar ao repositório para salvar solução de desafio")
     void shouldDelegateSaveChallengeSolution() {
         catalogService.saveChallengeSolution("lab-01-ch-1", "SELECT 1;");
-        verify(catalogRepository).saveChallengeSolution("lab-01-ch-1", "SELECT 1;");
+        verify(catalogRepository).saveChallengeSolution("lab-01-ch-1", "SELECT 1;", null);
+    }
+
+    @Test
+    @DisplayName("Deve delegar ao repositório para salvar solução de desafio com userReflection")
+    void shouldDelegateSaveChallengeSolutionWithReflection() {
+        catalogService.saveChallengeSolution("lab-01-ch-1", "SELECT 1;", "Minha reflexão");
+        verify(catalogRepository).saveChallengeSolution("lab-01-ch-1", "SELECT 1;", "Minha reflexão");
     }
 
     @Test

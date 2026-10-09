@@ -125,6 +125,29 @@ class HeuristicProviderClientTest {
     }
 
     @Test
+    @DisplayName("3NF State-Based: Deve aprovar quando o usuário submeter apenas o SELECT com LEFT JOIN após já ter criado o esquema no banco")
+    void shouldApprove3NFWhenUserSubmitsOnlySelectQueryAndDatabaseCatalogIsValid() {
+        Lab lab = createLab("ddia-cap-03-lab-01", EngineType.POSTGRES);
+        Challenge ch = createChallenge("lab-01-ch-1", EngineType.POSTGRES);
+
+        String userQuery = """
+                SELECT u.nome, e.cargo
+                FROM usuarios u
+                LEFT JOIN experiencias_profissionais e ON e.usuario_id = u.id;
+                """;
+
+        when(mockInspector.tableExists(eq(EngineType.POSTGRES), eq("usuarios"))).thenReturn(true);
+        when(mockInspector.foreignKeyExists(eq(EngineType.POSTGRES), eq("experiencias_profissionais"), eq("usuarios"))).thenReturn(true);
+        when(mockInspector.getRowCount(eq(EngineType.POSTGRES), eq("usuarios"))).thenReturn(2L);
+
+        AiAssessmentRequest request = new AiAssessmentRequest(lab.id(), ch.id(), userQuery, "ok", "Trade-off", "heuristic", null, null, "pt");
+        AiAssessmentResponse response = client.assess(lab, ch, request, AssessmentLanguage.PT);
+
+        assertThat(response.status()).isEqualTo("APPROVED");
+        assertThat(response.feedback()).containsIgnoringCase("3NF");
+    }
+
+    @Test
     @DisplayName("JSONB: Deve rejeitar quando tabela com tipo JSONB não for detectada no catálogo do banco")
     void shouldRejectJsonbWhenTableDoesNotExistInDatabase() {
         Lab lab = createLab("ddia-cap-03-lab-01", EngineType.POSTGRES);

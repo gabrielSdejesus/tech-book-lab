@@ -271,7 +271,24 @@ describe('API Service', () => {
       headers: expect.objectContaining({
         'Content-Type': 'application/json'
       }),
-      body: JSON.stringify({ code: 'SELECT 1;' })
+      body: JSON.stringify({ code: 'SELECT 1;', userReflection: undefined })
+    }));
+  });
+
+  it('saveChallengeSolution deve incluir userReflection quando informado', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({})
+    } as Response);
+
+    await saveChallengeSolution('lab-01-ch-1', 'SELECT 1;', 'Reflexão sobre 3NF');
+
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/catalog/challenges/lab-01-ch-1/solution', expect.objectContaining({
+      method: 'PUT',
+      headers: expect.objectContaining({
+        'Content-Type': 'application/json'
+      }),
+      body: JSON.stringify({ code: 'SELECT 1;', userReflection: 'Reflexão sobre 3NF' })
     }));
   });
 

@@ -105,7 +105,22 @@ class CatalogControllerTest {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        verify(mockService).saveChallengeSolution("lab-01-ch-1", "SELECT 1;");
+        verify(mockService).saveChallengeSolution("lab-01-ch-1", "SELECT 1;", null);
+    }
+
+    @Test
+    @DisplayName("saveChallengeSolution com userReflection deve retornar 200 OK e delegar ao CatalogService")
+    void shouldSaveChallengeSolutionWithReflection() {
+        CatalogService mockService = mock(CatalogService.class);
+        CatalogController controller = new CatalogController(mockService);
+
+        ResponseEntity<Void> response = controller.saveChallengeSolution(
+                "lab-01-ch-1",
+                new CatalogController.SaveSolutionRequest("SELECT 1;", "Reflexão sobre 3NF")
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        verify(mockService).saveChallengeSolution("lab-01-ch-1", "SELECT 1;", "Reflexão sobre 3NF");
     }
 
     @Test

@@ -753,26 +753,69 @@ describe('LabWorkspace Component', () => {
     expect(api.saveChallengeSolution).not.toHaveBeenCalled();
 
     vi.advanceTimersByTime(350);
-    expect(api.saveChallengeSolution).toHaveBeenCalledWith('lab-01-ch-1', 'SELECT * FROM usuarios WHERE ativo = true;');
+    expect(api.saveChallengeSolution).toHaveBeenCalledWith('lab-01-ch-1', 'SELECT * FROM usuarios WHERE ativo = true;', '');
 
     vi.useRealTimers();
   });
 
-  it('deve preservar o código digitado ao alternar entre exercícios do laboratório', async () => {
+  it('deve priorizar savedReflection ao carregar o laboratório', () => {
+    const labWithSavedReflection: Lab = {
+      ...mockLab,
+      challenges: [
+        {
+          ...mockLab.challenges[0],
+          savedReflection: 'No modelo 3NF, priorizamos consistência.'
+        }
+      ]
+    };
+
+    render(<LabWorkspace lab={labWithSavedReflection} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    const reflectionTextarea = screen.getByPlaceholderText(/Digite aqui sua análise sobre os trade-offs/i) as HTMLTextAreaElement;
+    expect(reflectionTextarea.value).toBe('No modelo 3NF, priorizamos consistência.');
+  });
+
+  it('deve acionar auto-save com userReflection ao digitar na caixa de reflexão conceitual', async () => {
+    vi.useFakeTimers();
+
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    const reflectionTextarea = screen.getByPlaceholderText(/Digite aqui sua análise sobre os trade-offs/i);
+    fireEvent.change(reflectionTextarea, { target: { value: 'Reflexão sobre integridade referencial.' } });
+
+    vi.advanceTimersByTime(300);
+    expect(api.saveChallengeSolution).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(350);
+    expect(api.saveChallengeSolution).toHaveBeenCalledWith(
+      'lab-01-ch-1',
+      mockLab.challenges[0].starterTemplate,
+      'Reflexão sobre integridade referencial.'
+    );
+
+    vi.useRealTimers();
+  });
+
+  it('deve preservar o código e reflexão digitados ao alternar entre exercícios do laboratório', async () => {
     render(<LabWorkspace lab={mockHybridLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
 
     const codeTextarea = screen.getByPlaceholderText(/-- Digite aqui sua instrução SQL ou Cypher.../i);
+    const reflectionTextarea = screen.getByPlaceholderText(/Digite aqui sua análise sobre os trade-offs/i);
+
     fireEvent.change(codeTextarea, { target: { value: 'MATCH (u:User) RETURN u;' } });
+    fireEvent.change(reflectionTextarea, { target: { value: 'Minha reflexão do exercício 1' } });
 
     const exercise2Tab = screen.getByRole('button', { name: /Exercício 2/i });
     fireEvent.click(exercise2Tab);
 
     expect(codeTextarea).toHaveValue(mockHybridLab.challenges[1].starterTemplate);
+    expect(reflectionTextarea).toHaveValue('');
 
     const exercise1Tab = screen.getByRole('button', { name: /Exercício 1/i });
     fireEvent.click(exercise1Tab);
 
     expect(codeTextarea).toHaveValue('MATCH (u:User) RETURN u;');
+    expect(reflectionTextarea).toHaveValue('Minha reflexão do exercício 1');
   });
 
   it('deve chamar resetChallengeSolution e restaurar starterTemplate ao clicar em Recarregar Template', async () => {
