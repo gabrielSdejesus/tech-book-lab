@@ -24,5 +24,9 @@ public interface CatalogRepository {
 
     void saveChallengeSolution(String challengeId, String code);
 
+    default void saveChallengeSolution(String challengeId, String code, String userReflection) {
+        saveChallengeSolution(challengeId, code);
+    }
+
     void deleteChallengeSolution(String challengeId);
 }

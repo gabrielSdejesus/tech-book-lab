@@ -84,13 +84,19 @@ public class JdbcCatalogRepository implements CatalogRepository {
 
     @Override
     public void saveChallengeSolution(String challengeId, String code) {
+        saveChallengeSolution(challengeId, code, null);
+    }
+
+    @Override
+    public void saveChallengeSolution(String challengeId, String code, String userReflection) {
         jdbcClient.sql("DELETE FROM challenge_user_solutions WHERE challenge_id = :challengeId")
                 .param("challengeId", challengeId)
                 .update();
 
-        jdbcClient.sql("INSERT INTO challenge_user_solutions (challenge_id, code, updated_at) VALUES (:challengeId, :code, CURRENT_TIMESTAMP)")
+        jdbcClient.sql("INSERT INTO challenge_user_solutions (challenge_id, code, user_reflection, updated_at) VALUES (:challengeId, :code, :userReflection, CURRENT_TIMESTAMP)")
                 .param("challengeId", challengeId)
                 .param("code", code)
+                .param("userReflection", userReflection)
                 .update();
     }
 
@@ -221,7 +227,8 @@ public class JdbcCatalogRepository implements CatalogRepository {
     private List<Challenge> findChallengesByLabId(String labId, Map<String, String> translations) {
         List<ChallengeRow> challengeRows = jdbcClient.sql("""
                 SELECT c.id, c.lab_id, c.order_index, c.title, c.description, c.scenario,
-                       c.starter_template, s.code AS saved_code, c.reflection_prompt, c.expected_reflection, c.engine_type
+                       c.starter_template, s.code AS saved_code, s.user_reflection AS saved_reflection,
+                       c.reflection_prompt, c.expected_reflection, c.engine_type
                 FROM challenges c
                 LEFT JOIN challenge_user_solutions s ON c.id = s.challenge_id
                 WHERE c.lab_id = :labId
@@ -265,6 +272,7 @@ public class JdbcCatalogRepository implements CatalogRepository {
                 lookup(translations, "CHALLENGE", row.id(), "scenario", row.scenario()),
                 lookup(translations, "CHALLENGE", row.id(), "starter_template", row.starter_template()),
                 row.saved_code(),
+                row.saved_reflection(),
                 guidelines,
                 lookup(translations, "CHALLENGE", row.id(), "reflection_prompt", row.reflection_prompt()),
                 lookup(translations, "CHALLENGE", row.id(), "expected_reflection", row.expected_reflection()),
@@ -287,7 +295,7 @@ public class JdbcCatalogRepository implements CatalogRepository {
     public record BookRow(String id, String title, String author, String tag_line, String cover_color, String cover_image_url, String description) {}
     public record ChapterRow(String id, String book_id, int number, String title, String subtitle, String summary) {}
     public record LabRow(String id, String chapter_id, int number, String slug, String title, String summary, String engine_type, String database_name, String reset_schema_sql) {}
-    public record ChallengeRow(String id, String lab_id, int order_index, String title, String description, String scenario, String starter_template, String saved_code, String reflection_prompt, String expected_reflection, String engine_type) {}
+    public record ChallengeRow(String id, String lab_id, int order_index, String title, String description, String scenario, String starter_template, String saved_code, String saved_reflection, String reflection_prompt, String expected_reflection, String engine_type) {}
     public record LabConceptRow(String concept, int order_index) {}
     public record ChallengeGuidelineRow(String guideline_text, int order_index) {}
     public record TranslationRow(String entity_type, String entity_id, String field_name, String translation_text) {}

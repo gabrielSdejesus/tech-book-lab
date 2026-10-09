@@ -52,7 +52,9 @@ public class CatalogController {
     public ResponseEntity<Void> saveChallengeSolution(
             @PathVariable String challengeId,
             @RequestBody SaveSolutionRequest request) {
-        catalogService.saveChallengeSolution(challengeId, request != null ? request.code() : "");
+        String code = request != null && request.code() != null ? request.code() : "";
+        String userReflection = request != null ? request.userReflection() : null;
+        catalogService.saveChallengeSolution(challengeId, code, userReflection);
         return ResponseEntity.ok().build();
     }
 
@@ -62,7 +64,11 @@ public class CatalogController {
         return ResponseEntity.ok().build();
     }
 
-    public record SaveSolutionRequest(String code) {}
+    public record SaveSolutionRequest(String code, String userReflection) {
+        public SaveSolutionRequest(String code) {
+            this(code, null);
+        }
+    }
 
     static String resolveLocale(String langParam, String acceptLanguage) {
         if (langParam != null && !langParam.isBlank()) {
