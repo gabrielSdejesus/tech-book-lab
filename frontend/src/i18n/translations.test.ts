@@ -75,4 +75,9 @@ describe('i18n Translations Parity and Integrity', () => {
     expect(pt.aiModal.activeVersion('gemini-1.5', 120)).toBe('Versão ativa: gemini-1.5 (120ms)');
     expect(en.aiModal.activeVersion('gemini-1.5', 120)).toBe('Active version: gemini-1.5 (120ms)');
   });
+
+  it('deve possuir as traduções corretas para a ação de conferir gabarito reflexivo', () => {
+    expect(pt.lab.checkReflectionAnswer).toBe('Conferir Gabarito de Trade-off');
+    expect(en.lab.checkReflectionAnswer).toBe('Check Model Answer');
+  });
 });

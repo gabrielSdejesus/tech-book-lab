@@ -44,6 +44,7 @@ describe('LabWorkspace Component', () => {
         starterTemplate: 'CREATE TABLE IF NOT EXISTS usuarios (id INT PRIMARY KEY);',
         guidelines: ['Crie chave primária'],
         reflectionPrompt: 'Qual é o impacto do JOIN na latência?',
+        expectedReflection: 'Gabarito oficial de trade-off para o modelo 3NF',
         engineType: 'POSTGRES',
       }
     ]
@@ -69,6 +70,7 @@ describe('LabWorkspace Component', () => {
         starterTemplate: 'MATCH (p:Person) RETURN p LIMIT 10;',
         guidelines: [],
         reflectionPrompt: 'Vantagens do Cypher?',
+        expectedReflection: 'Gabarito oficial Cypher',
         engineType: 'NEO4J',
       },
       {
@@ -80,6 +82,7 @@ describe('LabWorkspace Component', () => {
         starterTemplate: 'WITH RECURSIVE subordinates AS (...) SELECT * FROM subordinates;',
         guidelines: [],
         reflectionPrompt: 'Trade-offs de CTE recursiva?',
+        expectedReflection: 'Gabarito oficial CTE',
         engineType: 'POSTGRES',
       },
     ],
@@ -969,6 +972,83 @@ describe('LabWorkspace Component', () => {
 
     expect(screen.queryByTestId('model-reflection-box')).not.toBeInTheDocument();
   });
+
+  it('deve manter o botão de conferir gabarito reflexivo desabilitado quando a reflexão estiver vazia ou contiver apenas espaços', () => {
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    const checkAnswerBtn = screen.getByRole('button', { name: /Conferir Gabarito de Trade-off/i });
+    expect(checkAnswerBtn).toBeDisabled();
+
+    const reflectionInput = screen.getByPlaceholderText(/Digite aqui sua análise sobre os trade-offs/i);
+    fireEvent.change(reflectionInput, { target: { value: '   ' } });
+    expect(checkAnswerBtn).toBeDisabled();
+  });
+
+  it('deve habilitar o botão de conferir gabarito reflexivo assim que o usuário digita uma reflexão', () => {
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    const checkAnswerBtn = screen.getByRole('button', { name: /Conferir Gabarito de Trade-off/i });
+    expect(checkAnswerBtn).toBeDisabled();
+
+    const reflectionInput = screen.getByPlaceholderText(/Digite aqui sua análise sobre os trade-offs/i);
+    fireEvent.change(reflectionInput, { target: { value: 'Minha reflexão crítica sobre normalização' } });
+
+    expect(checkAnswerBtn).not.toBeDisabled();
+  });
+
+  it('deve renderizar imediatamente o gabarito reflexivo ao clicar no botão dedicado, mesmo com editor de código vazio', async () => {
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    // Garante que o gabarito não é exibido inicialmente
+    expect(screen.queryByTestId('model-reflection-box')).not.toBeInTheDocument();
+
+    const reflectionInput = screen.getByPlaceholderText(/Digite aqui sua análise sobre os trade-offs/i);
+    fireEvent.change(reflectionInput, { target: { value: 'Minha hipótese sobre 3NF e concorrência' } });
+
+    const checkAnswerBtn = screen.getByRole('button', { name: /Conferir Gabarito de Trade-off/i });
+    fireEvent.click(checkAnswerBtn);
+
+    const modelBox = screen.getByTestId('model-reflection-box');
+    expect(modelBox).toBeInTheDocument();
+    expect(modelBox).toHaveTextContent(mockLab.challenges[0].expectedReflection!);
+  });
+
+  it('deve ocultar o gabarito reflexivo e desabilitar o botão se o usuário apagar o texto da reflexão', async () => {
+    render(<LabWorkspace lab={mockLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    const reflectionInput = screen.getByPlaceholderText(/Digite aqui sua análise sobre os trade-offs/i);
+    fireEvent.change(reflectionInput, { target: { value: 'Minha análise inicial' } });
+
+    const checkAnswerBtn = screen.getByRole('button', { name: /Conferir Gabarito de Trade-off/i });
+    fireEvent.click(checkAnswerBtn);
+
+    expect(screen.getByTestId('model-reflection-box')).toBeInTheDocument();
+
+    // Usuário apaga todo o texto
+    fireEvent.change(reflectionInput, { target: { value: '' } });
+
+    expect(checkAnswerBtn).toBeDisabled();
+    expect(screen.queryByTestId('model-reflection-box')).not.toBeInTheDocument();
+  });
+
+  it('deve ocultar o gabarito reflexivo ao alternar de desafio na barra lateral', async () => {
+    render(<LabWorkspace lab={mockHybridLab} apiKey="test-key" provider="gemini" model="gemini-3.8-flash" />);
+
+    const reflectionInput = screen.getByPlaceholderText(/Digite aqui sua análise sobre os trade-offs/i);
+    fireEvent.change(reflectionInput, { target: { value: 'Reflexão sobre o desafio 1' } });
+
+    const checkAnswerBtn = screen.getByRole('button', { name: /Conferir Gabarito de Trade-off/i });
+    fireEvent.click(checkAnswerBtn);
+
+    expect(screen.getByTestId('model-reflection-box')).toBeInTheDocument();
+
+    // Alterna para o Exercício 2
+    const exercise2Tab = screen.getByRole('button', { name: /Exercício 2/i });
+    fireEvent.click(exercise2Tab);
+
+    expect(screen.queryByTestId('model-reflection-box')).not.toBeInTheDocument();
+  });
 });
+
 
 

@@ -171,6 +171,38 @@ class CatalogRepositoryTest {
     }
 
     @Test
+    @DisplayName("Deve garantir que todos os desafios retornados por findAllBooks e findLabById contenham expectedReflection populado em PT e EN")
+    void shouldEnsureAllChallengesHaveExpectedReflectionPopulatedInPtAndEn() {
+        for (String locale : List.of("pt", "en")) {
+            List<Book> books = catalogRepository.findAllBooks(locale);
+            assertThat(books).isNotEmpty();
+
+            List<com.dataintensive.lab.domain.Challenge> challenges = books.stream()
+                    .flatMap(b -> b.chapters().stream())
+                    .flatMap(c -> c.labs().stream())
+                    .flatMap(l -> l.challenges().stream())
+                    .toList();
+
+            assertThat(challenges).isNotEmpty();
+            for (var ch : challenges) {
+                assertThat(ch.expectedReflection())
+                        .as("Challenge %s deve possuir expectedReflection não nulo e não em branco no locale %s", ch.id(), locale)
+                        .isNotNull()
+                        .isNotBlank();
+            }
+
+            Optional<Lab> labOpt = catalogRepository.findLabById("ddia-cap-03-lab-01", locale);
+            assertThat(labOpt).isPresent();
+            for (var ch : labOpt.get().challenges()) {
+                assertThat(ch.expectedReflection())
+                        .as("Challenge %s de findLabById deve possuir expectedReflection no locale %s", ch.id(), locale)
+                        .isNotNull()
+                        .isNotBlank();
+            }
+        }
+    }
+
+    @Test
     @DisplayName("Deve garantir que todos os starter templates contenham apenas código executável e nenhum comentário")
     void shouldNotContainCommentsInStarterTemplates() {
         List<Book> books = catalogRepository.findAllBooks();

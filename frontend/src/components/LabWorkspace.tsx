@@ -92,6 +92,7 @@ export const LabWorkspace: React.FC<Props> = ({
 
   const [assessing, setAssessing] = useState(false);
   const [aiResponse, setAiResponse] = useState<AiAssessmentResponse | null>(null);
+  const [showReflectionAnswer, setShowReflectionAnswer] = useState<boolean>(false);
 
   const [activeTab, setActiveTab] = useState<'result' | 'offline' | 'ai' | 'json'>('result');
   const [resetting, setResetting] = useState(false);
@@ -235,6 +236,7 @@ export const LabWorkspace: React.FC<Props> = ({
     setQueryResult(null);
     setOfflineResponse(null);
     setAiResponse(null);
+    setShowReflectionAnswer(false);
     setActiveTab('result');
   };
 
@@ -243,6 +245,7 @@ export const LabWorkspace: React.FC<Props> = ({
     const template = selectedChallenge.starterTemplate || '';
     setQueryCode(template);
     setUserReflection('');
+    setShowReflectionAnswer(false);
     setSolutionsByChallenge((prev) => ({
       ...prev,
       [selectedChallenge.id]: template
@@ -593,12 +596,28 @@ export const LabWorkspace: React.FC<Props> = ({
                 if (selectedChallenge?.id) {
                   setReflectionsByChallenge((prev) => ({ ...prev, [selectedChallenge.id]: val }));
                 }
+                if (val.trim() === '') {
+                  setShowReflectionAnswer(false);
+                  if (offlineResponse?.expectedReflection) {
+                    setOfflineResponse((prev) => prev ? { ...prev, expectedReflection: undefined } : null);
+                  }
+                }
               }}
               placeholder={t.lab.reflectionPlaceholder}
               rows={4}
               className="w-full bg-[#fdfcf9] dark:bg-[#181715] border-2 border-stone-700 dark:border-stone-600 p-3 text-xs font-mono text-stone-900 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-500 focus:outline-none focus:border-stone-900 dark:focus:border-stone-300 leading-relaxed book-shadow-sm"
             />
-            {offlineResponse?.expectedReflection && (
+            <button
+              type="button"
+              onClick={() => setShowReflectionAnswer(true)}
+              disabled={!userReflection.trim()}
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 border-2 border-stone-700 dark:border-stone-600 text-stone-900 dark:text-stone-100 text-xs font-mono font-bold uppercase tracking-wider book-shadow book-shadow-pressed transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#15803d] dark:text-[#4ade80]" />
+              <span>{t.lab.checkReflectionAnswer}</span>
+            </button>
+            {(showReflectionAnswer || offlineResponse?.expectedReflection) &&
+              (selectedChallenge.expectedReflection || offlineResponse?.expectedReflection) && (
               <div
                 data-testid="model-reflection-box"
                 className="mt-3 p-3 bg-[#f5f0e4] dark:bg-[#1e1c19] border-2 border-[#15803d] dark:border-[#4ade80] space-y-1.5 book-shadow-sm"
@@ -613,7 +632,7 @@ export const LabWorkspace: React.FC<Props> = ({
                   </span>
                 </div>
                 <p className="text-xs font-serif italic text-stone-800 dark:text-stone-200 leading-relaxed whitespace-pre-line">
-                  {offlineResponse.expectedReflection}
+                  {selectedChallenge.expectedReflection || offlineResponse?.expectedReflection}
                 </p>
               </div>
             )}

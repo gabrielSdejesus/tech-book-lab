@@ -122,6 +122,21 @@ class ApiIntegrationTest {
                 .andExpect(jsonPath("$.challenges[0].guidelines[0]", is("Model coherent primary and foreign keys")));
     }
 
+    @Test
+    @DisplayName("GET /api/labs/{id} - Deve incluir expectedReflection em cada desafio da árvore para consumo desacoplado")
+    void shouldIncludeExpectedReflectionInLabChallenges() throws Exception {
+        mockMvc.perform(get("/api/labs/ddia-cap-03-lab-01"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.challenges", hasSize(greaterThanOrEqualTo(1))))
+                .andExpect(jsonPath("$.challenges[0].expectedReflection", not(emptyOrNullString())))
+                .andExpect(jsonPath("$.challenges[0].expectedReflection", containsString("3NF")));
+
+        mockMvc.perform(get("/api/labs/ddia-cap-03-lab-01")
+                        .header("Accept-Language", "en"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.challenges[0].expectedReflection", containsString("In the 3NF model")));
+    }
+
 
 
     @Test
