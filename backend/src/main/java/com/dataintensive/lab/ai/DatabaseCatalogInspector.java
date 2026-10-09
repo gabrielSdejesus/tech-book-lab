@@ -2,6 +2,8 @@ package com.dataintensive.lab.ai;
 
 import com.dataintensive.lab.domain.EngineType;
 
+import com.dataintensive.lab.query.QueryResult;
+
 public interface DatabaseCatalogInspector {
 
     /**
@@ -38,4 +40,9 @@ public interface DatabaseCatalogInspector {
      * Retorna a quantidade de relacionamentos existentes no Neo4j com o tipo especificado.
      */
     long countNeo4jRelationships(String relationshipType);
+
+    /**
+     * Executa uma consulta de verificação no motor especificado e retorna o QueryResult.
+     */
+    QueryResult executeVerificationQuery(EngineType engineType, String query);
 }

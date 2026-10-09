@@ -178,6 +178,23 @@ public class DefaultDatabaseCatalogInspector implements DatabaseCatalogInspector
         }
     }
 
+    @Override
+    public QueryResult executeVerificationQuery(EngineType engineType, String query) {
+        if (engineType == null || query == null || query.isBlank()) {
+            return QueryResult.error("Query ou engine inválidos", 0);
+        }
+        try {
+            QueryEngineExecutor executor = engineRegistry.getExecutor(engineType);
+            if (executor == null) {
+                return QueryResult.error("Executor indisponível para engine: " + engineType, 0);
+            }
+            return executor.execute(query, DEFAULT_TIMEOUT_MS);
+        } catch (Exception e) {
+            log.warn("Erro ao executar query de verificação no engine {}: {}", engineType, e.getMessage());
+            return QueryResult.error("Erro na verificação: " + e.getMessage(), 0);
+        }
+    }
+
     private String cleanIdentifier(String identifier) {
         return identifier.replaceAll("[^a-zA-Z0-9_]", "");
     }
