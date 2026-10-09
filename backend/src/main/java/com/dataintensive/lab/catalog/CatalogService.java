@@ -41,7 +41,11 @@ public class CatalogService {
     }
 
     public void saveChallengeSolution(String challengeId, String code) {
-        catalogRepository.saveChallengeSolution(challengeId, code);
+        saveChallengeSolution(challengeId, code, null);
+    }
+
+    public void saveChallengeSolution(String challengeId, String code, String userReflection) {
+        catalogRepository.saveChallengeSolution(challengeId, code, userReflection);
     }
 
     public void deleteChallengeSolution(String challengeId) {

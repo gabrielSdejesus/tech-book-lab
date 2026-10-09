@@ -261,5 +261,27 @@ class CatalogRepositoryTest {
         // cleanup
         catalogRepository.deleteChallengeSolution(challengeId);
     }
+
+    @Test
+    @DisplayName("Deve salvar e recuperar resposta do questionário de trade-off (userReflection) do desafio")
+    void shouldSaveAndLoadUserReflectionInChallengeSolution() {
+        String challengeId = "lab-01-ch-1";
+        String mySql = "SELECT * FROM usuarios;";
+        String myReflection = "No modelo 3NF, a consistência é preservada por chaves estrangeiras com baixo custo de escrita.";
+
+        catalogRepository.saveChallengeSolution(challengeId, mySql, myReflection);
+
+        Optional<Lab> labOpt = catalogRepository.findLabById("ddia-cap-03-lab-01");
+        var ch = labOpt.orElseThrow().challenges().stream()
+                .filter(c -> c.id().equals(challengeId))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(ch.savedCode()).isEqualTo(mySql);
+        assertThat(ch.savedReflection()).isEqualTo(myReflection);
+
+        // cleanup
+        catalogRepository.deleteChallengeSolution(challengeId);
+    }
 }
 
