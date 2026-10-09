@@ -20,11 +20,11 @@ Plataforma de laboratórios interativos para estudos práticos e aprofundados de
 O **Tech Book Lab** foi projetado para transformar o estudo teórico de literatura técnica avançada em experimentação prática direta. Ao invés de questionários de múltipla escolha com gabaritos rígidos, o desenvolvedor interage com bancos de dados reais e recebe feedback socrático sobre seus trade-offs arquiteturais.
 
 ### Principais Recursos
-- **Catálogo Dinâmico & Multilíngue (Flyway V1 a V8):** Livros, capítulos, conceitos-chave e desafios carregados dinamicamente via SQLite com Flyway migrations e suporte nativo a internacionalização (PT-BR e EN).
+- **Catálogo Dinâmico & Multilíngue (Flyway V1 a V9):** Livros, capítulos, conceitos-chave e desafios carregados dinamicamente via SQLite com Flyway migrations e suporte nativo a internacionalização (PT-BR e EN).
 - **Motores de Execução Pluggáveis (SQL & Cypher):** Execução nativa de consultas em PostgreSQL 16 (relacional/documentos/OLAP) e Neo4j 5 (grafos de propriedades) com drivers otimizados (`PostgresEngineExecutor` e `Neo4jEngineExecutor`).
 - **Dois Níveis Complementares de Avaliação de Soluções:**
   - **Tutor Socrático de IA Configurável:** Análise interativa via **Google Gemini** (2.5 Flash / 2.0 Flash) ou **Ollama Local** (ex: `qwen2.5-coder`), explorando trade-offs teóricos, análise de planos de execução e recomendações canônicas de Martin Kleppmann.
-  - **Validador Heurístico Offline Determinístico:** Avaliação local instantânea com zero chamadas externas de rede, baseada em validação estática de palavras-chave e inspeção determinística do catálogo real dos bancos (`DatabaseCatalogInspector`) checando tabelas, colunas, tipos e constraints.
+  - **Validador Heurístico Offline Determinístico:** Avaliação local instantânea com zero chamadas externas de rede, baseada em validação estática de palavras-chave, inspeção determinística do catálogo real dos bancos (`DatabaseCatalogInspector`) e apresentação do gabarito canônico de trade-off (`expected_reflection`) do livro.
 - **Autosave Contínuo & Persistência de Progresso:** Salvamento automático das soluções com debounce de 600ms persistido na tabela `challenge_user_solutions`, permitindo alternar entre desafios e retornar ao workspace sem perda de código digitado.
 - **Isolamento de Recursos & Ciclo de Vida Inteligente:** Contêineres Docker sob demanda com portas locais determinísticas (`5432` Postgres, `7687`/`7474` Neo4j), health check em tempo real (`GET /api/infra/status`), monitoramento de inatividade (TTL de 15m) e *teardown* automático ao fechar ou trocar de laboratório.
 - **Workbench Técnico Completo:** Editor com atalhos de teclado (`Ctrl + Enter`), visualizador tabular e JSON estruturado, cancelamento de consultas ativas (`POST /api/query/cancel`), reset de schema em 1 clique (`POST /api/query/reset/{labId}`) e recarga de starter template limpo.
@@ -41,7 +41,7 @@ graph TD
     WebApp -->|REST API / JSON| Backend["Backend (Spring Boot 3.4 / Java 21)"]
 
     subgraph CoreServices["Serviços Principais"]
-        Backend -->|Catálogo & Soluções (V1-V8)| Catalog["Catálogo SQLite WAL (CatalogService + Flyway)"]
+        Backend -->|Catálogo & Soluções (V1-V9)| Catalog["Catálogo SQLite WAL (CatalogService + Flyway)"]
         Backend -->|Strategy Registry| QueryEngines["Motores de Consulta (QueryExecutionService)"]
         Backend -->|Tutor Socrático (Configurável)| AiTutor["Tutor de IA (Gemini & Ollama)"]
         Backend -->|Validador Offline (Zero Config)| HeuristicEngine["Validador Heurístico + DatabaseCatalogInspector"]
@@ -123,7 +123,7 @@ Acessível diretamente pelo botão e aba dedicada **"Validação Offline"** no w
 - Executa validação em duas fases:
   1. **Análise Sintática:** Verifica a presença de comandos estruturais mandatórios (ex: cláusulas de agregação, `JOIN`, nós Cypher).
   2. **Inspeção de Catálogo no Banco Real:** Através do `DatabaseCatalogInspector`, checa se as tabelas, colunas, tipos de dados (`JSONB`, `SERIAL`), Foreign Keys e registros realmente foram criados no PostgreSQL ou Neo4j.
-- Emite feedback instantâneo com status `APPROVED` ou `NEEDS_REVISION`, detalhando os requisitos pendentes.
+- **Resposta Padrão de Referência de Trade-off:** Ao concluir a validação com sucesso ou necessidade de revisão, exibe a resposta de referência canônica de Martin Kleppmann (`expected_reflection`) para guiar a reflexão arquitetural do desenvolvedor.
 
 ---
 

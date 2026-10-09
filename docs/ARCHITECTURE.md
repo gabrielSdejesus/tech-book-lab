@@ -70,7 +70,7 @@ graph TD
     end
 
     subgraph Storage["Persistência de Metadados & Progresso"]
-        SQLiteDB[("SQLite (tbl_catalog.db)<br/>WAL Mode + Flyway V1-V8")]
+        SQLiteDB[("SQLite (tbl_catalog.db)<br/>WAL Mode + Flyway V1-V9")]
         JdbcRepo --> SQLiteDB
     end
 
@@ -109,11 +109,11 @@ graph TD
   - Permitir que o aluno inspecione diretamente o banco com ferramentas do seu dia a dia (DBeaver, TablePlus, psql, Neo4j Browser) sem barreiras.
 - **Consequências**: Setup trivial, consumo mínimo de memória e experiência de depuração transparente.
 
-### ADR 02: Catálogo Dinâmico em SQLite com WAL Mode, i18n Semântica e Migrações Flyway (V1 a V8)
-- **Contexto**: O catálogo de livros, capítulos, laboratórios e desafios precisava ser portável, leve e versionável sem depender de um banco relacional permanente adicional. Além disso, as soluções do aluno precisam ser persistidas continuamente.
+### ADR 02: Catálogo Dinâmico em SQLite com WAL Mode, i18n Semântica e Migrações Flyway (V1 a V9)
+- **Contexto**: O catálogo de livros, capítulos, laboratórios e desafios precisava ser portável, leve e versionável sem depender de um banco relacional permanente adicional. Além disso, as soluções do aluno e os gabaritos didáticos precisam ser persistidos continuamente.
 - **Decisão**:
   - Utilizar **SQLite** embarcado com **WAL Mode (Write-Ahead Logging)** gerenciado por migrações versionadas com **Flyway**.
-  - **Evolução das Migrações (V1 até V8)**:
+  - **Evolução das Migrações (V1 até V9)**:
     1. `V1__create_catalog_tables.sql`: Cria as tabelas canônicas fundamentais (`books`, `chapters`, `labs`, `lab_key_concepts`, `challenges`, `challenge_guidelines`).
     2. `V2__seed_tbl_catalog_data.sql`: Carga de dados didáticos dos laboratórios baseados no livro DDIA (Capítulos 1 a 4).
     3. `V3__add_cover_image_to_books.sql`: Adiciona coluna `cover_image_url` na tabela `books`.
@@ -122,10 +122,11 @@ graph TD
     6. `V6__add_catalog_translations.sql`: Cria a tabela `catalog_translations` adotando a **Estratégia de Dupla Inserção** para internacionalização (`pt` e `en`) sem fragmentar entidades em colunas duplicadas.
     7. `V7__remove_comments_from_starter_templates.sql`: Higieniza os templates iniciais, mantendo apenas código SQL/Cypher executável sem blocos de comentários redundantes.
     8. `V8__create_challenge_user_solutions.sql`: Cria a tabela `challenge_user_solutions` (`challenge_id`, `code`, `updated_at`) para persistência de progresso e autosave de soluções do usuário.
+    9. `V9__add_expected_reflection_to_challenges.sql`: Adiciona a coluna `expected_reflection` na tabela `challenges` com gabarito de referência de trade-offs canônicos e suas respectivas traduções em `catalog_translations`.
 - **Consequências**:
   - Isolamento transacional e leituras simultâneas sem bloqueios devido ao modo WAL.
   - Esquema limpo, normalizado e com suporte a novos idiomas sem alteração estrutural no banco.
-  - Continuidade do aprendizado garantida com armazenamento permanente do código desenvolvido.
+  - Continuidade do aprendizado garantida com armazenamento permanente do código e feedback de trade-offs transparente.
 
 ### ADR 03: Provisionamento sob Demanda, Heartbeat e Ciclo de Vida por Inatividade
 - **Contexto**: Manter instâncias de PostgreSQL e Neo4j ativas em segundo plano degrada a performance da máquina hospedeira.
@@ -159,6 +160,7 @@ graph TD
        - Restrições de integridade referencial (`foreignKeyExists`).
        - População de registros (`getRowCount`).
        - Criação de nós e relacionamentos rotulados no Neo4j (`countNeo4jNodes`, `countNeo4jRelationships`).
+  - **Apresentação de Gabarito Canônico**: Ao concluir a validação offline, o resultado fornece a resposta de referência pedagógica de Martin Kleppmann (`expected_reflection`) persistida na tabela `challenges`, orientando o aluno sobre a reflexão de trade-off ideal para aquele desafio.
 - **Consequências**: O aluno recebe retorno preciso e reprodutível sobre a aderência de sua implementação aos requisitos de engenharia, totalmente offline e sem custo.
 
 ### ADR 06: Autosave com Debounce de 600ms e Preservação de Estado Local
@@ -173,7 +175,7 @@ graph TD
 
 ---
 
-## 3. Modelo de Dados Relacional (SQLite + Flyway V1-V8)
+## 3. Modelo de Dados Relacional (SQLite + Flyway V1-V9)
 
 O esquema relacional é mantido no arquivo SQLite `tbl_catalog.db`:
 
@@ -231,6 +233,7 @@ erDiagram
         TEXT scenario
         TEXT starter_template
         TEXT reflection_prompt
+        TEXT expected_reflection
     }
 
     challenge_user_solutions {
