@@ -1,16 +1,12 @@
 import type {
   Book,
-  QueryResult,
   AiAssessmentRequest,
   AiAssessmentResponse,
   AiTestConnectionRequest,
   AiTestConnectionResponse,
-  EngineType,
   ProblemDetail,
-  AiProviderInfo,
-  InfraStatus
+  AiProviderInfo
 } from '../types';
-import { getSessionId } from './session';
 
 const API_BASE = '/api';
 
@@ -55,40 +51,11 @@ export async function getBooks(locale?: string): Promise<Book[]> {
   return res.json();
 }
 
-
-
-export async function executeQuery(query: string, engineType: EngineType, labId: string): Promise<QueryResult> {
-  const res = await fetch(`${API_BASE}/query/execute`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Session-Id': getSessionId(),
-    },
-    body: JSON.stringify({ query, engineType, labId })
-  });
-  if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha na comunicação com o servidor de execução'));
-  return res.json();
-}
-
-export async function resetLab(labId: string): Promise<QueryResult> {
-  const res = await fetch(`${API_BASE}/query/reset/${labId}`, {
-    method: 'POST',
-    headers: {
-      'X-Session-Id': getSessionId(),
-    }
-  });
-  if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao resetar banco do laboratório'));
-  return res.json();
-}
-
-
-
 export async function assessWithAi(req: AiAssessmentRequest): Promise<AiAssessmentResponse> {
   const res = await fetch(`${API_BASE}/ai/assess`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Session-Id': getSessionId(),
     },
     body: JSON.stringify(req)
   });
@@ -101,7 +68,6 @@ export async function testAiConnection(req: AiTestConnectionRequest): Promise<Ai
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Session-Id': getSessionId(),
     },
     body: JSON.stringify(req)
   });
@@ -117,16 +83,6 @@ export async function getAiProviders(locale?: string): Promise<AiProviderInfo[]>
     },
   });
   if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao consultar provedores de IA'));
-  return res.json();
-}
-
-export async function getInfraStatus(): Promise<InfraStatus> {
-  const res = await fetch(`${API_BASE}/infra/status`, {
-    headers: {
-      'X-Session-Id': getSessionId(),
-    },
-  });
-  if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao consultar status da infraestrutura'));
   return res.json();
 }
 
@@ -147,5 +103,3 @@ export async function resetChallengeSolution(challengeId: string): Promise<void>
   });
   if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao resetar solução do desafio'));
 }
-
-

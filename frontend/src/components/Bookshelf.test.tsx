@@ -29,9 +29,6 @@ const mockBooks: Book[] = [
             title: 'Relacional vs Documentos',
             summary: 'Analise a incompatibilidade.',
             keyConcepts: ['Impedance Mismatch'],
-            engineType: 'POSTGRES',
-            databaseName: 'tbl_lab',
-            resetSchemaSql: 'DROP TABLE...',
             challenges: [],
           },
         ],
@@ -97,31 +94,6 @@ describe('Bookshelf Component', () => {
     expect(handleSelectBook).toHaveBeenCalledTimes(2);
   });
 
-  it('deve estilizar badges de motores dinamicamente a partir do engineConfig, incluindo novos motores', () => {
-    const customBook: Book = {
-      ...mockBooks[0],
-      chapters: [
-        {
-          ...mockBooks[0].chapters[0],
-          labs: [
-            ...mockBooks[0].chapters[0].labs,
-            {
-              ...mockBooks[0].chapters[0].labs[0],
-              id: 'custom-lab-redis',
-              engineType: 'REDIS' as any,
-            },
-          ],
-        },
-      ],
-    };
-
-    render(<Bookshelf books={[customBook]} onSelectBook={vi.fn()} />);
-
-    const redisBadge = screen.getByText('REDIS');
-    expect(redisBadge).toBeInTheDocument();
-    expect(redisBadge).toHaveClass('bg-stone-100');
-    expect(redisBadge).not.toHaveClass('bg-[#e5ebe4]');
-  });
 
   it('deve exibir mensagem de catálogo vazio quando a lista de livros for vazia', () => {
     render(<Bookshelf books={[]} onSelectBook={vi.fn()} />);

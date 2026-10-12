@@ -1,14 +1,3 @@
-export type EngineType = 'POSTGRES' | 'NEO4J';
-
-export interface EngineHealthStatus {
-  healthy: boolean;
-  port: number;
-  serviceName: string;
-  status: string;
-}
-
-export type InfraStatus = Record<string, EngineHealthStatus>;
-
 export interface Challenge {
   id: string;
   order: number;
@@ -21,7 +10,6 @@ export interface Challenge {
   guidelines: string[];
   reflectionPrompt: string;
   expectedReflection?: string;
-  engineType?: EngineType;
 }
 
 export interface Lab {
@@ -31,9 +19,8 @@ export interface Lab {
   title: string;
   summary: string;
   keyConcepts: string[];
-  engineType: EngineType;
-  databaseName: string;
-  resetSchemaSql: string;
+  databaseName?: string;
+  resetSchemaSql?: string;
   challenges: Challenge[];
 }
 
@@ -60,16 +47,6 @@ export interface Book {
   edition?: string;
 }
 
-export interface QueryResult {
-  success: boolean;
-  message: string;
-  columns: string[];
-  rows: Record<string, any>[];
-  rowCount: number;
-  executionTimeMs: number;
-  errorMessage: string | null;
-}
-
 export interface AiAssessmentResponse {
   status: 'APPROVED' | 'NEEDS_REVISION' | 'DISCUSSION';
   feedback: string;
@@ -91,7 +68,6 @@ export interface AiAssessmentRequest {
   modelOverride?: string;
   language?: string;
 }
-
 
 export interface AiTestConnectionRequest {
   provider: string;
@@ -132,4 +108,3 @@ export interface AiProviderInfo {
   defaultModel: string;
   models: AiModelInfo[];
 }
-

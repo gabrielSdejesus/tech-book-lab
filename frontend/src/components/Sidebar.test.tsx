@@ -15,9 +15,6 @@ describe('Sidebar Component', () => {
     title: 'Relacional vs Documentos',
     summary: 'Comparativo de modelos',
     keyConcepts: ['Impedance Mismatch'],
-    engineType: 'POSTGRES',
-    databaseName: 'tbl_lab',
-    resetSchemaSql: 'DROP TABLE IF EXISTS...',
     challenges: []
   };
 
@@ -28,9 +25,6 @@ describe('Sidebar Component', () => {
     title: 'Grafos de Propriedades',
     summary: 'Neo4j vs SQL recursivo',
     keyConcepts: ['Cypher'],
-    engineType: 'NEO4J',
-    databaseName: 'neo4j',
-    resetSchemaSql: 'MATCH (n) DETACH DELETE n;',
     challenges: []
   };
 

@@ -7,8 +7,6 @@ import { LanguageProvider } from '../i18n/LanguageContext';
 vi.mock('../services/api', () => ({
   testAiConnection: vi.fn(),
   getBooks: vi.fn(),
-  executeQuery: vi.fn(),
-  resetLab: vi.fn(),
   assessWithAi: vi.fn(),
   getAiProviders: vi.fn(),
 }));
