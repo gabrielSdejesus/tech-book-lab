@@ -13,8 +13,7 @@ public record Challenge(
     String savedReflection,
     List<String> guidelines,
     String reflectionPrompt,
-    String expectedReflection,
-    EngineType engineType
+    String expectedReflection
 ) {
     public Challenge(
         String id,
@@ -26,10 +25,9 @@ public record Challenge(
         String savedCode,
         List<String> guidelines,
         String reflectionPrompt,
-        String expectedReflection,
-        EngineType engineType
+        String expectedReflection
     ) {
-        this(id, order, title, description, scenario, starterTemplate, savedCode, null, guidelines, reflectionPrompt, expectedReflection, engineType);
+        this(id, order, title, description, scenario, starterTemplate, savedCode, null, guidelines, reflectionPrompt, expectedReflection);
     }
 
     public Challenge(
@@ -41,10 +39,9 @@ public record Challenge(
         String starterTemplate,
         String savedCode,
         List<String> guidelines,
-        String reflectionPrompt,
-        EngineType engineType
+        String reflectionPrompt
     ) {
-        this(id, order, title, description, scenario, starterTemplate, savedCode, null, guidelines, reflectionPrompt, null, engineType);
+        this(id, order, title, description, scenario, starterTemplate, savedCode, null, guidelines, reflectionPrompt, null);
     }
 
     public Challenge(
@@ -56,24 +53,9 @@ public record Challenge(
         String starterTemplate,
         List<String> guidelines,
         String reflectionPrompt,
-        String expectedReflection,
-        EngineType engineType
+        String expectedReflection
     ) {
-        this(id, order, title, description, scenario, starterTemplate, null, null, guidelines, reflectionPrompt, expectedReflection, engineType);
-    }
-
-    public Challenge(
-        String id,
-        int order,
-        String title,
-        String description,
-        String scenario,
-        String starterTemplate,
-        List<String> guidelines,
-        String reflectionPrompt,
-        EngineType engineType
-    ) {
-        this(id, order, title, description, scenario, starterTemplate, null, null, guidelines, reflectionPrompt, null, engineType);
+        this(id, order, title, description, scenario, starterTemplate, null, null, guidelines, reflectionPrompt, expectedReflection);
     }
 
     public Challenge(
@@ -86,6 +68,6 @@ public record Challenge(
         List<String> guidelines,
         String reflectionPrompt
     ) {
-        this(id, order, title, description, scenario, starterTemplate, null, null, guidelines, reflectionPrompt, null, null);
+        this(id, order, title, description, scenario, starterTemplate, null, null, guidelines, reflectionPrompt, null);
     }
 }

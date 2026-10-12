@@ -1,7 +1,6 @@
 package com.dataintensive.lab.catalog;
 
 import com.dataintensive.lab.domain.Book;
-import com.dataintensive.lab.domain.EngineType;
 import com.dataintensive.lab.domain.Lab;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -80,7 +79,7 @@ class CatalogControllerTest {
         CatalogService mockService = mock(CatalogService.class);
         CatalogController controller = new CatalogController(mockService);
 
-        Lab mockLab = new Lab("lab-1", 1, "slug", "Lab 1", "Sum", List.of(), EngineType.POSTGRES, "db", "SQL", List.of());
+        Lab mockLab = new Lab("lab-1", 1, "slug", "Lab 1", "Sum", List.of(), "db", "SQL", List.of());
         when(mockService.findLabById("lab-1", "en")).thenReturn(Optional.of(mockLab));
         when(mockService.findLabById("unknown", "en")).thenReturn(Optional.empty());
 

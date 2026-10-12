@@ -15,12 +15,12 @@ class DomainEntitiesValidationTest {
     void shouldValidateBookAndChapterEntities() {
         Challenge challenge = new Challenge(
                 "ch-1", 1, "Desafio 1", "Desc", "Cenário",
-                "SELECT 1;", List.of("Guia 1"), "Reflexão", EngineType.POSTGRES
+                "SELECT 1;", List.of("Guia 1"), "Reflexão"
         );
 
         Lab lab = new Lab(
                 "ddia-cap-03-lab-01", 1, "relacional", "Lab 1", "Sumário",
-                List.of("Conceito 1"), EngineType.POSTGRES, "tbl_lab", "DROP TABLE IF EXISTS t;",
+                List.of("Conceito 1"), "tbl_lab", "DROP TABLE IF EXISTS t;",
                 List.of(challenge)
         );
 
@@ -49,7 +49,7 @@ class DomainEntitiesValidationTest {
     void shouldValidateLabEntity() {
         Lab lab = new Lab(
                 "ddia-cap-03-lab-02", 2, "grafos", "Grafos", "Sumário Lab 2",
-                List.of("Property Graphs"), EngineType.NEO4J, "tbl_graphs", "MATCH (n) DETACH DELETE n;",
+                List.of("Property Graphs"), "tbl_graphs", "MATCH (n) DETACH DELETE n;",
                 List.of()
         );
 
@@ -59,7 +59,6 @@ class DomainEntitiesValidationTest {
         assertThat(lab.title()).isEqualTo("Grafos");
         assertThat(lab.summary()).isEqualTo("Sumário Lab 2");
         assertThat(lab.keyConcepts()).containsExactly("Property Graphs");
-        assertThat(lab.engineType()).isEqualTo(EngineType.NEO4J);
         assertThat(lab.databaseName()).isEqualTo("tbl_graphs");
         assertThat(lab.resetSchemaSql()).isEqualTo("MATCH (n) DETACH DELETE n;");
         assertThat(lab.challenges()).isEmpty();
@@ -68,29 +67,23 @@ class DomainEntitiesValidationTest {
     @Test
     @DisplayName("Deve validar construtores canônico e sobrecarregados de Challenge")
     void shouldValidateChallengeConstructors() {
-        // Construtor canônico (10 argumentos)
         Challenge c1 = new Challenge(
                 "ch-1", 1, "Titulo", "Desc", "Cenário",
-                "STARTER", "SAVED", List.of("G1"), "Prompt", EngineType.POSTGRES
+                "STARTER", "SAVED", List.of("G1"), "Prompt"
         );
         assertThat(c1.savedCode()).isEqualTo("SAVED");
-        assertThat(c1.engineType()).isEqualTo(EngineType.POSTGRES);
 
-        // Construtor com 9 argumentos (savedCode deve ser null)
         Challenge c2 = new Challenge(
                 "ch-2", 2, "Titulo 2", "Desc 2", "Cenário 2",
-                "STARTER 2", List.of("G2"), "Prompt 2", EngineType.NEO4J
+                "STARTER 2", List.of("G2"), "Prompt 2"
         );
         assertThat(c2.savedCode()).isNull();
-        assertThat(c2.engineType()).isEqualTo(EngineType.NEO4J);
 
-        // Construtor com 8 argumentos (savedCode e engineType devem ser null)
         Challenge c3 = new Challenge(
                 "ch-3", 3, "Titulo 3", "Desc 3", "Cenário 3",
                 "STARTER 3", List.of("G3"), "Prompt 3"
         );
         assertThat(c3.savedCode()).isNull();
-        assertThat(c3.engineType()).isNull();
     }
 
     @Test
@@ -114,21 +107,9 @@ class DomainEntitiesValidationTest {
     }
 
     @Test
-    @DisplayName("Deve validar valores do enum EngineType")
-    void shouldValidateEngineTypeEnum() {
-        assertThat(EngineType.values()).containsExactly(EngineType.POSTGRES, EngineType.NEO4J);
-        assertThat(EngineType.valueOf("POSTGRES")).isEqualTo(EngineType.POSTGRES);
-        assertThat(EngineType.valueOf("NEO4J")).isEqualTo(EngineType.NEO4J);
-    }
-
-    @Test
-    @DisplayName("Deve validar exceções de domínio DomainValidationException e QueryExecutionException")
+    @DisplayName("Deve validar exceção de domínio DomainValidationException")
     void shouldValidateDomainExceptions() {
         DomainValidationException dve = new DomainValidationException("Erro de domínio");
         assertThat(dve.getMessage()).isEqualTo("Erro de domínio");
-
-        QueryExecutionException qee = new QueryExecutionException("Falha na consulta", 150L);
-        assertThat(qee.getMessage()).isEqualTo("Falha na consulta");
-        assertThat(qee.getExecutionTimeMs()).isEqualTo(150L);
     }
 }

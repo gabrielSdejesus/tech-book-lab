@@ -9,7 +9,6 @@ public record Lab(
     String title,
     String summary,
     List<String> keyConcepts,
-    EngineType engineType,
     String databaseName,
     String resetSchemaSql,
     List<Challenge> challenges

@@ -1,7 +1,6 @@
 package com.dataintensive.lab.config;
 
 import com.dataintensive.lab.domain.DomainValidationException;
-import com.dataintensive.lab.domain.QueryExecutionException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -59,37 +58,4 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
-    @ExceptionHandler(com.dataintensive.lab.provisioning.LabNotFoundException.class)
-    public ResponseEntity<ProblemDetail> handleLabNotFound(com.dataintensive.lab.provisioning.LabNotFoundException ex) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-                HttpStatus.NOT_FOUND,
-                ex.getMessage()
-        );
-        problemDetail.setTitle("Recurso Não Encontrado");
-        problemDetail.setType(URI.create("https://api.dataintensive.lab/errors/not-found"));
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
-    }
-
-    @ExceptionHandler(com.dataintensive.lab.provisioning.SessionExpiredException.class)
-    public ResponseEntity<ProblemDetail> handleSessionExpired(com.dataintensive.lab.provisioning.SessionExpiredException ex) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-                HttpStatus.GONE,
-                ex.getMessage()
-        );
-        problemDetail.setTitle("Sessão Expirada");
-        problemDetail.setType(URI.create("https://api.dataintensive.lab/errors/session-expired"));
-        return ResponseEntity.status(HttpStatus.GONE).body(problemDetail);
-    }
-
-    @ExceptionHandler(QueryExecutionException.class)
-    public ResponseEntity<ProblemDetail> handleQueryExecution(QueryExecutionException ex) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-                HttpStatus.BAD_REQUEST,
-                ex.getMessage()
-        );
-        problemDetail.setTitle("Erro na execução da consulta");
-        problemDetail.setType(URI.create("urn:problem:query-execution-error"));
-        problemDetail.setProperty("executionTimeMs", ex.getExecutionTimeMs());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
-    }
 }

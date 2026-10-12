@@ -2,7 +2,6 @@ package com.dataintensive.lab.ai;
 
 import com.dataintensive.lab.domain.AssessmentLanguage;
 import com.dataintensive.lab.domain.Challenge;
-import com.dataintensive.lab.domain.EngineType;
 import com.dataintensive.lab.domain.Lab;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -11,20 +10,14 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 class HeuristicProviderClientTest {
 
-    private DatabaseCatalogInspector mockInspector;
     private HeuristicProviderClient client;
 
     @BeforeEach
     void setUp() {
-        mockInspector = mock(DatabaseCatalogInspector.class);
-        client = new HeuristicProviderClient(mockInspector);
+        client = new HeuristicProviderClient();
     }
 
     @Test
@@ -57,15 +50,12 @@ class HeuristicProviderClientTest {
     @Test
     @DisplayName("3NF: Deve rejeitar (NEEDS_REVISION) quando utilizar apenas JOIN interno em vez de LEFT JOIN")
     void shouldRejectPostgres3NFWhenUsingInnerJoinInsteadOfLeftJoin() {
-        Lab lab = createLab("ddia-cap-03-lab-01", EngineType.POSTGRES);
-        Challenge ch = createChallenge("lab-01-ch-1", EngineType.POSTGRES);
+        Lab lab = createLab("ddia-cap-03-lab-01");
+        Challenge ch = createChallenge("lab-01-ch-1");
 
         String userQuery = """
-                CREATE TABLE usuarios (id INT PRIMARY KEY, nome VARCHAR(100));
-                CREATE TABLE experiencias_profissionais (id INT PRIMARY KEY, usuario_id INT REFERENCES usuarios(id), cargo VARCHAR(100));
-                INSERT INTO usuarios VALUES (1, 'Ana'), (2, 'Beto');
-                INSERT INTO experiencias_profissionais VALUES (1, 1, 'Engenheira');
-                SELECT u.nome, e.cargo FROM usuarios u
+                SELECT u.nome, e.cargo
+                FROM usuarios u
                 JOIN experiencias_profissionais e ON e.usuario_id = u.id;
                 """;
 
@@ -77,10 +67,10 @@ class HeuristicProviderClientTest {
     }
 
     @Test
-    @DisplayName("3NF: Deve rejeitar quando a sintaxe estiver correta mas tabelas/dados não existirem no banco de dados")
-    void shouldRejectPostgres3NFWhenTablesOrDataDoNotExistInDatabase() {
-        Lab lab = createLab("ddia-cap-03-lab-01", EngineType.POSTGRES);
-        Challenge ch = createChallenge("lab-01-ch-1", EngineType.POSTGRES);
+    @DisplayName("3NF: Deve aprovar quando sintaxe contiver LEFT JOIN, tabelas, FKs e INSERTs")
+    void shouldApproveValidPostgres3NFSolution() {
+        Lab lab = createLab("ddia-cap-03-lab-01");
+        Challenge ch = createChallenge("lab-01-ch-1");
 
         String userQuery = """
                 CREATE TABLE usuarios (id INT PRIMARY KEY, nome VARCHAR(100));
@@ -89,56 +79,6 @@ class HeuristicProviderClientTest {
                 SELECT u.nome, e.cargo FROM usuarios u
                 LEFT JOIN experiencias_profissionais e ON e.usuario_id = u.id;
                 """;
-
-        when(mockInspector.tableExists(eq(EngineType.POSTGRES), eq("usuarios"))).thenReturn(false);
-
-        AiAssessmentRequest request = new AiAssessmentRequest(lab.id(), ch.id(), userQuery, "ok", "", "heuristic", null, null, "pt");
-        AiAssessmentResponse response = client.assess(lab, ch, request, AssessmentLanguage.PT);
-
-        assertThat(response.status()).isEqualTo("NEEDS_REVISION");
-        assertThat(response.feedback()).containsIgnoringCase("Ctrl + Enter");
-    }
-
-    @Test
-    @DisplayName("3NF: Deve aprovar quando sintaxe contiver LEFT JOIN, FKs, INSERT e banco confirmar dados")
-    void shouldApproveValidPostgres3NFSolutionWhenSyntaxAndDatabaseAreValid() {
-        Lab lab = createLab("ddia-cap-03-lab-01", EngineType.POSTGRES);
-        Challenge ch = createChallenge("lab-01-ch-1", EngineType.POSTGRES);
-
-        String userQuery = """
-                CREATE TABLE usuarios (id INT PRIMARY KEY, nome VARCHAR(100));
-                CREATE TABLE experiencias_profissionais (id INT PRIMARY KEY, usuario_id INT REFERENCES usuarios(id), cargo VARCHAR(100));
-                INSERT INTO usuarios VALUES (1, 'Ana'), (2, 'Beto');
-                SELECT u.nome, e.cargo FROM usuarios u
-                LEFT JOIN experiencias_profissionais e ON e.usuario_id = u.id;
-                """;
-
-        when(mockInspector.tableExists(eq(EngineType.POSTGRES), eq("usuarios"))).thenReturn(true);
-        when(mockInspector.foreignKeyExists(eq(EngineType.POSTGRES), eq("experiencias_profissionais"), eq("usuarios"))).thenReturn(true);
-        when(mockInspector.getRowCount(eq(EngineType.POSTGRES), eq("usuarios"))).thenReturn(2L);
-
-        AiAssessmentRequest request = new AiAssessmentRequest(lab.id(), ch.id(), userQuery, "ok", "Trade-off", "heuristic", null, null, "pt");
-        AiAssessmentResponse response = client.assess(lab, ch, request, AssessmentLanguage.PT);
-
-        assertThat(response.status()).isEqualTo("APPROVED");
-        assertThat(response.feedback()).containsIgnoringCase("normaliz");
-    }
-
-    @Test
-    @DisplayName("3NF State-Based: Deve aprovar quando o usuário submeter apenas o SELECT com LEFT JOIN após já ter criado o esquema no banco")
-    void shouldApprove3NFWhenUserSubmitsOnlySelectQueryAndDatabaseCatalogIsValid() {
-        Lab lab = createLab("ddia-cap-03-lab-01", EngineType.POSTGRES);
-        Challenge ch = createChallenge("lab-01-ch-1", EngineType.POSTGRES);
-
-        String userQuery = """
-                SELECT u.nome, e.cargo
-                FROM usuarios u
-                LEFT JOIN experiencias_profissionais e ON e.usuario_id = u.id;
-                """;
-
-        when(mockInspector.tableExists(eq(EngineType.POSTGRES), eq("usuarios"))).thenReturn(true);
-        when(mockInspector.foreignKeyExists(eq(EngineType.POSTGRES), eq("experiencias_profissionais"), eq("usuarios"))).thenReturn(true);
-        when(mockInspector.getRowCount(eq(EngineType.POSTGRES), eq("usuarios"))).thenReturn(2L);
 
         AiAssessmentRequest request = new AiAssessmentRequest(lab.id(), ch.id(), userQuery, "ok", "Trade-off", "heuristic", null, null, "pt");
         AiAssessmentResponse response = client.assess(lab, ch, request, AssessmentLanguage.PT);
@@ -148,31 +88,29 @@ class HeuristicProviderClientTest {
     }
 
     @Test
-    @DisplayName("JSONB: Deve rejeitar quando tabela com tipo JSONB não for detectada no catálogo do banco")
-    void shouldRejectJsonbWhenTableDoesNotExistInDatabase() {
-        Lab lab = createLab("ddia-cap-03-lab-01", EngineType.POSTGRES);
-        Challenge ch = createChallenge("lab-01-ch-2", EngineType.POSTGRES);
+    @DisplayName("JSONB: Deve rejeitar quando faltar declaração JSONB ou operadores")
+    void shouldRejectJsonbWhenMissingJsonbColumnOrOperators() {
+        Lab lab = createLab("ddia-cap-03-lab-01");
+        Challenge ch = createChallenge("lab-01-ch-2");
 
         String userQuery = """
-                CREATE TABLE usuarios_documento (id INT PRIMARY KEY, perfil JSONB);
-                INSERT INTO usuarios_documento VALUES (1, '{"nome": "Ana"}'), (2, '{"nome": "Beto"}');
-                SELECT id, perfil->>'nome' AS nome FROM usuarios_documento WHERE perfil @> '{"nome": "Ana"}';
+                CREATE TABLE usuarios_documento (id INT PRIMARY KEY, nome VARCHAR(100));
+                INSERT INTO usuarios_documento VALUES (1, 'Ana');
+                SELECT * FROM usuarios_documento;
                 """;
-
-        when(mockInspector.columnExists(eq(EngineType.POSTGRES), eq("usuarios_documento"), eq("perfil"), eq("jsonb"))).thenReturn(false);
 
         AiAssessmentRequest request = new AiAssessmentRequest(lab.id(), ch.id(), userQuery, "ok", "", "heuristic", null, null, "pt");
         AiAssessmentResponse response = client.assess(lab, ch, request, AssessmentLanguage.PT);
 
         assertThat(response.status()).isEqualTo("NEEDS_REVISION");
-        assertThat(response.feedback()).containsIgnoringCase("Ctrl + Enter");
+        assertThat(response.feedback()).containsIgnoringCase("JSONB");
     }
 
     @Test
-    @DisplayName("JSONB: Deve aprovar quando operadores de documento forem usados e coluna existir no banco")
-    void shouldApproveValidPostgresJsonbSolution() {
-        Lab lab = createLab("ddia-cap-03-lab-01", EngineType.POSTGRES);
-        Challenge ch = createChallenge("lab-01-ch-2", EngineType.POSTGRES);
+    @DisplayName("JSONB: Deve aprovar quando contiver coluna JSONB, INSERT e operadores de consulta")
+    void shouldApproveValidJsonbSolution() {
+        Lab lab = createLab("ddia-cap-03-lab-01");
+        Challenge ch = createChallenge("lab-01-ch-2");
 
         String userQuery = """
                 CREATE TABLE usuarios_documento (id INT PRIMARY KEY, perfil JSONB);
@@ -180,26 +118,22 @@ class HeuristicProviderClientTest {
                 SELECT id, perfil->>'nome' AS nome FROM usuarios_documento WHERE perfil @> '{"nome": "Ana"}';
                 """;
 
-        when(mockInspector.columnExists(eq(EngineType.POSTGRES), eq("usuarios_documento"), eq("perfil"), eq("jsonb"))).thenReturn(true);
-        when(mockInspector.getRowCount(eq(EngineType.POSTGRES), eq("usuarios_documento"))).thenReturn(2L);
-
         AiAssessmentRequest request = new AiAssessmentRequest(lab.id(), ch.id(), userQuery, "ok", "Trade-off", "heuristic", null, null, "pt");
         AiAssessmentResponse response = client.assess(lab, ch, request, AssessmentLanguage.PT);
 
         assertThat(response.status()).isEqualTo("APPROVED");
-        assertThat(response.feedback()).containsIgnoringCase("jsonb");
+        assertThat(response.feedback()).containsIgnoringCase("JSONB");
     }
 
     @Test
-    @DisplayName("Cypher: Deve rejeitar quando faltar operador de profundidade variável (*1..5)")
-    void shouldRejectCypherWhenVariableLengthPathIsMissing() {
-        Lab lab = createLab("ddia-cap-03-lab-02", EngineType.NEO4J);
-        Challenge ch = createChallenge("lab-02-ch-1", EngineType.NEO4J);
+    @DisplayName("Cypher: Deve rejeitar quando não utilizar operador de profundidade variável")
+    void shouldRejectCypherWhenNotUsingVariablePath() {
+        Lab lab = createLab("ddia-cap-03-lab-02");
+        Challenge ch = createChallenge("lab-02-ch-1");
 
         String userQuery = """
-                CREATE (c:Location {name: 'Sao Paulo'}), (p:Person {name: 'Gabriel'}), (c)-[:WITHIN]->(b:Location {name: 'Brasil'});
-                MATCH (p:Person)-[:BORN_IN]->(c:Location)-[:WITHIN]->(country:Location)
-                RETURN p.name, country.name;
+                MATCH (p:Person {name: 'Alice'})-[:WITHIN]->(city:Location)-[:WITHIN]->(country:Location)
+                RETURN country.name;
                 """;
 
         AiAssessmentRequest request = new AiAssessmentRequest(lab.id(), ch.id(), userQuery, "ok", "", "heuristic", null, null, "pt");
@@ -210,108 +144,89 @@ class HeuristicProviderClientTest {
     }
 
     @Test
-    @DisplayName("Cypher: Deve rejeitar quando os nós não existirem no Neo4j")
-    void shouldRejectCypherWhenNodesDoNotExistInNeo4j() {
-        Lab lab = createLab("ddia-cap-03-lab-02", EngineType.NEO4J);
-        Challenge ch = createChallenge("lab-02-ch-1", EngineType.NEO4J);
+    @DisplayName("Cypher: Deve aprovar solução válida com nós, relacionamentos e profundidade variável")
+    void shouldApproveValidCypherSolution() {
+        Lab lab = createLab("ddia-cap-03-lab-02");
+        Challenge ch = createChallenge("lab-02-ch-1");
 
         String userQuery = """
-                CREATE (c:Location {name: 'Sao Paulo'}), (s:Location {name: 'SP'}), (p:Person {name: 'Gabriel'});
-                MATCH (p:Person)-[:BORN_IN]->(:Location)-[:WITHIN*1..5]->(country:Location)
-                RETURN p.name, country.name;
+                CREATE (p:Person {name: 'Alice'}), (l:Location {name: 'Brasil'})
+                CREATE (p)-[:BORN_IN]->(l)
+                MATCH (p:Person)-[:WITHIN*1..5]->(c:Location)
+                RETURN c.name;
                 """;
-
-        when(mockInspector.countNeo4jNodes(anyString())).thenReturn(0L);
-
-        AiAssessmentRequest request = new AiAssessmentRequest(lab.id(), ch.id(), userQuery, "ok", "", "heuristic", null, null, "pt");
-        AiAssessmentResponse response = client.assess(lab, ch, request, AssessmentLanguage.PT);
-
-        assertThat(response.status()).isEqualTo("NEEDS_REVISION");
-        assertThat(response.feedback()).containsIgnoringCase("Ctrl + Enter");
-    }
-
-    @Test
-    @DisplayName("Cypher: Deve aprovar quando contiver profundidade variável e nós existirem no Neo4j")
-    void shouldApproveValidNeo4jCypherSolution() {
-        Lab lab = createLab("ddia-cap-03-lab-02", EngineType.NEO4J);
-        Challenge ch = createChallenge("lab-02-ch-1", EngineType.NEO4J);
-
-        String userQuery = """
-                CREATE (c:Location {name: 'Sao Paulo'}), (s:Location {name: 'SP'}), (p:Person {name: 'Gabriel'});
-                MATCH (p:Person)-[:BORN_IN]->(:Location)-[:WITHIN*1..5]->(country:Location)
-                RETURN p.name, country.name;
-                """;
-
-        when(mockInspector.countNeo4jNodes("Person")).thenReturn(1L);
-        when(mockInspector.countNeo4jNodes("Location")).thenReturn(2L);
-        when(mockInspector.countNeo4jRelationships(anyString())).thenReturn(2L);
 
         AiAssessmentRequest request = new AiAssessmentRequest(lab.id(), ch.id(), userQuery, "ok", "", "heuristic", null, null, "pt");
         AiAssessmentResponse response = client.assess(lab, ch, request, AssessmentLanguage.PT);
 
         assertThat(response.status()).isEqualTo("APPROVED");
-        assertThat(response.feedback()).containsIgnoringCase("grafo");
+        assertThat(response.feedback()).containsIgnoringCase("propriedades");
     }
 
     @Test
-    @DisplayName("Recursive CTE: Deve rejeitar quando faltar auto-relacionamento parent_id ou UNION ALL")
-    void shouldRejectRecursiveCteWhenParentIdOrRecursiveUnionIsMissing() {
-        Lab lab = createLab("ddia-cap-03-lab-02", EngineType.POSTGRES);
-        Challenge ch = createChallenge("lab-02-ch-2", EngineType.POSTGRES);
+    @DisplayName("Recursive CTE: Deve rejeitar quando faltar WITH RECURSIVE ou UNION")
+    void shouldRejectRecursiveCteWhenMissingWithRecursive() {
+        Lab lab = createLab("ddia-cap-03-lab-02");
+        Challenge ch = createChallenge("lab-02-ch-2");
+
+        String userQuery = "SELECT id, parent_id FROM locais WHERE id = 1;";
+
+        AiAssessmentRequest request = new AiAssessmentRequest(lab.id(), ch.id(), userQuery, "ok", "", "heuristic", null, null, "pt");
+        AiAssessmentResponse response = client.assess(lab, ch, request, AssessmentLanguage.PT);
+
+        assertThat(response.status()).isEqualTo("NEEDS_REVISION");
+        assertThat(response.feedback()).containsIgnoringCase("WITH RECURSIVE");
+    }
+
+    @Test
+    @DisplayName("Recursive CTE: Deve aprovar solução válida com WITH RECURSIVE, UNION e parent_id")
+    void shouldApproveValidRecursiveCte() {
+        Lab lab = createLab("ddia-cap-03-lab-02");
+        Challenge ch = createChallenge("lab-02-ch-2");
 
         String userQuery = """
-                WITH RECURSIVE hierarquia AS (
-                    SELECT id, nome FROM locais WHERE id = 1
+                WITH RECURSIVE local_hierarquia AS (
+                    SELECT id, nome, parent_id FROM locais WHERE id = 1
+                    UNION ALL
+                    SELECT l.id, l.nome, l.parent_id FROM locais l
+                    JOIN local_hierarquia h ON l.id = h.parent_id
                 )
-                SELECT * FROM hierarquia;
+                SELECT * FROM local_hierarquia;
                 """;
 
         AiAssessmentRequest request = new AiAssessmentRequest(lab.id(), ch.id(), userQuery, "ok", "", "heuristic", null, null, "pt");
         AiAssessmentResponse response = client.assess(lab, ch, request, AssessmentLanguage.PT);
 
-        assertThat(response.status()).isEqualTo("NEEDS_REVISION");
-        assertThat(response.feedback()).containsIgnoringCase("UNION");
+        assertThat(response.status()).isEqualTo("APPROVED");
     }
 
     @Test
-    @DisplayName("Star Schema: Deve rejeitar quando contiver apenas dimensões sem tabela de fatos (eliminação do ||)")
-    void shouldRejectStarSchemaWhenMissingFactTable() {
-        Lab lab = createLab("ddia-cap-03-lab-03", EngineType.POSTGRES);
-        Challenge ch = createChallenge("lab-03-ch-1", EngineType.POSTGRES);
+    @DisplayName("Star Schema: Deve rejeitar quando faltar tabela de dimensões ou fato")
+    void shouldRejectStarSchemaWhenMissingFactOrDimension() {
+        Lab lab = createLab("ddia-cap-03-lab-03");
+        Challenge ch = createChallenge("lab-03-ch-1");
 
-        String userQuery = """
-                CREATE TABLE dim_tempo (id INT PRIMARY KEY, ano INT);
-                CREATE TABLE dim_produto (id INT PRIMARY KEY, nome VARCHAR(50));
-                """;
+        String userQuery = "CREATE TABLE fato_vendas (id INT, valor NUMERIC);";
 
         AiAssessmentRequest request = new AiAssessmentRequest(lab.id(), ch.id(), userQuery, "ok", "", "heuristic", null, null, "pt");
         AiAssessmentResponse response = client.assess(lab, ch, request, AssessmentLanguage.PT);
 
         assertThat(response.status()).isEqualTo("NEEDS_REVISION");
-        assertThat(response.feedback()).containsIgnoringCase("fato");
+        assertThat(response.feedback()).containsIgnoringCase("dimensões");
     }
 
     @Test
-    @DisplayName("Star Schema: Deve aprovar quando fatos e dimensões coexistirem e existirem no banco")
-    void shouldApproveStarSchemaWhenFactAndDimensionsCoexistAndExistInDb() {
-        Lab lab = createLab("ddia-cap-03-lab-03", EngineType.POSTGRES);
-        Challenge ch = createChallenge("lab-03-ch-1", EngineType.POSTGRES);
+    @DisplayName("Star Schema: Deve aprovar modelagem com fato, dimensão, FK e inserts")
+    void shouldApproveValidStarSchema() {
+        Lab lab = createLab("ddia-cap-03-lab-03");
+        Challenge ch = createChallenge("lab-03-ch-1");
 
         String userQuery = """
                 CREATE TABLE dim_tempo (id INT PRIMARY KEY, ano INT);
-                CREATE TABLE dim_produto (id INT PRIMARY KEY, nome VARCHAR(50));
-                CREATE TABLE fato_vendas (
-                    id INT PRIMARY KEY,
-                    tempo_id INT REFERENCES dim_tempo(id),
-                    produto_id INT REFERENCES dim_produto(id),
-                    quantidade INT,
-                    valor_total NUMERIC(10,2)
-                );
-                INSERT INTO fato_vendas VALUES (1, 1, 1, 10, 100.00);
+                CREATE TABLE fato_vendas (id INT, dim_tempo_id INT REFERENCES dim_tempo(id));
+                INSERT INTO dim_tempo VALUES (1, 2026);
+                INSERT INTO fato_vendas VALUES (1, 1);
                 """;
-
-        when(mockInspector.tableExists(eq(EngineType.POSTGRES), eq("fato_vendas"))).thenReturn(true);
-        when(mockInspector.getRowCount(eq(EngineType.POSTGRES), eq("fato_vendas"))).thenReturn(1L);
 
         AiAssessmentRequest request = new AiAssessmentRequest(lab.id(), ch.id(), userQuery, "ok", "", "heuristic", null, null, "pt");
         AiAssessmentResponse response = client.assess(lab, ch, request, AssessmentLanguage.PT);
@@ -321,52 +236,85 @@ class HeuristicProviderClientTest {
     }
 
     @Test
-    @DisplayName("Event Store: Deve rejeitar sumariamente com anti-padrão quando contiver UPDATE ou DELETE")
-    void shouldRejectEventStoreWhenUpdateOrDeleteIsUsed() {
-        Lab lab = createLab("ddia-cap-03-lab-04", EngineType.POSTGRES);
-        Challenge ch = createChallenge("lab-04-ch-1", EngineType.POSTGRES);
+    @DisplayName("Slice and Dice: Deve validar agregações analíticas com GROUP BY")
+    void shouldValidateSliceAndDiceAnalytics() {
+        Lab lab = createLab("ddia-cap-03-lab-03");
+        Challenge ch = createChallenge("lab-03-ch-2");
 
-        String userQuery = """
-                CREATE TABLE pedidos_eventos (id INT PRIMARY KEY, pedido_id INT, tipo_evento VARCHAR(50), criado_em TIMESTAMP);
-                INSERT INTO pedidos_eventos VALUES (1, 10, 'CRIADO', NOW());
-                UPDATE pedidos_eventos SET tipo_evento = 'CANCELADO' WHERE id = 1;
+        String validQuery = """
+                SELECT t.ano, SUM(f.valor)
+                FROM fato_vendas f
+                JOIN dim_tempo t ON t.id = f.dim_tempo_id
+                GROUP BY t.ano;
                 """;
+
+        AiAssessmentRequest request = new AiAssessmentRequest(lab.id(), ch.id(), validQuery, "ok", "", "heuristic", null, null, "pt");
+        AiAssessmentResponse response = client.assess(lab, ch, request, AssessmentLanguage.PT);
+
+        assertThat(response.status()).isEqualTo("APPROVED");
+        assertThat(response.feedback()).containsIgnoringCase("Slice & Dice");
+    }
+
+    @Test
+    @DisplayName("Event Store: Deve rejeitar mutabilidade destrutiva (UPDATE ou DELETE)")
+    void shouldRejectMutableOperationsInEventStore() {
+        Lab lab = createLab("ddia-cap-03-lab-04");
+        Challenge ch = createChallenge("lab-04-ch-1");
+
+        String userQuery = "UPDATE pedidos_eventos SET status = 'CANCELADO' WHERE id = 1;";
 
         AiAssessmentRequest request = new AiAssessmentRequest(lab.id(), ch.id(), userQuery, "ok", "", "heuristic", null, null, "pt");
         AiAssessmentResponse response = client.assess(lab, ch, request, AssessmentLanguage.PT);
 
         assertThat(response.status()).isEqualTo("NEEDS_REVISION");
         assertThat(response.feedback()).containsIgnoringCase("append-only");
-        assertThat(response.feedback()).containsIgnoringCase("UPDATE");
     }
 
     @Test
-    @DisplayName("CQRS View: Deve rejeitar quando faltar comando CREATE VIEW ou MATERIALIZED VIEW")
-    void shouldRejectCqrsWhenMaterializedViewIsMissing() {
-        Lab lab = createLab("ddia-cap-03-lab-04", EngineType.POSTGRES);
-        Challenge ch = createChallenge("lab-04-ch-2", EngineType.POSTGRES);
+    @DisplayName("Event Store: Deve aprovar solução append-only com INSERT e CREATE TABLE")
+    void shouldApproveValidAppendOnlyEventStore() {
+        Lab lab = createLab("ddia-cap-03-lab-04");
+        Challenge ch = createChallenge("lab-04-ch-1");
 
-        String userQuery = "SELECT pedido_id, COUNT(*) FROM pedidos_eventos GROUP BY pedido_id;";
+        String userQuery = """
+                CREATE TABLE pedidos_eventos (id INT, pedido_id INT, tipo_evento VARCHAR(50), payload TEXT);
+                INSERT INTO pedidos_eventos VALUES (1, 100, 'PEDIDO_CRIADO', '{}');
+                """;
+
+        AiAssessmentRequest request = new AiAssessmentRequest(lab.id(), ch.id(), userQuery, "ok", "", "heuristic", null, null, "pt");
+        AiAssessmentResponse response = client.assess(lab, ch, request, AssessmentLanguage.PT);
+
+        assertThat(response.status()).isEqualTo("APPROVED");
+        assertThat(response.feedback()).containsIgnoringCase("Event Store");
+    }
+
+    @Test
+    @DisplayName("CQRS View: Deve rejeitar quando faltar definição de visão ou tabela de leitura")
+    void shouldRejectCqrsWhenMissingView() {
+        Lab lab = createLab("ddia-cap-03-lab-04");
+        Challenge ch = createChallenge("lab-04-ch-2");
+
+        String userQuery = "SELECT * FROM pedidos_eventos;";
 
         AiAssessmentRequest request = new AiAssessmentRequest(lab.id(), ch.id(), userQuery, "ok", "", "heuristic", null, null, "pt");
         AiAssessmentResponse response = client.assess(lab, ch, request, AssessmentLanguage.PT);
 
         assertThat(response.status()).isEqualTo("NEEDS_REVISION");
-        assertThat(response.feedback()).containsIgnoringCase("VIEW");
+        assertThat(response.feedback()).containsIgnoringCase("visão materializada");
     }
 
     @Test
-    @DisplayName("CQRS View: Deve aprovar quando view materializada for declarada e existir no banco")
-    void shouldApproveCqrsWhenMaterializedViewExists() {
-        Lab lab = createLab("ddia-cap-03-lab-04", EngineType.POSTGRES);
-        Challenge ch = createChallenge("lab-04-ch-2", EngineType.POSTGRES);
+    @DisplayName("CQRS View: Deve aprovar criação de MATERIALIZED VIEW para projeção")
+    void shouldApproveCqrsMaterializedView() {
+        Lab lab = createLab("ddia-cap-03-lab-04");
+        Challenge ch = createChallenge("lab-04-ch-2");
 
         String userQuery = """
                 CREATE MATERIALIZED VIEW pedidos_resumo_leitura AS
-                SELECT pedido_id, COUNT(*) AS total_eventos FROM pedidos_eventos GROUP BY pedido_id;
+                SELECT pedido_id, COUNT(*) AS total_eventos
+                FROM pedidos_eventos
+                GROUP BY pedido_id;
                 """;
-
-        when(mockInspector.viewExists(eq(EngineType.POSTGRES), anyString())).thenReturn(true);
 
         AiAssessmentRequest request = new AiAssessmentRequest(lab.id(), ch.id(), userQuery, "ok", "", "heuristic", null, null, "pt");
         AiAssessmentResponse response = client.assess(lab, ch, request, AssessmentLanguage.PT);
@@ -376,9 +324,9 @@ class HeuristicProviderClientTest {
     }
 
     @Test
-    @DisplayName("Heurístico: Deve anexar a resposta de reflexão padrão (gabarito) do desafio no resultado da avaliação")
+    @DisplayName("Deve anexar expectedReflection quando presente no desafio")
     void shouldAttachExpectedReflectionFromChallengeInAssessmentResponse() {
-        Lab lab = createLab("ddia-cap-03-lab-01", EngineType.POSTGRES);
+        Lab lab = createLab("ddia-cap-03-lab-01");
         Challenge ch = new Challenge(
                 "lab-01-ch-1",
                 1,
@@ -387,10 +335,10 @@ class HeuristicProviderClientTest {
                 "Cenário",
                 "SELECT 1;",
                 null,
+                null,
                 List.of(),
                 "Pergunta Reflexiva",
-                "Gabarito oficial de trade-off para 3NF",
-                EngineType.POSTGRES
+                "Gabarito oficial de trade-off para 3NF"
         );
 
         AiAssessmentRequest request = new AiAssessmentRequest(lab.id(), ch.id(), "SELECT 1;", "ok", "", "heuristic", null, null, "pt");
@@ -399,11 +347,11 @@ class HeuristicProviderClientTest {
         assertThat(response.expectedReflection()).isEqualTo("Gabarito oficial de trade-off para 3NF");
     }
 
-    private Lab createLab(String id, EngineType engine) {
-        return new Lab(id, 1, "slug", "Lab Title", "Summary", List.of("Topic"), engine, "tbl", null, List.of());
+    private Lab createLab(String id) {
+        return new Lab(id, 1, "slug", "Lab Title", "Summary", List.of("Topic"), "tbl", null, List.of());
     }
 
-    private Challenge createChallenge(String id, EngineType engine) {
-        return new Challenge(id, 1, "Challenge Title", "Description", "Requirements", "Initial Code", List.of(), "Reflection", engine);
+    private Challenge createChallenge(String id) {
+        return new Challenge(id, 1, "Challenge Title", "Description", "Requirements", "Initial Code", List.of(), "Reflection");
     }
 }
