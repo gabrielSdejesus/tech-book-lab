@@ -9,7 +9,9 @@ import {
   getLabScenarios,
   saveScenarioSolution,
   getChapterQuiz,
-  submitChapterQuiz
+  submitChapterQuiz,
+  stressTestScenario,
+  assessScenario
 } from './api';
 
 describe('API Service', () => {
@@ -300,6 +302,79 @@ describe('API Service', () => {
     expect(result).toEqual(mockResponse);
   });
 
+  it('stressTestScenario deve realizar POST em /api/scenarios/:id/stress-test com body e cabeçalho Accept-Language', async () => {
+    const mockStressResponse = {
+      totalRequests: 1000,
+      successfulRequests: 1000,
+      failedRequests: 0,
+      actualThroughputRps: 1000,
+      p50LatencyMs: 4.5,
+      p99LatencyMs: 18.2,
+      lockContentionIndex: 0.05,
+      slaMet: true,
+      diagnostics: ['Arquitetura altamente escalável'],
+      nodeBottlenecks: {}
+    };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockStressResponse
+    } as Response);
+
+    const req = {
+      modelJson: '{"nodes":[],"edges":[]}',
+      workload: {
+        concurrency: 50,
+        targetRps: 1000,
+        durationSeconds: 10,
+        readRatio: 0.8,
+        keyDistribution: 'ZIPFIAN' as const,
+        slaLatencyMs: 50
+      }
+    };
+    const result = await stressTestScenario('sc-1', req, 'en');
+
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/scenarios/sc-1/stress-test', expect.objectContaining({
+      method: 'POST',
+      headers: expect.objectContaining({
+        'Content-Type': 'application/json',
+        'Accept-Language': 'en'
+      }),
+      body: JSON.stringify(req)
+    }));
+    expect(result).toEqual(mockStressResponse);
+  });
+
+  it('assessScenario deve realizar POST em /api/scenarios/:id/assess com body e cabeçalho Accept-Language', async () => {
+    const mockAssessResponse = {
+      status: 'APPROVED',
+      feedback: 'Arquitetura muito bem projetada.',
+      architecturalAnalysis: 'Particionamento eficiente.',
+      executionAnalysis: 'Latência baixa'
+    };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockAssessResponse
+    } as Response);
+
+    const req = {
+      architectureJson: '{"nodes":[]}',
+      userReflection: 'Optamos por cache Redis para desonerar o PostgreSQL.',
+      provider: 'gemini',
+      model: 'gemini-2.5-flash'
+    };
+    const result = await assessScenario('sc-1', req, 'pt');
+
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/scenarios/sc-1/assess', expect.objectContaining({
+      method: 'POST',
+      headers: expect.objectContaining({
+        'Content-Type': 'application/json',
+        'Accept-Language': 'pt'
+      }),
+      body: JSON.stringify(req)
+    }));
+    expect(result).toEqual(mockAssessResponse);
+  });
+
   describe('Cenários de Erro e Resiliência', () => {
     it('getBooks deve propagar exceção quando fetch falhar por erro de rede', async () => {
       vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new TypeError('Failed to fetch'));
@@ -388,6 +463,28 @@ describe('API Service', () => {
         json: async () => ({})
       } as unknown as Response);
       await expect(submitChapterQuiz('cap-1', { answers: {} })).rejects.toThrow('Falha ao submeter simulado do capítulo');
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        headers: { get: () => 'text/plain' },
+        json: async () => ({})
+      } as unknown as Response);
+      await expect(stressTestScenario('sc-1', {
+        modelJson: '{}',
+        workload: { concurrency: 10, targetRps: 100, durationSeconds: 5, readRatio: 0.5, keyDistribution: 'UNIFORM', slaLatencyMs: 50 }
+      })).rejects.toThrow('Falha ao executar teste de estresse da arquitetura');
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        headers: { get: () => 'text/plain' },
+        json: async () => ({})
+      } as unknown as Response);
+      await expect(assessScenario('sc-1', {
+        architectureJson: '{}',
+        userReflection: 'Reflexao'
+      })).rejects.toThrow('Falha ao avaliar arquitetura com Tutor de IA');
     });
   });
 });
