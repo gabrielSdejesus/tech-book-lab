@@ -10,6 +10,8 @@ interface Props {
   onSelectLab: (lab: Lab) => void;
   isOpen?: boolean;
   onToggle?: () => void;
+  selectedQuizChapterId?: string | null;
+  onSelectQuiz?: (chapter: Chapter) => void;
 }
 
 export const Sidebar: React.FC<Props> = ({
@@ -18,6 +20,8 @@ export const Sidebar: React.FC<Props> = ({
   onSelectLab,
   isOpen = true,
   onToggle,
+  selectedQuizChapterId,
+  onSelectQuiz,
 }) => {
   const { t, locale } = useLanguage();
 
@@ -76,7 +80,7 @@ export const Sidebar: React.FC<Props> = ({
               </h3>
             </div>
 
-            {/* Labs as numbered sections */}
+              {/* Labs as numbered sections */}
             <div className="space-y-1.5">
               {chapter.labs.map((lab) => {
                 const isSelected = selectedLab?.id === lab.id;
@@ -120,6 +124,40 @@ export const Sidebar: React.FC<Props> = ({
                   </button>
                 );
               })}
+
+              {/* Optional Chapter Quiz Entry */}
+              {onSelectQuiz && (
+                <button
+                  key={`quiz-${chapter.id}`}
+                  onClick={() => onSelectQuiz(chapter)}
+                  className={`w-full text-left p-2.5 transition-all flex items-start gap-2.5 border text-xs ${
+                    selectedQuizChapterId === chapter.id
+                      ? 'bg-[#eee8db] dark:bg-[#252320] border-l-4 border-l-[#8f1d1d] dark:border-l-[#df4444] border-t-stone-400 dark:border-t-stone-700 border-r-stone-400 dark:border-r-stone-700 border-b-stone-400 dark:border-b-stone-700 text-stone-950 dark:text-stone-100 font-medium book-shadow-sm'
+                      : 'border-transparent text-stone-700 dark:text-stone-300 hover:text-stone-950 dark:hover:text-stone-100 hover:bg-[#ede7da] dark:hover:bg-[#201e1b]'
+                  }`}
+                >
+                  <span className="mt-0.5 text-stone-500 dark:text-stone-400 font-mono text-[11px] font-bold">
+                    &sect;&nbsp;{chapter.number}.Q
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="font-serif font-semibold truncate text-stone-900 dark:text-stone-100">
+                        {t.sidebar.chapterQuiz}
+                      </span>
+                      <ChevronRight
+                        className={`w-3.5 h-3.5 shrink-0 transition-transform ${
+                          selectedQuizChapterId === chapter.id ? 'text-[#8f1d1d] dark:text-[#df4444] translate-x-0.5' : 'text-stone-400 dark:text-stone-600'
+                        }`}
+                      />
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <span className="text-[10px] font-mono text-stone-500 dark:text-stone-400">
+                        [{locale === 'pt' ? 'Simulado Conceitual' : 'Conceptual Quiz'}]
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              )}
             </div>
           </div>
         ))}

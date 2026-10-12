@@ -5,7 +5,12 @@ import type {
   AiTestConnectionRequest,
   AiTestConnectionResponse,
   ProblemDetail,
-  AiProviderInfo
+  AiProviderInfo,
+  InteractiveScenario,
+  ScenarioSolutionRequest,
+  ChapterQuiz,
+  QuizSubmissionRequest,
+  QuizSubmissionResponse
 } from '../types';
 
 const API_BASE = '/api';
@@ -103,3 +108,62 @@ export async function resetChallengeSolution(challengeId: string): Promise<void>
   });
   if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao resetar solução do desafio'));
 }
+
+export async function getLabScenarios(labId: string, locale?: string): Promise<InteractiveScenario[]> {
+  const activeLocale = locale || getActiveLocale();
+  const res = await fetch(`${API_BASE}/labs/${labId}/scenarios`, {
+    headers: {
+      'Accept-Language': activeLocale,
+    },
+  });
+  if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao carregar cenários interativos'));
+  return res.json();
+}
+
+export async function saveScenarioSolution(
+  scenarioId: string,
+  solution: ScenarioSolutionRequest
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/scenarios/${scenarioId}/solution`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(solution),
+  });
+  if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao salvar solução do cenário interativo'));
+}
+
+export async function getChapterQuiz(
+  chapterId: string,
+  locale?: string,
+  bookId?: string
+): Promise<ChapterQuiz> {
+  const activeLocale = locale || getActiveLocale();
+  const url = bookId
+    ? `${API_BASE}/books/${bookId}/chapters/${chapterId}/quiz`
+    : `${API_BASE}/chapters/${chapterId}/quiz`;
+  const res = await fetch(url, {
+    headers: {
+      'Accept-Language': activeLocale,
+    },
+  });
+  if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao carregar simulado do capítulo'));
+  return res.json();
+}
+
+export async function submitChapterQuiz(
+  chapterId: string,
+  request: QuizSubmissionRequest
+): Promise<QuizSubmissionResponse> {
+  const res = await fetch(`${API_BASE}/chapters/${chapterId}/quiz/submit`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+  if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao submeter simulado do capítulo'));
+  return res.json();
+}
+

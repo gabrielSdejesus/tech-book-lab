@@ -5,7 +5,11 @@ import {
   testAiConnection,
   getAiProviders,
   saveChallengeSolution,
-  resetChallengeSolution
+  resetChallengeSolution,
+  getLabScenarios,
+  saveScenarioSolution,
+  getChapterQuiz,
+  submitChapterQuiz
 } from './api';
 
 describe('API Service', () => {
@@ -206,6 +210,96 @@ describe('API Service', () => {
     }));
   });
 
+  it('getLabScenarios deve realizar GET em /api/labs/:id/scenarios e retornar cenarios interativos', async () => {
+    const mockScenarios = [
+      { id: 'sc-1', labId: 'lab-1', title: 'Cenário 1', scenarioType: 'CANVAS_MODELING' }
+    ];
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockScenarios
+    } as Response);
+
+    const result = await getLabScenarios('lab-1', 'en');
+
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/labs/lab-1/scenarios', expect.objectContaining({
+      headers: expect.objectContaining({
+        'Accept-Language': 'en'
+      })
+    }));
+    expect(result).toEqual(mockScenarios);
+  });
+
+  it('saveScenarioSolution deve realizar PUT em /api/scenarios/:id/solution com body JSON', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({})
+    } as Response);
+
+    const payload = { userStateJson: '{"nodes":[]}', userReflection: 'Arquitetura validada' };
+    await saveScenarioSolution('sc-1', payload);
+
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/scenarios/sc-1/solution', expect.objectContaining({
+      method: 'PUT',
+      headers: expect.objectContaining({
+        'Content-Type': 'application/json'
+      }),
+      body: JSON.stringify(payload)
+    }));
+  });
+
+  it('getChapterQuiz deve realizar GET em /api/chapters/:id/quiz e retornar simulado', async () => {
+    const mockQuiz = { chapterId: 'cap-3', questions: [], totalQuestions: 6, totalAnswered: 0, totalCorrect: 0 };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockQuiz
+    } as Response);
+
+    const result = await getChapterQuiz('cap-3', 'pt');
+
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/chapters/cap-3/quiz', expect.objectContaining({
+      headers: expect.objectContaining({
+        'Accept-Language': 'pt'
+      })
+    }));
+    expect(result).toEqual(mockQuiz);
+  });
+
+  it('getChapterQuiz com bookId deve incluir bookId no caminho da rota', async () => {
+    const mockQuiz = { chapterId: 'cap-3', questions: [], totalQuestions: 6, totalAnswered: 0, totalCorrect: 0 };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockQuiz
+    } as Response);
+
+    await getChapterQuiz('cap-3', 'en', 'ddia');
+
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/books/ddia/chapters/cap-3/quiz', expect.objectContaining({
+      headers: expect.objectContaining({
+        'Accept-Language': 'en'
+      })
+    }));
+  });
+
+  it('submitChapterQuiz deve realizar POST em /api/chapters/:id/quiz/submit e retornar resultado', async () => {
+    const mockResponse = { chapterId: 'cap-3', totalQuestions: 2, correctAnswers: 2, scorePercentage: 100, results: [] };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockResponse
+    } as Response);
+
+    const submission = { answers: { 'q-1': 'opt-1' } };
+    const result = await submitChapterQuiz('cap-3', submission);
+
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/chapters/cap-3/quiz/submit', expect.objectContaining({
+      method: 'POST',
+      headers: expect.objectContaining({
+        'Content-Type': 'application/json'
+      }),
+      body: JSON.stringify(submission)
+    }));
+    expect(result).toEqual(mockResponse);
+  });
+
   describe('Cenários de Erro e Resiliência', () => {
     it('getBooks deve propagar exceção quando fetch falhar por erro de rede', async () => {
       vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new TypeError('Failed to fetch'));
@@ -260,6 +354,40 @@ describe('API Service', () => {
       } as unknown as Response);
 
       await expect(resetChallengeSolution('ch-1')).rejects.toThrow('Falha ao resetar solução do desafio');
+    });
+
+    it('getLabScenarios, saveScenarioSolution, getChapterQuiz e submitChapterQuiz devem lançar fallbacks amigáveis ao falharem', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        headers: { get: () => 'text/plain' },
+        json: async () => ({})
+      } as unknown as Response);
+      await expect(getLabScenarios('lab-1')).rejects.toThrow('Falha ao carregar cenários interativos');
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        headers: { get: () => 'text/plain' },
+        json: async () => ({})
+      } as unknown as Response);
+      await expect(saveScenarioSolution('sc-1', { userStateJson: '{}' })).rejects.toThrow('Falha ao salvar solução do cenário interativo');
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        headers: { get: () => 'text/plain' },
+        json: async () => ({})
+      } as unknown as Response);
+      await expect(getChapterQuiz('cap-1')).rejects.toThrow('Falha ao carregar simulado do capítulo');
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        headers: { get: () => 'text/plain' },
+        json: async () => ({})
+      } as unknown as Response);
+      await expect(submitChapterQuiz('cap-1', { answers: {} })).rejects.toThrow('Falha ao submeter simulado do capítulo');
     });
   });
 });

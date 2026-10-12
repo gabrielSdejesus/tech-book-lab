@@ -181,5 +181,44 @@ describe('Sidebar Component', () => {
 
     expect(screen.getAllByText(/\[0 desafios\]/)).toHaveLength(2);
   });
+
+  it('deve renderizar a opção de simulado de capítulo quando onSelectQuiz for fornecido e disparar o callback ao clicar', () => {
+    const handleSelectQuiz = vi.fn();
+    render(
+      <Sidebar
+        books={[mockBook]}
+        selectedLab={mockLab1}
+        onSelectLab={vi.fn()}
+        onSelectQuiz={handleSelectQuiz}
+      />
+    );
+
+    expect(screen.getByText('Simulado do Capítulo')).toBeInTheDocument();
+    expect(screen.getByText(/§\s*3\.Q/)).toBeInTheDocument();
+    expect(screen.getByText('[Simulado Conceitual]')).toBeInTheDocument();
+
+    const quizButton = screen.getByText('Simulado do Capítulo');
+    fireEvent.click(quizButton);
+
+    expect(handleSelectQuiz).toHaveBeenCalledWith(mockBook.chapters[0]);
+  });
+
+  it('deve renderizar o simulado com tradução em inglês quando o locale for en', () => {
+    localStorage.setItem('tbl_locale', 'en');
+    render(
+      <LanguageProvider>
+        <Sidebar
+          books={[mockBook]}
+          selectedLab={mockLab1}
+          onSelectLab={vi.fn()}
+          onSelectQuiz={vi.fn()}
+        />
+      </LanguageProvider>
+    );
+
+    expect(screen.getByText('Chapter Quiz')).toBeInTheDocument();
+    expect(screen.getByText('[Conceptual Quiz]')).toBeInTheDocument();
+  });
 });
+
 

@@ -279,7 +279,232 @@ public class JdbcCatalogRepository implements CatalogRepository {
         return "pt";
     }
 
+    @Override
+    public List<InteractiveScenario> findScenariosByLabId(String labId, String locale) {
+        String normalized = normalizeLocale(locale);
+        return jdbcClient.sql("""
+                SELECT s.id, s.lab_id, s.scenario_type, s.difficulty, s.order_index,
+                       COALESCE(st.title, st_def.title) as title,
+                       COALESCE(st.description, st_def.description) as description,
+                       COALESCE(st.context_briefing, st_def.context_briefing) as context_briefing,
+                       COALESCE(st.expected_reflection, st_def.expected_reflection) as expected_reflection,
+                       s.constraints_json, s.initial_state_json, s.validation_rules_json,
+                       uss.user_state_json as saved_user_state_json,
+                       uss.user_reflection as saved_user_reflection,
+                       COALESCE(uss.status, 'NOT_STARTED') as status
+                FROM interactive_scenarios s
+                LEFT JOIN scenario_translations st ON st.scenario_id = s.id AND st.locale = :locale
+                LEFT JOIN scenario_translations st_def ON st_def.scenario_id = s.id AND st_def.locale = 'pt'
+                LEFT JOIN user_scenario_solutions uss ON uss.scenario_id = s.id
+                WHERE s.lab_id = :labId
+                ORDER BY s.order_index ASC
+                """)
+                .param("labId", labId)
+                .param("locale", normalized)
+                .query((rs, rowNum) -> new InteractiveScenario(
+                        rs.getString("id"),
+                        rs.getString("lab_id"),
+                        ScenarioType.fromString(rs.getString("scenario_type")),
+                        Difficulty.fromString(rs.getString("difficulty")),
+                        rs.getInt("order_index"),
+                        rs.getString("title"),
+                        rs.getString("description"),
+                        rs.getString("context_briefing"),
+                        rs.getString("expected_reflection"),
+                        rs.getString("constraints_json"),
+                        rs.getString("initial_state_json"),
+                        rs.getString("validation_rules_json"),
+                        rs.getString("saved_user_state_json"),
+                        rs.getString("saved_user_reflection"),
+                        rs.getString("status")
+                ))
+                .list();
+    }
+
+    @Override
+    public Optional<InteractiveScenario> findScenarioById(String scenarioId, String locale) {
+        String normalized = normalizeLocale(locale);
+        return jdbcClient.sql("""
+                SELECT s.id, s.lab_id, s.scenario_type, s.difficulty, s.order_index,
+                       COALESCE(st.title, st_def.title) as title,
+                       COALESCE(st.description, st_def.description) as description,
+                       COALESCE(st.context_briefing, st_def.context_briefing) as context_briefing,
+                       COALESCE(st.expected_reflection, st_def.expected_reflection) as expected_reflection,
+                       s.constraints_json, s.initial_state_json, s.validation_rules_json,
+                       uss.user_state_json as saved_user_state_json,
+                       uss.user_reflection as saved_user_reflection,
+                       COALESCE(uss.status, 'NOT_STARTED') as status
+                FROM interactive_scenarios s
+                LEFT JOIN scenario_translations st ON st.scenario_id = s.id AND st.locale = :locale
+                LEFT JOIN scenario_translations st_def ON st_def.scenario_id = s.id AND st_def.locale = 'pt'
+                LEFT JOIN user_scenario_solutions uss ON uss.scenario_id = s.id
+                WHERE s.id = :scenarioId
+                """)
+                .param("scenarioId", scenarioId)
+                .param("locale", normalized)
+                .query((rs, rowNum) -> new InteractiveScenario(
+                        rs.getString("id"),
+                        rs.getString("lab_id"),
+                        ScenarioType.fromString(rs.getString("scenario_type")),
+                        Difficulty.fromString(rs.getString("difficulty")),
+                        rs.getInt("order_index"),
+                        rs.getString("title"),
+                        rs.getString("description"),
+                        rs.getString("context_briefing"),
+                        rs.getString("expected_reflection"),
+                        rs.getString("constraints_json"),
+                        rs.getString("initial_state_json"),
+                        rs.getString("validation_rules_json"),
+                        rs.getString("saved_user_state_json"),
+                        rs.getString("saved_user_reflection"),
+                        rs.getString("status")
+                ))
+                .optional();
+    }
+
+    @Override
+    public void saveScenarioSolution(String scenarioId, String userStateJson, String userReflection, String status) {
+        jdbcClient.sql("DELETE FROM user_scenario_solutions WHERE scenario_id = :scenarioId")
+                .param("scenarioId", scenarioId)
+                .update();
+
+        jdbcClient.sql("""
+                INSERT INTO user_scenario_solutions (scenario_id, user_state_json, user_reflection, status, updated_at)
+                VALUES (:scenarioId, :userStateJson, :userReflection, :status, CURRENT_TIMESTAMP)
+                """)
+                .param("scenarioId", scenarioId)
+                .param("userStateJson", userStateJson)
+                .param("userReflection", userReflection)
+                .param("status", status != null ? status : "IN_PROGRESS")
+                .update();
+    }
+
+    @Override
+    public Optional<ChapterQuiz> findQuizByChapterId(String chapterId, String locale) {
+        String normalized = normalizeLocale(locale);
+
+        List<QuizQuestionRow> questionRows = jdbcClient.sql("""
+                SELECT q.id, q.chapter_id, q.order_index, q.difficulty,
+                       COALESCE(qt.prompt, qt_def.prompt) as prompt,
+                       COALESCE(qt.explanation, qt_def.explanation) as explanation,
+                       uqs.selected_option_id,
+                       uqs.is_correct as is_answered_correctly
+                FROM chapter_quiz_questions q
+                LEFT JOIN quiz_question_translations qt ON qt.question_id = q.id AND qt.locale = :locale
+                LEFT JOIN quiz_question_translations qt_def ON qt_def.question_id = q.id AND qt_def.locale = 'pt'
+                LEFT JOIN user_quiz_submissions uqs ON uqs.chapter_id = q.chapter_id AND uqs.question_id = q.id
+                WHERE q.chapter_id = :chapterId
+                ORDER BY q.order_index ASC
+                """)
+                .param("chapterId", chapterId)
+                .param("locale", normalized)
+                .query((rs, rowNum) -> new QuizQuestionRow(
+                        rs.getString("id"),
+                        rs.getString("chapter_id"),
+                        rs.getInt("order_index"),
+                        rs.getString("difficulty"),
+                        rs.getString("prompt"),
+                        rs.getString("explanation"),
+                        rs.getString("selected_option_id"),
+                        rs.getObject("is_answered_correctly") != null ? rs.getBoolean("is_answered_correctly") : null
+                ))
+                .list();
+
+        if (questionRows.isEmpty()) {
+            return Optional.empty();
+        }
+
+        List<QuizOptionRow> optionRows = jdbcClient.sql("""
+                SELECT o.id, o.question_id, o.option_letter, o.is_correct,
+                       COALESCE(ot.text, ot_def.text) as text
+                FROM quiz_options o
+                JOIN chapter_quiz_questions q ON q.id = o.question_id
+                LEFT JOIN quiz_option_translations ot ON ot.option_id = o.id AND ot.locale = :locale
+                LEFT JOIN quiz_option_translations ot_def ON ot_def.option_id = o.id AND ot_def.locale = 'pt'
+                WHERE q.chapter_id = :chapterId
+                ORDER BY o.question_id, o.option_letter ASC
+                """)
+                .param("chapterId", chapterId)
+                .param("locale", normalized)
+                .query((rs, rowNum) -> new QuizOptionRow(
+                        rs.getString("id"),
+                        rs.getString("question_id"),
+                        rs.getString("option_letter"),
+                        rs.getString("text"),
+                        rs.getBoolean("is_correct")
+                ))
+                .list();
+
+        Map<String, List<QuizOption>> optionsByQuestion = optionRows.stream()
+                .collect(Collectors.groupingBy(
+                        QuizOptionRow::questionId,
+                        Collectors.mapping(
+                                row -> new QuizOption(row.id(), row.questionId(), row.optionLetter(), row.text(), row.isCorrect()),
+                                Collectors.toList()
+                        )
+                ));
+
+        List<QuizQuestion> questions = questionRows.stream().map(row -> new QuizQuestion(
+                row.id(),
+                row.chapterId(),
+                row.orderIndex(),
+                Difficulty.fromString(row.difficulty()),
+                row.prompt(),
+                row.explanation(),
+                optionsByQuestion.getOrDefault(row.id(), List.of()),
+                row.selectedOptionId(),
+                row.isAnsweredCorrectly()
+        )).toList();
+
+        int totalQuestions = questions.size();
+        int totalAnswered = (int) questions.stream().filter(q -> q.selectedOptionId() != null).count();
+        int totalCorrect = (int) questions.stream().filter(q -> Boolean.TRUE.equals(q.isAnsweredCorrectly())).count();
+
+        return Optional.of(new ChapterQuiz(chapterId, questions, totalQuestions, totalAnswered, totalCorrect));
+    }
+
+    @Override
+    public void saveQuizSubmission(String chapterId, String questionId, String selectedOptionId, boolean isCorrect) {
+        jdbcClient.sql("DELETE FROM user_quiz_submissions WHERE chapter_id = :chapterId AND question_id = :questionId")
+                .param("chapterId", chapterId)
+                .param("questionId", questionId)
+                .update();
+
+        jdbcClient.sql("""
+                INSERT INTO user_quiz_submissions (chapter_id, question_id, selected_option_id, is_correct, answered_at)
+                VALUES (:chapterId, :questionId, :selectedOptionId, :isCorrect, CURRENT_TIMESTAMP)
+                """)
+                .param("chapterId", chapterId)
+                .param("questionId", questionId)
+                .param("selectedOptionId", selectedOptionId)
+                .param("isCorrect", isCorrect)
+                .update();
+    }
+
+    @Override
+    public List<QuizOption> findOptionsByQuestionId(String questionId) {
+        return jdbcClient.sql("""
+                SELECT o.id, o.question_id, o.option_letter, o.is_correct,
+                       COALESCE(ot.text, '') as text
+                FROM quiz_options o
+                LEFT JOIN quiz_option_translations ot ON ot.option_id = o.id AND ot.locale = 'pt'
+                WHERE o.question_id = :questionId
+                ORDER BY o.option_letter ASC
+                """)
+                .param("questionId", questionId)
+                .query((rs, rowNum) -> new QuizOption(
+                        rs.getString("id"),
+                        rs.getString("question_id"),
+                        rs.getString("option_letter"),
+                        rs.getString("text"),
+                        rs.getBoolean("is_correct")
+                ))
+                .list();
+    }
+
     // Intermediate projection records
+    public record QuizQuestionRow(String id, String chapterId, int orderIndex, String difficulty, String prompt, String explanation, String selectedOptionId, Boolean isAnsweredCorrectly) {}
+    public record QuizOptionRow(String id, String questionId, String optionLetter, String text, boolean isCorrect) {}
     public record BookRow(String id, String title, String author, String tag_line, String cover_color, String cover_image_url, String description) {}
     public record ChapterRow(String id, String book_id, int number, String title, String subtitle, String summary) {}
     public record LabRow(String id, String chapter_id, int number, String slug, String title, String summary, String engine_type, String database_name, String reset_schema_sql) {}

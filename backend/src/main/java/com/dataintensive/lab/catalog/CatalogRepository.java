@@ -1,7 +1,10 @@
 package com.dataintensive.lab.catalog;
 
 import com.dataintensive.lab.domain.Book;
+import com.dataintensive.lab.domain.ChapterQuiz;
+import com.dataintensive.lab.domain.InteractiveScenario;
 import com.dataintensive.lab.domain.Lab;
+import com.dataintensive.lab.domain.QuizOption;
 
 import java.util.List;
 import java.util.Optional;
@@ -29,4 +32,16 @@ public interface CatalogRepository {
     }
 
     void deleteChallengeSolution(String challengeId);
+
+    List<InteractiveScenario> findScenariosByLabId(String labId, String locale);
+
+    Optional<InteractiveScenario> findScenarioById(String scenarioId, String locale);
+
+    void saveScenarioSolution(String scenarioId, String userStateJson, String userReflection, String status);
+
+    Optional<ChapterQuiz> findQuizByChapterId(String chapterId, String locale);
+
+    void saveQuizSubmission(String chapterId, String questionId, String selectedOptionId, boolean isCorrect);
+
+    List<QuizOption> findOptionsByQuestionId(String questionId);
 }
