@@ -313,5 +313,87 @@ class CatalogRepositoryTest {
         // cleanup
         catalogRepository.deleteChallengeSolution(challengeId);
     }
+
+    @Test
+    @DisplayName("Deve buscar cenários interativos de arquitetura por labId com traduções (PT e EN)")
+    void shouldFindScenariosByLabIdWithTranslations() {
+        List<com.dataintensive.lab.domain.InteractiveScenario> scenariosPt =
+                catalogRepository.findScenariosByLabId("ddia-cap-03-lab-01", "pt");
+
+        assertThat(scenariosPt).isNotEmpty();
+        var sPt = scenariosPt.get(0);
+        assertThat(sPt.id()).isEqualTo("ddia-cap-03-lab-01-scenario-01");
+        assertThat(sPt.scenarioType()).isEqualTo(com.dataintensive.lab.domain.ScenarioType.CANVAS_MODELING);
+        assertThat(sPt.difficulty()).isEqualTo(com.dataintensive.lab.domain.Difficulty.MEDIUM);
+        assertThat(sPt.title()).contains("Decisão de Modelagem: Perfil de Usuário");
+        assertThat(sPt.constraintsJson()).contains("maxLatencyMs");
+        assertThat(sPt.initialStateJson()).contains("node-client");
+        assertThat(sPt.validationRulesJson()).contains("DOCUMENT_WITH_LOCALITY");
+
+        List<com.dataintensive.lab.domain.InteractiveScenario> scenariosEn =
+                catalogRepository.findScenariosByLabId("ddia-cap-03-lab-01", "en");
+
+        assertThat(scenariosEn).isNotEmpty();
+        var sEn = scenariosEn.get(0);
+        assertThat(sEn.title()).contains("Modeling Decision: User Profile");
+        assertThat(sEn.contextBriefing()).contains("Martin Kleppmann");
+    }
+
+    @Test
+    @DisplayName("Deve salvar e recuperar solução de cenário interativo (userStateJson e userReflection)")
+    void shouldSaveAndRetrieveScenarioSolution() {
+        String scenarioId = "ddia-cap-03-lab-01-scenario-01";
+        String customState = "{\"nodes\":[{\"id\":\"custom-cache\"}]}";
+        String customReflection = "Adicionar nó de cache para atender ao SLA de 15ms.";
+
+        catalogRepository.saveScenarioSolution(scenarioId, customState, customReflection, "APPROVED");
+
+        var scenario = catalogRepository.findScenarioById(scenarioId, "pt").orElseThrow();
+        assertThat(scenario.savedUserStateJson()).isEqualTo(customState);
+        assertThat(scenario.savedUserReflection()).isEqualTo(customReflection);
+        assertThat(scenario.status()).isEqualTo("APPROVED");
+    }
+
+    @Test
+    @DisplayName("Deve carregar simulado do capítulo com perguntas e alternativas ordenadas por dificuldade")
+    void shouldFindQuizByChapterIdWithQuestionsAndOptions() {
+        var quizOpt = catalogRepository.findQuizByChapterId("ddia-cap-03", "pt");
+
+        assertThat(quizOpt).isPresent();
+        var quiz = quizOpt.get();
+        assertThat(quiz.chapterId()).isEqualTo("ddia-cap-03");
+        assertThat(quiz.questions()).hasSize(6);
+
+        var q1 = quiz.questions().get(0);
+        assertThat(q1.difficulty()).isEqualTo(com.dataintensive.lab.domain.Difficulty.EASY);
+        assertThat(q1.prompt()).contains("modelo de documento");
+        assertThat(q1.options()).hasSize(4);
+
+        var q6 = quiz.questions().get(5);
+        assertThat(q6.difficulty()).isEqualTo(com.dataintensive.lab.domain.Difficulty.HARD);
+        assertThat(q6.prompt()).contains("OLAP");
+
+        // Validação em inglês
+        var quizEn = catalogRepository.findQuizByChapterId("ddia-cap-03", "en").orElseThrow();
+        assertThat(quizEn.questions().get(0).prompt()).contains("document model");
+    }
+
+    @Test
+    @DisplayName("Deve salvar e recuperar submissão de simulado do usuário com pontuação calculada")
+    void shouldSaveAndRetrieveQuizSubmission() {
+        String chapterId = "ddia-cap-03";
+        String questionId = "ddia-cap-03-quiz-01";
+        String selectedOpt = "ddia-cap-03-quiz-01-opt-b";
+
+        catalogRepository.saveQuizSubmission(chapterId, questionId, selectedOpt, true);
+
+        var quiz = catalogRepository.findQuizByChapterId(chapterId, "pt").orElseThrow();
+        assertThat(quiz.totalAnswered()).isGreaterThanOrEqualTo(1);
+        assertThat(quiz.totalCorrect()).isGreaterThanOrEqualTo(1);
+
+        var q1 = quiz.questions().stream().filter(q -> q.id().equals(questionId)).findFirst().orElseThrow();
+        assertThat(q1.selectedOptionId()).isEqualTo(selectedOpt);
+        assertThat(q1.isAnsweredCorrectly()).isTrue();
+    }
 }
 

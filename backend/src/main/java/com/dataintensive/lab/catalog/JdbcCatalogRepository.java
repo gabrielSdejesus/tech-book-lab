@@ -279,6 +279,36 @@ public class JdbcCatalogRepository implements CatalogRepository {
         return "pt";
     }
 
+    @Override
+    public List<InteractiveScenario> findScenariosByLabId(String labId, String locale) {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
+    @Override
+    public Optional<InteractiveScenario> findScenarioById(String scenarioId, String locale) {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
+    @Override
+    public void saveScenarioSolution(String scenarioId, String userStateJson, String userReflection, String status) {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
+    @Override
+    public Optional<ChapterQuiz> findQuizByChapterId(String chapterId, String locale) {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
+    @Override
+    public void saveQuizSubmission(String chapterId, String questionId, String selectedOptionId, boolean isCorrect) {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
+    @Override
+    public List<QuizOption> findOptionsByQuestionId(String questionId) {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
     // Intermediate projection records
     public record BookRow(String id, String title, String author, String tag_line, String cover_color, String cover_image_url, String description) {}
     public record ChapterRow(String id, String book_id, int number, String title, String subtitle, String summary) {}
