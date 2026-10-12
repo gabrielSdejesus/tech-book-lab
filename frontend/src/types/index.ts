@@ -183,3 +183,38 @@ export interface QuizSubmissionResponse {
   results: QuizQuestionResult[];
 }
 
+export interface StressWorkload {
+  concurrency: number;
+  targetRps: number;
+  durationSeconds: number;
+  readRatio: number;
+  keyDistribution: 'UNIFORM' | 'ZIPFIAN' | 'HOTSPOT';
+  slaLatencyMs: number;
+}
+
+export interface StressTestRequest {
+  modelJson: string;
+  workload: StressWorkload;
+}
+
+export interface StressTestResponse {
+  totalRequests: number;
+  successfulRequests: number;
+  failedRequests: number;
+  actualThroughputRps: number;
+  p50LatencyMs: number;
+  p99LatencyMs: number;
+  lockContentionIndex: number;
+  slaMet: boolean;
+  diagnostics: string[];
+  nodeBottlenecks: Record<string, string>;
+}
+
+export interface ScenarioAssessmentRequest {
+  architectureJson: string;
+  userReflection: string;
+  stressMetrics?: StressTestResponse;
+  provider?: string;
+  model?: string;
+}
+
