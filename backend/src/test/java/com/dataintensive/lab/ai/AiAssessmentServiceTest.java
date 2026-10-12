@@ -545,6 +545,45 @@ class AiAssessmentServiceTest {
 
         assertThat(res.expectedReflection()).isNull();
     }
+
+    @Test
+    @DisplayName("Tutor IA: Deve avaliar cenário interativo com métricas determinísticas de estresse")
+    void shouldAssessScenarioWithDeterministicStressMetrics() {
+        var scenario = new com.dataintensive.lab.domain.InteractiveScenario(
+                "sc-1", "ddia-cap-03-lab-01", com.dataintensive.lab.domain.ScenarioType.CANVAS_MODELING,
+                com.dataintensive.lab.domain.Difficulty.MEDIUM, 1,
+                "Modelagem de Particionamento", "Descrição", "Briefing de contexto",
+                "Gabarito: trade-off entre normalização e desempenho de leitura",
+                "{\"targetOpsPerSec\": 10000, \"targetSlaP99Ms\": 50.0}",
+                "{}", "{}", "{}", "{}", "IN_PROGRESS"
+        );
+        CatalogRepository catalogRepo = mock(CatalogRepository.class);
+        when(catalogRepo.findScenarioById("sc-1", "pt")).thenReturn(Optional.of(scenario));
+
+        CatalogService catService = new CatalogService(catalogRepo);
+        com.dataintensive.lab.simulation.ArchitectureStressSimulator sim = new com.dataintensive.lab.simulation.ArchitectureStressSimulator(objectMapper);
+
+        AiAssessmentService service = new AiAssessmentService(
+                catService,
+                objectMapper,
+                new AiProviderRegistry(List.of(new HeuristicProviderClient())),
+                sim,
+                "heuristic"
+        );
+
+        var req = new ScenarioAssessmentRequest(
+                "{\"nodes\":[],\"dataModel\":\"NORMALIZED_3NF\"}",
+                "Decidimos utilizar normalização para evitar redundância, cientes de que mais JOINs impactam leituras.",
+                null, "heuristic", null, "pt"
+        );
+
+        AiAssessmentResponse res = service.assessScenario("sc-1", req);
+
+        assertThat(res).isNotNull();
+        assertThat(res.feedback()).isNotEmpty();
+        assertThat(res.tradeOffAnalysis()).isNotEmpty();
+        assertThat(res.modelUsed()).contains("rules-engine-v1");
+    }
 }
 
 
