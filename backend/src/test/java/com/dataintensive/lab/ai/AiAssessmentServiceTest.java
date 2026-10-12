@@ -3,7 +3,6 @@ package com.dataintensive.lab.ai;
 import com.dataintensive.lab.catalog.CatalogRepository;
 import com.dataintensive.lab.catalog.CatalogService;
 import com.dataintensive.lab.domain.Challenge;
-import com.dataintensive.lab.domain.EngineType;
 import com.dataintensive.lab.domain.Lab;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,7 +44,6 @@ class AiAssessmentServiceTest {
                 "Relacional vs Documentos",
                 "Comparativo",
                 List.of("Impedance Mismatch"),
-                EngineType.POSTGRES,
                 "tbl_lab",
                 "DROP TABLE...",
                 List.of(ch1)
@@ -495,10 +493,9 @@ class AiAssessmentServiceTest {
                 null,
                 List.of(),
                 "Prompt",
-                "Gabarito de trade-off 3NF",
-                EngineType.POSTGRES
+                "Gabarito de trade-off 3NF"
         );
-        Lab lab = new Lab("ddia-cap-03-lab-01", 1, "slug", "Title", "Summary", List.of(), EngineType.POSTGRES, "db", null, List.of(ch));
+        Lab lab = new Lab("ddia-cap-03-lab-01", 1, "slug", "Title", "Summary", List.of(), "db", null, List.of(ch));
         CatalogRepository catalogRepo = mock(CatalogRepository.class);
         when(catalogRepo.findLabById("ddia-cap-03-lab-01")).thenReturn(Optional.of(lab));
 
@@ -534,10 +531,9 @@ class AiAssessmentServiceTest {
                 null,
                 List.of(),
                 "Prompt",
-                "Gabarito de trade-off 3NF",
-                EngineType.POSTGRES
+                "Gabarito de trade-off 3NF"
         );
-        Lab lab = new Lab("ddia-cap-03-lab-01", 1, "slug", "Title", "Summary", List.of(), EngineType.POSTGRES, "db", null, List.of(ch));
+        Lab lab = new Lab("ddia-cap-03-lab-01", 1, "slug", "Title", "Summary", List.of(), "db", null, List.of(ch));
         CatalogRepository catalogRepo = mock(CatalogRepository.class);
         when(catalogRepo.findLabById("ddia-cap-03-lab-01")).thenReturn(Optional.of(lab));
 

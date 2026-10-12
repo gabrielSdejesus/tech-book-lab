@@ -69,8 +69,7 @@ class ApiIntegrationTest {
     void shouldReturnLabById() throws Exception {
         mockMvc.perform(get("/api/labs/ddia-cap-03-lab-01"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id", is("ddia-cap-03-lab-01")))
-                .andExpect(jsonPath("$.engineType", is("POSTGRES")));
+                .andExpect(jsonPath("$.id", is("ddia-cap-03-lab-01")));
     }
 
     @Test
@@ -140,86 +139,6 @@ class ApiIntegrationTest {
 
 
     @Test
-    @DisplayName("POST /api/query/execute - Deve rejeitar consulta vazia com HTTP 400 Bad Request e RFC 7807")
-    void shouldRejectEmptyQueryExecution() throws Exception {
-        Map<String, Object> payload = Map.of(
-                "query", "   ",
-                "engineType", "POSTGRES",
-                "labId", "ddia-cap-03-lab-01"
-        );
-
-        mockMvc.perform(post("/api/query/execute")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(payload)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.title", is("Erro de validação sintática")))
-                .andExpect(jsonPath("$.errors", hasItem(hasEntry("field", "query"))));
-    }
-
-    @Test
-    @DisplayName("POST /api/query/execute - Deve rejeitar consulta excessivamente longa (> 10.000 caracteres)")
-    void shouldRejectExcessivelyLongQuery() throws Exception {
-        String hugeQuery = "SELECT " + "a".repeat(10005);
-        Map<String, Object> payload = Map.of(
-                "query", hugeQuery,
-                "engineType", "POSTGRES",
-                "labId", "ddia-cap-03-lab-01"
-        );
-
-        mockMvc.perform(post("/api/query/execute")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(payload)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.title", is("Erro de validação sintática")))
-                .andExpect(jsonPath("$.errors", hasItem(hasEntry("field", "query"))));
-    }
-
-    @Test
-    @DisplayName("POST /api/query/execute - Deve rejeitar payload sem engineType obrigatório")
-    void shouldRejectMissingEngineType() throws Exception {
-        Map<String, Object> payload = Map.of(
-                "query", "SELECT 1;",
-                "labId", "ddia-cap-03-lab-01"
-        );
-
-        mockMvc.perform(post("/api/query/execute")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(payload)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.title", is("Erro de validação sintática")))
-                .andExpect(jsonPath("$.errors", hasItem(hasEntry("field", "engineType"))));
-    }
-
-    @Test
-    @DisplayName("POST /api/query/execute - Deve rejeitar payload sem labId obrigatório")
-    void shouldRejectMissingLabId() throws Exception {
-        Map<String, Object> payload = Map.of(
-                "query", "SELECT 1;",
-                "engineType", "POSTGRES"
-        );
-
-        mockMvc.perform(post("/api/query/execute")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(payload)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.title", is("Erro de validação sintática")))
-                .andExpect(jsonPath("$.errors", hasItem(hasEntry("field", "labId"))));
-    }
-
-    @Test
-    @DisplayName("POST /api/query/execute - Deve retornar HTTP 400 amigável para JSON malformado")
-    void shouldRejectMalformedJson() throws Exception {
-        String malformedJson = "{ \"query\": \"SELECT 1\", ";
-
-        mockMvc.perform(post("/api/query/execute")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(malformedJson))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.title", is("Requisição JSON inválida")))
-                .andExpect(jsonPath("$.detail", containsString("formato JSON inválido")));
-    }
-
-    @Test
     @DisplayName("POST /api/ai/assess - Deve rejeitar requisição sem campos obrigatórios")
     void shouldRejectEmptyAiAssessmentRequest() throws Exception {
         mockMvc.perform(post("/api/ai/assess")
@@ -230,49 +149,6 @@ class ApiIntegrationTest {
                 .andExpect(jsonPath("$.errors", hasItem(hasEntry("field", "labId"))))
                 .andExpect(jsonPath("$.errors", hasItem(hasEntry("field", "challengeId"))))
                 .andExpect(jsonPath("$.errors", hasItem(hasEntry("field", "userQuery"))));
-    }
-
-    @Test
-    @DisplayName("POST /api/query/reset/{labId} - Deve retornar HTTP 400 Bad Request para lab inexistente")
-    void shouldFailResetForUnknownLab() throws Exception {
-        mockMvc.perform(post("/api/query/reset/lab-inexistente"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.title", is("Regra de negócio violada")))
-                .andExpect(jsonPath("$.detail", containsString("não encontrado")));
-    }
-
-    @Test
-    @DisplayName("POST /api/query/execute - Deve retornar HTTP 400 Bad Request para labId inexistente no catálogo")
-    void shouldRejectQueryExecutionWithUnknownLabId() throws Exception {
-        Map<String, Object> payload = Map.of(
-                "query", "SELECT 1;",
-                "engineType", "POSTGRES",
-                "labId", "lab-fantasma"
-        );
-
-        mockMvc.perform(post("/api/query/execute")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(payload)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.title", is("Regra de negócio violada")))
-                .andExpect(jsonPath("$.detail", containsString("não encontrado")));
-    }
-
-    @Test
-    @DisplayName("POST /api/query/execute - Deve retornar HTTP 400 Bad Request com diagnóstico para erro de sintaxe SQL")
-    void shouldRejectInvalidSqlSyntaxWithBadRequest() throws Exception {
-        Map<String, Object> payload = Map.of(
-                "query", "SELECT FROM WHERE ;",
-                "engineType", "POSTGRES",
-                "labId", "ddia-cap-03-lab-01"
-        );
-
-        mockMvc.perform(post("/api/query/execute")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(payload)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.title", is("Erro na execução da consulta")))
-                .andExpect(jsonPath("$.detail", notNullValue()));
     }
 
 
@@ -304,18 +180,6 @@ class ApiIntegrationTest {
                 .andExpect(jsonPath("$[?(@.id == 'ollama')].requiresApiKey", hasItem(false)));
     }
 
-    @Test
-    @DisplayName("GET /api/infra/status - Deve retornar status dinâmico dos motores de infraestrutura registrados")
-    void shouldReturnInfraStatusMap() throws Exception {
-        mockMvc.perform(get("/api/infra/status"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.postgres").exists())
-                .andExpect(jsonPath("$.postgres.port", is(5432)))
-                .andExpect(jsonPath("$.postgres.status").exists())
-                .andExpect(jsonPath("$.neo4j").exists())
-                .andExpect(jsonPath("$.neo4j.port", is(7687)))
-                .andExpect(jsonPath("$.neo4j.status").exists());
-    }
 
     @Test
     @DisplayName("POST /api/ai/assess - Deve exigir revisão quando código do aluno contiver apenas comentários")

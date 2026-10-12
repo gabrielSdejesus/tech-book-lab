@@ -27,9 +27,6 @@ const mockBook: Book = {
           title: 'Relacional vs Documentos',
           summary: 'Lab summary',
           keyConcepts: ['Concept1'],
-          engineType: 'POSTGRES',
-          databaseName: 'tbl_lab',
-          resetSchemaSql: 'DROP TABLE...',
           challenges: [
             {
               id: 'ch-1',

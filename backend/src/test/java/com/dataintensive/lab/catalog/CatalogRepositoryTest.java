@@ -2,7 +2,6 @@ package com.dataintensive.lab.catalog;
 
 import com.dataintensive.lab.domain.Book;
 import com.dataintensive.lab.domain.Chapter;
-import com.dataintensive.lab.domain.EngineType;
 import com.dataintensive.lab.domain.Lab;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -62,7 +61,6 @@ class CatalogRepositoryTest {
         Optional<Lab> lab = catalogRepository.findLabById("ddia-cap-03-lab-01");
 
         assertThat(lab).isPresent();
-        assertThat(lab.get().engineType()).isEqualTo(EngineType.POSTGRES);
         assertThat(lab.get().databaseName()).isEqualTo("tbl_lab");
         assertThat(lab.get().keyConcepts()).contains("Impedance Mismatch");
         assertThat(lab.get().challenges()).hasSize(2);

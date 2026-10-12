@@ -2,10 +2,7 @@ package com.dataintensive.lab.ai;
 
 import com.dataintensive.lab.domain.AssessmentLanguage;
 import com.dataintensive.lab.domain.Challenge;
-import com.dataintensive.lab.domain.EngineType;
 import com.dataintensive.lab.domain.Lab;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -14,15 +11,7 @@ import java.util.Locale;
 @Component
 public class HeuristicProviderClient implements AiProviderClient {
 
-    private final DatabaseCatalogInspector catalogInspector;
-
     public HeuristicProviderClient() {
-        this(null);
-    }
-
-    @Autowired
-    public HeuristicProviderClient(@Nullable DatabaseCatalogInspector catalogInspector) {
-        this.catalogInspector = catalogInspector;
     }
 
     @Override
@@ -162,23 +151,7 @@ public class HeuristicProviderClient implements AiProviderClient {
             );
         }
 
-        // Inspeção Baseada em Estado (Prioridade Máxima do Catálogo Real)
-        if (catalogInspector != null) {
-            if (!catalogInspector.tableExists(EngineType.POSTGRES, "usuarios")) {
-                return databaseExecutionRequired(isEn, modelName, isEn ? "Table 'usuarios' was not found in the public schema." : "A tabela 'usuarios' não foi encontrada no schema public.");
-            }
-            boolean hasFk = catalogInspector.foreignKeyExists(EngineType.POSTGRES, "experiencias_profissionais", "usuarios") ||
-                    catalogInspector.foreignKeyExists(EngineType.POSTGRES, "formacoes_academicas", "usuarios");
-            if (!hasFk) {
-                return databaseExecutionRequired(isEn, modelName, isEn ? "Foreign key relationship pointing to 'usuarios' was not detected." : "Chave estrangeira apontando para 'usuarios' não foi detectada no catálogo.");
-            }
-            if (catalogInspector.getRowCount(EngineType.POSTGRES, "usuarios") < 2) {
-                return databaseExecutionRequired(isEn, modelName, isEn ? "Table 'usuarios' must have at least 2 rows." : "A tabela 'usuarios' deve conter pelo menos 2 registros inseridos.");
-            }
-            return approved3NFResponse(isEn, modelName);
-        }
-
-        // Fallback sintático quando catálogo offline não estiver acoplado
+        // Validação semântica e sintática determinística offline
         boolean hasTables = query.contains("CREATE TABLE") && query.contains("USUARIOS");
         boolean hasChildTables = query.contains("EXPERIENCIAS") || query.contains("FORMACOES");
         boolean hasRelationships = query.contains("REFERENCES") || query.contains("FOREIGN KEY");
@@ -239,19 +212,6 @@ public class HeuristicProviderClient implements AiProviderClient {
     }
 
     private AiAssessmentResponse evaluateJsonb(String query, boolean isEn, String modelName) {
-        // Inspeção Baseada em Estado (Prioridade Máxima do Catálogo Real)
-        if (catalogInspector != null) {
-            boolean hasJsonbColumn = catalogInspector.columnExists(EngineType.POSTGRES, "usuarios_documento", "perfil", "jsonb");
-            if (!hasJsonbColumn) {
-                return databaseExecutionRequired(isEn, modelName, isEn ? "Column 'perfil' of type jsonb was not found in table 'usuarios_documento'." : "A coluna 'perfil' do tipo jsonb não foi encontrada na tabela 'usuarios_documento'.");
-            }
-            if (catalogInspector.getRowCount(EngineType.POSTGRES, "usuarios_documento") < 2) {
-                return databaseExecutionRequired(isEn, modelName, isEn ? "Table 'usuarios_documento' must contain at least 2 rows." : "A tabela 'usuarios_documento' deve conter ao menos 2 registros inseridos.");
-            }
-            return approvedJsonbResponse(isEn, modelName);
-        }
-
-        // Fallback sintático
         boolean hasJsonb = query.contains("JSONB");
         boolean hasInserts = query.contains("INSERT INTO");
         boolean hasOperators = query.contains("->") || query.contains("@>") || query.contains("JSONB_");
@@ -313,22 +273,6 @@ public class HeuristicProviderClient implements AiProviderClient {
             );
         }
 
-        // Inspeção no Neo4j
-        if (catalogInspector != null) {
-            long personNodes = catalogInspector.countNeo4jNodes("Person");
-            long locationNodes = catalogInspector.countNeo4jNodes("Location");
-            long relationships = catalogInspector.countNeo4jRelationships("WITHIN");
-
-            if (personNodes == 0 && locationNodes == 0) {
-                return databaseExecutionRequired(isEn, modelName, isEn ? "No Person or Location nodes found in Neo4j." : "Nenhum nó de Person ou Location encontrado no Neo4j.");
-            }
-            if (relationships == 0 && catalogInspector.countNeo4jRelationships("BORN_IN") == 0) {
-                return databaseExecutionRequired(isEn, modelName, isEn ? "No relationships found in Neo4j." : "Nenhum relacionamento encontrado no Neo4j.");
-            }
-            return approvedCypherResponse(isEn, modelName);
-        }
-
-        // Fallback sintático
         boolean hasCreate = query.contains("CREATE");
         boolean hasLabels = query.contains(":PERSON") || query.contains(":LOCATION");
         boolean hasEdges = query.contains("-[:") && query.contains("]->");
@@ -394,13 +338,6 @@ public class HeuristicProviderClient implements AiProviderClient {
             );
         }
 
-        // Fase 2: Inspeção do Catálogo do Banco de Dados
-        if (catalogInspector != null) {
-            if (catalogInspector.tableExists(EngineType.POSTGRES, "locais") &&
-                    catalogInspector.getRowCount(EngineType.POSTGRES, "locais") < 3) {
-                return databaseExecutionRequired(isEn, modelName, isEn ? "Table 'locais' needs at least 3 rows to form a multi-level hierarchy." : "A tabela 'locais' precisa de ao menos 3 registros para representar uma hierarquia multi-nível.");
-            }
-        }
 
         return new AiAssessmentResponse(
                 "APPROVED",
@@ -419,18 +356,6 @@ public class HeuristicProviderClient implements AiProviderClient {
     }
 
     private AiAssessmentResponse evaluateStarSchema(String query, boolean isEn, String modelName) {
-        // Inspeção Baseada em Estado (Prioridade Máxima do Catálogo Real)
-        if (catalogInspector != null) {
-            if (!catalogInspector.tableExists(EngineType.POSTGRES, "fato_vendas")) {
-                return databaseExecutionRequired(isEn, modelName, isEn ? "Fact table 'fato_vendas' was not found in database." : "A tabela de fatos 'fato_vendas' não foi encontrada no banco de dados.");
-            }
-            if (catalogInspector.getRowCount(EngineType.POSTGRES, "fato_vendas") < 1) {
-                return databaseExecutionRequired(isEn, modelName, isEn ? "Fact table 'fato_vendas' must contain at least 1 record." : "A tabela de fatos 'fato_vendas' deve conter ao menos 1 registro inserido.");
-            }
-            return approvedStarSchemaResponse(isEn, modelName);
-        }
-
-        // Fallback sintático
         boolean hasDim = query.contains("DIM_") || query.contains("DIMENSAO");
         boolean hasFact = query.contains("FATO_") || query.contains("FATOS");
         boolean hasFk = query.contains("REFERENCES") || query.contains("FOREIGN KEY");
@@ -513,13 +438,6 @@ public class HeuristicProviderClient implements AiProviderClient {
             );
         }
 
-        // Inspeção do Catálogo do Banco de Dados
-        if (catalogInspector != null) {
-            if (catalogInspector.tableExists(EngineType.POSTGRES, "fato_vendas") &&
-                    catalogInspector.getRowCount(EngineType.POSTGRES, "fato_vendas") < 1) {
-                return databaseExecutionRequired(isEn, modelName, isEn ? "Table 'fato_vendas' contains no records to aggregate." : "A tabela 'fato_vendas' não contém registros para agregação.");
-            }
-        }
 
         return new AiAssessmentResponse(
                 "APPROVED",
@@ -556,18 +474,6 @@ public class HeuristicProviderClient implements AiProviderClient {
             );
         }
 
-        // Inspeção Baseada em Estado
-        if (catalogInspector != null) {
-            if (!catalogInspector.tableExists(EngineType.POSTGRES, "pedidos_eventos")) {
-                return databaseExecutionRequired(isEn, modelName, isEn ? "Event store table 'pedidos_eventos' was not found in database." : "A tabela de eventos 'pedidos_eventos' não foi encontrada no banco de dados.");
-            }
-            if (catalogInspector.getRowCount(EngineType.POSTGRES, "pedidos_eventos") < 2) {
-                return databaseExecutionRequired(isEn, modelName, isEn ? "Table 'pedidos_eventos' must contain at least 2 events." : "A tabela 'pedidos_eventos' deve conter pelo menos 2 eventos inseridos.");
-            }
-            return approvedEventStoreResponse(isEn, modelName);
-        }
-
-        // Fallback sintático
         boolean hasCreate = query.contains("CREATE TABLE");
         boolean hasEvent = query.contains("EVENT") || query.contains("PEDIDO");
         boolean hasInsert = query.contains("INSERT INTO");
@@ -610,17 +516,6 @@ public class HeuristicProviderClient implements AiProviderClient {
     }
 
     private AiAssessmentResponse evaluateCqrsView(String query, boolean isEn, String modelName) {
-        // Inspeção Baseada em Estado
-        if (catalogInspector != null) {
-            boolean viewDetected = catalogInspector.viewExists(EngineType.POSTGRES, "pedidos_resumo_leitura") ||
-                    catalogInspector.tableExists(EngineType.POSTGRES, "pedidos_resumo_leitura");
-            if (!viewDetected) {
-                return databaseExecutionRequired(isEn, modelName, isEn ? "View or table 'pedidos_resumo_leitura' was not found in database." : "A visão (VIEW) ou tabela 'pedidos_resumo_leitura' não foi encontrada no banco de dados.");
-            }
-            return approvedCqrsResponse(isEn, modelName);
-        }
-
-        // Fallback sintático
         boolean hasView = query.contains("CREATE MATERIALIZED VIEW") || query.contains("CREATE VIEW") ||
                 (query.contains("CREATE TABLE") && query.contains("LEITURA"));
 
@@ -695,22 +590,5 @@ public class HeuristicProviderClient implements AiProviderClient {
                             : List.of("Leia as instruções do desafio na barra lateral", "Execute sua consulta com Ctrl + Enter antes de solicitar avaliação"),
                     modelName
             );
-    }
-
-    private AiAssessmentResponse databaseExecutionRequired(boolean isEn, String modelName, String details) {
-        return new AiAssessmentResponse(
-                "NEEDS_REVISION",
-                (isEn
-                        ? "Your query meets the syntax and architectural requirements, but the corresponding tables or records were not found in the database. Please execute your query using Ctrl + Enter before requesting offline evaluation. "
-                        : "Sua consulta atende aos requisitos sintáticos e arquiteturais, mas as tabelas ou dados correspondentes ainda não foram detectados no banco de dados. Execute sua consulta com Ctrl + Enter antes de solicitar a validação offline. ") + details,
-                isEn
-                        ? "In Designing Data-Intensive Applications, empirical verification requires actual execution of commands on the database engine to observe storage layout and behaviors."
-                        : "Em Designing Data-Intensive Applications, o aprendizado empírico exige a execução concreta dos comandos no motor de banco para validação de layout de armazenamento e integridade.",
-                isEn ? "No records or tables found in current catalog inspection." : "Nenhuma tabela ou registro correspondente encontrado na inspeção do catálogo.",
-                isEn
-                        ? List.of("Run your DDL and DML statements with Ctrl + Enter", "Verify table and row existence before evaluating")
-                        : List.of("Execute seus comandos DDL e DML com Ctrl + Enter", "Verifique se as tabelas e linhas foram criadas antes de avaliar"),
-                modelName
-        );
     }
 }

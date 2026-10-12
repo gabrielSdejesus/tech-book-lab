@@ -1,7 +1,6 @@
 package com.dataintensive.lab.catalog;
 
 import com.dataintensive.lab.domain.Book;
-import com.dataintensive.lab.domain.EngineType;
 import com.dataintensive.lab.domain.Lab;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -67,7 +66,7 @@ class CatalogServiceTest {
     @Test
     @DisplayName("Deve delegar ao repositório para encontrar Lab por ID")
     void shouldFindLabById() {
-        Lab lab = new Lab("ddia-cap-03-lab-01", 1, "relacional-vs-documentos", "Relacional", "Sum", List.of(), EngineType.POSTGRES, "tbl_lab", "DROP TABLE...", List.of());
+        Lab lab = new Lab("ddia-cap-03-lab-01", 1, "relacional-vs-documentos", "Relacional", "Sum", List.of(), "tbl_lab", "DROP TABLE...", List.of());
         when(catalogRepository.findLabById("ddia-cap-03-lab-01")).thenReturn(Optional.of(lab));
 
         Optional<Lab> result = catalogService.findLabById("ddia-cap-03-lab-01");
@@ -79,7 +78,7 @@ class CatalogServiceTest {
     @Test
     @DisplayName("Deve delegar ao repositório para encontrar Lab por slug")
     void shouldFindLabBySlug() {
-        Lab lab = new Lab("ddia-cap-03-lab-01", 1, "relacional-vs-documentos", "Relacional", "Sum", List.of(), EngineType.POSTGRES, "tbl_lab", "DROP TABLE...", List.of());
+        Lab lab = new Lab("ddia-cap-03-lab-01", 1, "relacional-vs-documentos", "Relacional", "Sum", List.of(), "tbl_lab", "DROP TABLE...", List.of());
         when(catalogRepository.findLabById("relacional-vs-documentos")).thenReturn(Optional.of(lab));
 
         Optional<Lab> result = catalogService.findLabById("relacional-vs-documentos");
@@ -115,7 +114,7 @@ class CatalogServiceTest {
     @Test
     @DisplayName("Deve delegar ao repositório para encontrar Lab por ID no idioma especificado")
     void shouldFindLabByIdWithLocale() {
-        Lab lab = new Lab("ddia-cap-03-lab-01", 1, "relacional-vs-documentos", "Relational", "Sum", List.of(), EngineType.POSTGRES, "tbl_lab", "DROP TABLE...", List.of());
+        Lab lab = new Lab("ddia-cap-03-lab-01", 1, "relacional-vs-documentos", "Relational", "Sum", List.of(), "tbl_lab", "DROP TABLE...", List.of());
         when(catalogRepository.findLabById("ddia-cap-03-lab-01", "en")).thenReturn(Optional.of(lab));
 
         Optional<Lab> result = catalogService.findLabById("ddia-cap-03-lab-01", "en");
@@ -148,8 +147,8 @@ class CatalogServiceTest {
     @Test
     @DisplayName("Deve preservar os metadados de expectedReflection nos desafios ao retornar Lab por ID")
     void shouldPreserveExpectedReflectionInLabChallenges() {
-        var challenge = new com.dataintensive.lab.domain.Challenge("ch-1", 1, "Titulo", "Desc", "Cenario", "SELECT 1;", null, null, List.of(), "Reflexao", "Gabarito oficial de trade-off", EngineType.POSTGRES);
-        var lab = new Lab("lab-1", 1, "slug", "Lab 1", "Sum", List.of(), EngineType.POSTGRES, "db", "SQL", List.of(challenge));
+        var challenge = new com.dataintensive.lab.domain.Challenge("ch-1", 1, "Titulo", "Desc", "Cenario", "SELECT 1;", null, null, List.of(), "Reflexao", "Gabarito oficial de trade-off");
+        var lab = new Lab("lab-1", 1, "slug", "Lab 1", "Sum", List.of(), "db", "SQL", List.of(challenge));
 
         when(catalogRepository.findLabById("lab-1", "pt")).thenReturn(Optional.of(lab));
 

@@ -24,17 +24,6 @@ spring:
     locations: classpath:db/migration
 
 lab:
-  postgres:
-    url: jdbc:postgresql://localhost:5432/tbl_lab
-    username: postgres
-    password: postgrespassword
-  neo4j:
-    uri: bolt://localhost:7687
-    username: neo4j
-    password: tblpassword
-  provisioning:
-    inactivity-timeout-minutes: ${LAB_PROVISIONING_INACTIVITY_TIMEOUT_MINUTES:15}
-    heartbeat-interval-seconds: ${LAB_PROVISIONING_HEARTBEAT_INTERVAL_SECONDS:30}
   ai:
     provider: ${AI_PROVIDER:gemini} # gemini, ollama, or heuristic
     gemini:
@@ -43,26 +32,3 @@ lab:
     ollama:
       base-url: ${OLLAMA_URL:http://localhost:11434}
       model: ${OLLAMA_MODEL:qwen2.5-coder:1.5b}
-  engines:
-    configs:
-      postgres:
-        service-name: postgres
-        container-name: tbl-lab-postgres
-        default-port: 5432
-        image: postgres:16-alpine
-        ports:
-          - "0:5432"
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgrespassword
-          POSTGRES_DB: tbl_lab
-      neo4j:
-        service-name: neo4j
-        container-name: tbl-lab-neo4j
-        default-port: 7687
-        image: neo4j:5-community
-        ports:
-          - "0:7687"
-          - "0:7474"
-        env:
-          NEO4J_AUTH: neo4j/tblpassword

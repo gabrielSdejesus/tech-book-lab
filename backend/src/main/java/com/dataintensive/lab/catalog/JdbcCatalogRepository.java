@@ -208,8 +208,6 @@ public class JdbcCatalogRepository implements CatalogRepository {
 
         List<Challenge> challenges = findChallengesByLabId(row.id(), translations);
 
-        EngineType engine = EngineType.valueOf(row.engine_type().toUpperCase());
-
         return new Lab(
                 row.id(),
                 row.number(),
@@ -217,7 +215,6 @@ public class JdbcCatalogRepository implements CatalogRepository {
                 lookup(translations, "LAB", row.id(), "title", row.title()),
                 lookup(translations, "LAB", row.id(), "summary", row.summary()),
                 keyConcepts,
-                engine,
                 row.database_name(),
                 row.reset_schema_sql(),
                 challenges
@@ -256,14 +253,6 @@ public class JdbcCatalogRepository implements CatalogRepository {
                 .map(gr -> lookup(translations, "GUIDELINE", row.id() + ":" + gr.order_index(), "guideline_text", gr.guideline_text()))
                 .toList();
 
-        EngineType engineType = null;
-        if (row.engine_type() != null && !row.engine_type().isBlank()) {
-            try {
-                engineType = EngineType.valueOf(row.engine_type().toUpperCase());
-            } catch (IllegalArgumentException ignored) {
-            }
-        }
-
         return new Challenge(
                 row.id(),
                 row.order_index(),
@@ -275,8 +264,7 @@ public class JdbcCatalogRepository implements CatalogRepository {
                 row.saved_reflection(),
                 guidelines,
                 lookup(translations, "CHALLENGE", row.id(), "reflection_prompt", row.reflection_prompt()),
-                lookup(translations, "CHALLENGE", row.id(), "expected_reflection", row.expected_reflection()),
-                engineType
+                lookup(translations, "CHALLENGE", row.id(), "expected_reflection", row.expected_reflection())
         );
     }
 
