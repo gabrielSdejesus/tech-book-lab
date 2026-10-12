@@ -108,3 +108,78 @@ export interface AiProviderInfo {
   defaultModel: string;
   models: AiModelInfo[];
 }
+
+export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD';
+export type ScenarioType = 'CANVAS_MODELING' | 'SLIDER_SIMULATION';
+
+export interface InteractiveScenario {
+  id: string;
+  labId: string;
+  scenarioType: ScenarioType;
+  difficulty: Difficulty;
+  orderIndex: number;
+  title: string;
+  description: string;
+  contextBriefing?: string;
+  expectedReflection?: string;
+  constraintsJson?: string;
+  initialStateJson?: string;
+  validationRulesJson?: string;
+  savedUserStateJson?: string;
+  savedUserReflection?: string;
+  status?: string;
+}
+
+export interface ScenarioSolutionRequest {
+  userStateJson: string;
+  userReflection?: string;
+}
+
+export interface QuizOption {
+  id: string;
+  questionId: string;
+  optionLetter: string;
+  text: string;
+  isCorrect?: boolean;
+}
+
+export interface QuizQuestion {
+  id: string;
+  chapterId: string;
+  orderIndex: number;
+  difficulty: Difficulty;
+  prompt: string;
+  explanation?: string;
+  options: QuizOption[];
+  selectedOptionId?: string;
+  isAnsweredCorrectly?: boolean;
+}
+
+export interface ChapterQuiz {
+  chapterId: string;
+  questions: QuizQuestion[];
+  totalQuestions: number;
+  totalAnswered: number;
+  totalCorrect: number;
+}
+
+export interface QuizSubmissionRequest {
+  answers: Record<string, string>;
+}
+
+export interface QuizQuestionResult {
+  questionId: string;
+  selectedOptionId?: string;
+  correctOptionId?: string;
+  isCorrect: boolean;
+  explanation?: string;
+}
+
+export interface QuizSubmissionResponse {
+  chapterId: string;
+  totalQuestions: number;
+  correctAnswers: number;
+  scorePercentage: number;
+  results: QuizQuestionResult[];
+}
+

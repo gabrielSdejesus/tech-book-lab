@@ -33,6 +33,7 @@ export const translations: Record<'pt' | 'en', TranslationSchema> = {
       collapseSidebar: 'Recolher tábua de matérias',
       expandSidebar: 'Expandir tábua de matérias',
       toggleSidebar: 'Alternar tábua de matérias',
+      chapterQuiz: 'Simulado do Capítulo',
     },
     lab: {
       laboratory: 'LABORATÓRIO',
@@ -155,6 +156,7 @@ export const translations: Record<'pt' | 'en', TranslationSchema> = {
       collapseSidebar: 'Collapse table of contents',
       expandSidebar: 'Expand table of contents',
       toggleSidebar: 'Toggle table of contents',
+      chapterQuiz: 'Chapter Quiz',
     },
     lab: {
       laboratory: 'LABORATORY',

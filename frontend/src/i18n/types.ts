@@ -27,6 +27,7 @@ export interface TranslationSchema {
     collapseSidebar: string;
     expandSidebar: string;
     toggleSidebar: string;
+    chapterQuiz: string;
   };
   lab: {
     laboratory: string;
