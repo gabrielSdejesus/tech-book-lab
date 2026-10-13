@@ -20,6 +20,7 @@ public class AiAssessmentService {
     private final CatalogService catalogService;
     private final ObjectMapper objectMapper;
     private final AiProviderRegistry aiProviderRegistry;
+    private final com.dataintensive.lab.simulation.ArchitectureStressSimulator architectureStressSimulator;
     private final String defaultProvider;
 
     @Autowired
@@ -27,11 +28,23 @@ public class AiAssessmentService {
             CatalogService catalogService,
             ObjectMapper objectMapper,
             AiProviderRegistry aiProviderRegistry,
+            com.dataintensive.lab.simulation.ArchitectureStressSimulator architectureStressSimulator,
             @Value("${lab.ai.provider:gemini}") String defaultProvider) {
         this.catalogService = catalogService;
         this.objectMapper = objectMapper;
         this.aiProviderRegistry = aiProviderRegistry;
+        this.architectureStressSimulator = architectureStressSimulator != null
+                ? architectureStressSimulator
+                : new com.dataintensive.lab.simulation.ArchitectureStressSimulator(objectMapper);
         this.defaultProvider = defaultProvider;
+    }
+
+    public AiAssessmentService(
+            CatalogService catalogService,
+            ObjectMapper objectMapper,
+            AiProviderRegistry aiProviderRegistry,
+            String defaultProvider) {
+        this(catalogService, objectMapper, aiProviderRegistry, new com.dataintensive.lab.simulation.ArchitectureStressSimulator(objectMapper), defaultProvider);
     }
 
     public AiAssessmentService(
@@ -51,6 +64,7 @@ public class AiAssessmentService {
                         new OllamaProviderClient(objectMapper, httpClient, ollamaBaseUrl, ollamaModel),
                         new HeuristicProviderClient()
                 )),
+                new com.dataintensive.lab.simulation.ArchitectureStressSimulator(objectMapper),
                 defaultProvider
         );
     }
@@ -299,6 +313,187 @@ public class AiAssessmentService {
                 request.userQuery() != null ? request.userQuery() : "(Nenhum código)",
                 request.executionSummary() != null ? request.executionSummary() : "(Nenhum retorno)",
                 request.userReflection() != null ? request.userReflection() : "(Nenhuma reflexão)"
+        );
+    }
+
+    public AiAssessmentResponse assessScenario(String scenarioId, ScenarioAssessmentRequest request) {
+        AssessmentLanguage lang = AssessmentLanguage.from(request.language());
+        boolean isEn = lang == AssessmentLanguage.EN;
+        String locale = lang.name().toLowerCase();
+
+        com.dataintensive.lab.domain.InteractiveScenario scenario = catalogService.getScenarioById(scenarioId, locale)
+                .orElseThrow(() -> new DomainValidationException("Cenário não encontrado com id: " + scenarioId));
+
+        String userState = (request.userStateJson() != null && !request.userStateJson().isBlank())
+                ? request.userStateJson()
+                : (scenario.savedUserStateJson() != null && !scenario.savedUserStateJson().isBlank()
+                ? scenario.savedUserStateJson()
+                : scenario.initialStateJson());
+
+        com.dataintensive.lab.simulation.ArchitectureModel model = architectureStressSimulator.parseModel(userState);
+        com.dataintensive.lab.simulation.StressWorkload workload = architectureStressSimulator.parseWorkload(scenario.constraintsJson(), null);
+        com.dataintensive.lab.simulation.StressSimulationResult simulationResult = architectureStressSimulator.simulate(model, workload);
+
+        String provider = (request.providerOverride() != null && !request.providerOverride().isBlank())
+                ? request.providerOverride().trim().toLowerCase()
+                : defaultProvider;
+
+        AiProviderClient client = aiProviderRegistry.getClient(provider);
+
+        if (client instanceof HeuristicProviderClient) {
+            return evaluateScenarioHeuristically(scenario, request, simulationResult, lang);
+        }
+
+        String prompt = buildScenarioPrompt(scenario, model, workload, simulationResult, request.userReflection(), lang);
+        boolean isModelOverridden = request.modelOverride() != null && !request.modelOverride().isBlank();
+        try {
+            return client.assess(prompt, request.apiKeyOverride(), request.modelOverride(), isModelOverridden);
+        } catch (Exception e) {
+            System.err.println("Erro ao chamar serviço de IA para cenário (" + provider + "): " + e.getMessage());
+            String errorMsg = isEn
+                    ? "Communication failure with AI Tutor (" + provider + "): " + e.getMessage()
+                    : "Falha na comunicação com o Tutor de IA (" + provider + "): " + e.getMessage();
+            return new AiAssessmentResponse(
+                    "NEEDS_REVISION",
+                    errorMsg,
+                    "Falha ao contatar modelo de IA.",
+                    "Erro de comunicação.",
+                    List.of(),
+                    "Erro de API (" + provider + ")"
+            );
+        }
+    }
+
+    private AiAssessmentResponse evaluateScenarioHeuristically(
+            com.dataintensive.lab.domain.InteractiveScenario scenario,
+            ScenarioAssessmentRequest request,
+            com.dataintensive.lab.simulation.StressSimulationResult simResult,
+            AssessmentLanguage lang) {
+        boolean isEn = lang == AssessmentLanguage.EN;
+
+        String userReflection = request.userReflection() != null ? request.userReflection().trim() : "";
+        boolean hasDetailedReflection = userReflection.length() >= 25;
+
+        if (!simResult.slaMet()) {
+            String feedback = isEn
+                    ? "Your architecture proposal violated performance or SLA constraints. " + String.join(" ", simResult.violations())
+                    : "Sua proposta de arquitetura violou restrições de desempenho ou SLA contratado. " + String.join(" ", simResult.violations());
+            String tradeOff = isEn
+                    ? "Trade-off analysis: The current component topology generates excessive latency (p99: " + simResult.estimatedLatencyP99Ms() + "ms) or high lock contention (" + (int)(simResult.lockContentionIndex() * 100) + "%)."
+                    : "Análise de trade-off: A topologia atual gera sobrecarga de latência (p99: " + simResult.estimatedLatencyP99Ms() + "ms) ou alta contenção de concorrência (" + (int)(simResult.lockContentionIndex() * 100) + "%).";
+            String efficiency = isEn
+                    ? "Estimated p50: " + simResult.estimatedLatencyP50Ms() + "ms | Throughput: " + simResult.estimatedThroughputOps() + " ops/s."
+                    : "Latência p50 estimada: " + simResult.estimatedLatencyP50Ms() + "ms | Vazão: " + simResult.estimatedThroughputOps() + " ops/s.";
+
+            return new AiAssessmentResponse(
+                    "NEEDS_REVISION",
+                    feedback,
+                    tradeOff,
+                    efficiency,
+                    simResult.recommendations(),
+                    "rules-engine-v1",
+                    scenario.expectedReflection()
+            );
+        }
+
+        if (hasDetailedReflection) {
+            String feedback = isEn
+                    ? "Architecture approved! Your design safely meets the SLA requirements with sound engineering judgment."
+                    : "Arquitetura aprovada! Seu design atende com folga aos requisitos de SLA com sólido embasamento de engenharia.";
+            String tradeOff = isEn
+                    ? "Trade-off analysis: The distribution between storage, indexing, and partitioning mitigates hotspots and guarantees bounded latency."
+                    : "Análise de trade-off: A distribuição entre armazenamento, indexação e particionamento mitiga hotspots e garante latência delimitada.";
+            String efficiency = isEn
+                    ? "Estimated p99: " + simResult.estimatedLatencyP99Ms() + "ms (SLA met) | Throughput: " + simResult.estimatedThroughputOps() + " ops/s."
+                    : "Latência p99 estimada: " + simResult.estimatedLatencyP99Ms() + "ms (SLA atendido) | Vazão: " + simResult.estimatedThroughputOps() + " ops/s.";
+
+            return new AiAssessmentResponse(
+                    "APPROVED",
+                    feedback,
+                    tradeOff,
+                    efficiency,
+                    simResult.recommendations(),
+                    "rules-engine-v1",
+                    scenario.expectedReflection()
+            );
+        }
+
+        String feedback = isEn
+                ? "SLA is technically met, but your trade-off reflection is too brief. How does this design handle future traffic spikes?"
+                : "O SLA foi atendido tecnicamente, mas sua justificativa de trade-offs foi muito sucinta. Como este design se comportará sob picos imprevistos de tráfego?";
+        String tradeOff = isEn
+                ? "Consider explaining your decision on normalization vs denormalization according to DDIA Chapter 3."
+                : "Aprofunde sua reflexão detalhando os impactos de normalização vs desnormalização conforme o Capítulo 3 do DDIA.";
+
+        return new AiAssessmentResponse(
+                "DISCUSSION",
+                feedback,
+                tradeOff,
+                "p50: " + simResult.estimatedLatencyP50Ms() + "ms | p99: " + simResult.estimatedLatencyP99Ms() + "ms",
+                simResult.recommendations(),
+                "rules-engine-v1",
+                scenario.expectedReflection()
+        );
+    }
+
+    private String buildScenarioPrompt(
+            com.dataintensive.lab.domain.InteractiveScenario scenario,
+            com.dataintensive.lab.simulation.ArchitectureModel model,
+            com.dataintensive.lab.simulation.StressWorkload workload,
+            com.dataintensive.lab.simulation.StressSimulationResult simResult,
+            String userReflection,
+            AssessmentLanguage lang) {
+        return """
+                Você é um Tutor Socrático especializado em Engenharia de Sistemas Intensivos de Dados (baseado no livro Designing Data-Intensive Applications de Martin Kleppmann).
+                Analise criticamente o modelo de arquitetura proposto pelo aluno para o seguinte cenário prático:
+                
+                CENÁRIO: %s
+                BRIEFING: %s
+                MODELO DE DADOS ESCOLHIDO: %s
+                CHAVE DE PARTICIONAMENTO: %s
+                RÉPLICAS: %d
+                ESTRATÉGIA DE CACHE: %s
+                COMPONENTES: %s
+                
+                RESULTADO DO TESTE DE ESTRESSE:
+                - Latência Estimada p50: %.1f ms
+                - Latência Estimada p99: %.1f ms (SLA Alvo: %.1f ms)
+                - Throughput Estimado: %.1f ops/s
+                - Índice de Contenção de Locks: %.2f
+                - SLA Atendido: %s
+                - Violações Detectadas: %s
+                
+                JUSTIFICATIVA / REFLEXÃO DO ALUNO:
+                %s
+                
+                GABARITO ESPERADO DE TRADE-OFF:
+                %s
+                
+                Responda EXCLUSIVAMENTE em formato JSON com as seguintes chaves:
+                {
+                  "status": "APPROVED" | "NEEDS_REVISION" | "DISCUSSION",
+                  "feedback": "Análise pedagógica construtiva e socrática sobre o diagrama e decisões de engenharia.",
+                  "tradeOffAnalysis": "Comentário profundo relacionando a resposta do aluno com os conceitos de Martin Kleppmann (DDIA).",
+                  "efficiencyNotes": "Observações sobre métricas de SLA, contenção de locks e throughput sob estresse.",
+                  "alternativeApproaches": ["Abordagem alternativa 1", "Abordagem alternativa 2"]
+                }
+                """.formatted(
+                scenario.title(),
+                scenario.contextBriefing(),
+                model.dataModel(),
+                model.partitioningKey(),
+                model.replicationFactor(),
+                model.cachingStrategy(),
+                model.nodes().stream().map(n -> n.type().name() + " (" + n.label() + ")").toList(),
+                simResult.estimatedLatencyP50Ms(),
+                simResult.estimatedLatencyP99Ms(),
+                workload.targetSlaP99Ms(),
+                simResult.estimatedThroughputOps(),
+                simResult.lockContentionIndex(),
+                simResult.slaMet() ? "SIM" : "NÃO",
+                String.join("; ", simResult.violations()),
+                userReflection != null ? userReflection : "",
+                scenario.expectedReflection() != null ? scenario.expectedReflection() : ""
         );
     }
 }

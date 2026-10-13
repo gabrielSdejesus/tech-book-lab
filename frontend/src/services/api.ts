@@ -10,7 +10,10 @@ import type {
   ScenarioSolutionRequest,
   ChapterQuiz,
   QuizSubmissionRequest,
-  QuizSubmissionResponse
+  QuizSubmissionResponse,
+  StressTestRequest,
+  StressTestResponse,
+  ScenarioAssessmentRequest
 } from '../types';
 
 const API_BASE = '/api';
@@ -164,6 +167,42 @@ export async function submitChapterQuiz(
     body: JSON.stringify(request),
   });
   if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao submeter simulado do capítulo'));
+  return res.json();
+}
+
+export async function stressTestScenario(
+  scenarioId: string,
+  request: StressTestRequest,
+  locale?: string
+): Promise<StressTestResponse> {
+  const activeLocale = locale || getActiveLocale();
+  const res = await fetch(`${API_BASE}/scenarios/${scenarioId}/stress-test`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept-Language': activeLocale,
+    },
+    body: JSON.stringify(request),
+  });
+  if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao executar teste de estresse da arquitetura'));
+  return res.json();
+}
+
+export async function assessScenario(
+  scenarioId: string,
+  request: ScenarioAssessmentRequest,
+  locale?: string
+): Promise<AiAssessmentResponse> {
+  const activeLocale = locale || getActiveLocale();
+  const res = await fetch(`${API_BASE}/scenarios/${scenarioId}/assess`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept-Language': activeLocale,
+    },
+    body: JSON.stringify(request),
+  });
+  if (!res.ok) throw new Error(await extractErrorMessage(res, 'Falha ao avaliar arquitetura com Tutor de IA'));
   return res.json();
 }
 
